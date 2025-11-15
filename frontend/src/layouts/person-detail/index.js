@@ -6,12 +6,14 @@ import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
+import MenuItem from "@mui/material/MenuItem";
+import Autocomplete from "@mui/material/Autocomplete";
+import { styled } from "@mui/material/styles";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
-import MenuItem from "@mui/material/MenuItem";
 import {
   updatePerson,
   fetchPeople,
@@ -48,18 +50,65 @@ const SG_DISTRICTS = [
   "Yishun",
 ];
 
+// suggestions for custom field names
+const FIELD_NAME_SUGGESTIONS = [
+  "Baptism Date",
+  "Cell Group",
+  "Role",
+  "Notes",
+  "Emergency Contact",
+  "Relationship",
+];
+
+// suggestions for relationship type
+const RELATION_SUGGESTIONS = [
+  "Father",
+  "Mother",
+  "Son",
+  "Daughter",
+  "Brother",
+  "Sister",
+  "Husband",
+  "Wife",
+  "Grandfather",
+  "Grandmother",
+  "Uncle",
+  "Aunt",
+  "Cousin",
+];
+
+const Highlight = styled("span")({
+  fontWeight: 600,
+});
+
+function splitMatch(label, query) {
+  if (!query) return [label, null, ""];
+  const lowerLabel = label.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const index = lowerLabel.indexOf(lowerQuery);
+  if (index === -1) return [label, null, ""];
+  return [
+    label.slice(0, index),
+    label.slice(index, index + query.length),
+    label.slice(index + query.length),
+  ];
+}
+
 function PersonDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const isAddMode = id === "add";
+
   const [person, setPerson] = useState(null);
   const [isEditing, setIsEditing] = useState(location.state?.edit || isAddMode);
   const [editedPerson, setEditedPerson] = useState(isAddMode ? {} : null);
   const [customFields, setCustomFields] = useState([]);
   const [showNotFoundModal, setShowNotFoundModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [peopleList, setPeopleList] = useState([]); // for Person suggestions
 
+  // load this person's data
   useEffect(() => {
     if (!isAddMode) {
       const stored = localStorage.getItem("people");
@@ -76,6 +125,19 @@ function PersonDetail() {
     }
   }, [id, isAddMode]);
 
+  // always load full people list (for Person suggestions)
+  useEffect(() => {
+    const stored = localStorage.getItem("people");
+    if (stored) {
+      const people = JSON.parse(stored);
+      setPeopleList(people);
+    }
+  }, []);
+
+  const personNameOptions = peopleList
+    .map((p) => p.Name)
+    .filter((name) => !!name);
+
   const handleEdit = () => {
     setIsEditing(true);
   };
@@ -83,9 +145,24 @@ function PersonDetail() {
   const handleSave = async () => {
     try {
       const dataToSave = { ...editedPerson };
+
+      // apply custom fields
       customFields.forEach((field) => {
-        if (field.key) dataToSave[field.key] = field.value;
+        if (!field.key) return;
+
+        const keyLower = field.key.toLowerCase();
+
+        if (keyLower === "relationship") {
+          // nested structure: Relationship > person, relation
+          dataToSave[field.key] = {
+            person: field.value || "",
+            relation: field.value2 || "",
+          };
+        } else {
+          dataToSave[field.key] = field.value;
+        }
       });
+
       if (isAddMode) {
         await createPerson(dataToSave);
         localStorage.removeItem("people");
@@ -125,7 +202,8 @@ function PersonDetail() {
   };
 
   const addCustomField = () => {
-    setCustomFields([...customFields, { key: "", value: "" }]);
+    // include second value slot for relationship
+    setCustomFields([...customFields, { key: "", value: "", value2: "" }]);
   };
 
   const updateCustomField = (index, field, value) => {
@@ -172,6 +250,7 @@ function PersonDetail() {
     "Address",
     "Contact",
   ];
+
   const extraFields = person
     ? Object.keys(person).filter((key) => !knownFields.includes(key))
     : [];
@@ -235,15 +314,18 @@ function PersonDetail() {
                 )}
               </MDBox>
             </MDBox>
+
             {isEditing || isAddMode ? (
               <MDBox display="flex" flexDirection="column" gap={2}>
                 <TextField
+                  variant="outlined"
                   label="Name"
                   value={editedPerson?.Name || ""}
                   onChange={(e) => handleChange("Name", e.target.value)}
                   fullWidth
                 />
                 <TextField
+                  variant="outlined"
                   label="Chinese Name"
                   value={editedPerson?.NameChi || ""}
                   onChange={(e) => handleChange("NameChi", e.target.value)}
@@ -266,11 +348,7 @@ function PersonDetail() {
                     },
                   }}
                   sx={{
-                    // make the outer input match your other fields
-                    "& .MuiOutlinedInput-root": {
-                      height: 44.13,
-                    },
-                    // align the select text vertically like the others
+                    "& .MuiOutlinedInput-root": { height: 56 },
                     "& .MuiSelect-select": {
                       display: "flex",
                       alignItems: "center",
@@ -286,22 +364,30 @@ function PersonDetail() {
                   ))}
                 </TextField>
                 <TextField
+                  variant="outlined"
                   label="Address"
                   value={editedPerson?.Address || ""}
                   onChange={(e) => handleChange("Address", e.target.value)}
                   fullWidth
                 />
                 <TextField
+                  variant="outlined"
                   label="Contact"
                   value={editedPerson?.Contact || ""}
                   onChange={(e) => handleChange("Contact", e.target.value)}
                   fullWidth
                 />
+
                 {extraFields.map((key) => (
                   <MDBox key={key} display="flex" gap={2}>
                     <TextField
+                      variant="outlined"
                       label={key}
-                      value={editedPerson?.[key] || ""}
+                      value={
+                        typeof editedPerson?.[key] === "object"
+                          ? JSON.stringify(editedPerson[key])
+                          : editedPerson?.[key] || ""
+                      }
                       onChange={(e) => handleChange(key, e.target.value)}
                       fullWidth
                     />
@@ -314,33 +400,182 @@ function PersonDetail() {
                     </MDButton>
                   </MDBox>
                 ))}
-                {customFields.map((field, index) => (
-                  <MDBox key={index} display="flex" gap={2}>
-                    <TextField
-                      label="Field Name"
-                      value={field.key}
-                      onChange={(e) =>
-                        updateCustomField(index, "key", e.target.value)
-                      }
-                      sx={{ flex: 1 }}
-                    />
-                    <TextField
-                      label="Value"
-                      value={field.value}
-                      onChange={(e) =>
-                        updateCustomField(index, "value", e.target.value)
-                      }
-                      sx={{ flex: 1 }}
-                    />
-                    <MDButton
-                      variant="outlined"
-                      color="error"
-                      onClick={() => removeCustomField(index)}
-                    >
-                      Remove
-                    </MDButton>
-                  </MDBox>
-                ))}
+
+                {customFields.map((field, index) => {
+                  const isRelationship =
+                    (field.key || "").toLowerCase() === "relationship";
+
+                  return (
+                    <MDBox key={index} display="flex" gap={2}>
+                      {/* FIELD NAME */}
+                      <Autocomplete
+                        freeSolo
+                        options={FIELD_NAME_SUGGESTIONS}
+                        value={field.key || ""}
+                        onChange={(event, newValue) =>
+                          updateCustomField(index, "key", newValue || "")
+                        }
+                        onInputChange={(event, newInputValue) =>
+                          updateCustomField(index, "key", newInputValue)
+                        }
+                        sx={{
+                          flex: isRelationship ? 2 : 1,
+                          "& .MuiOutlinedInput-root": { height: 56 },
+                          "& .MuiOutlinedInput-input": {
+                            paddingTop: "16.5px",
+                            paddingBottom: "16.5px",
+                          },
+                        }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            variant="outlined"
+                            label="Field Name"
+                          />
+                        )}
+                        renderOption={(props, option) => {
+                          const [start, match, end] = splitMatch(
+                            option,
+                            field.key || ""
+                          );
+                          return (
+                            <li {...props}>
+                              {match ? (
+                                <>
+                                  {start}
+                                  <Highlight>{match}</Highlight>
+                                  {end}
+                                </>
+                              ) : (
+                                option
+                              )}
+                            </li>
+                          );
+                        }}
+                      />
+
+                      {/* PERSON / VALUE */}
+                      {isRelationship ? (
+                        <Autocomplete
+                          freeSolo
+                          options={personNameOptions}
+                          value={field.value || ""}
+                          onChange={(event, newValue) =>
+                            updateCustomField(index, "value", newValue || "")
+                          }
+                          onInputChange={(event, newInputValue) =>
+                            updateCustomField(index, "value", newInputValue)
+                          }
+                          sx={{
+                            flex: 3,
+                            "& .MuiOutlinedInput-root": { height: 56 },
+                            "& .MuiOutlinedInput-input": {
+                              paddingTop: "16.5px",
+                              paddingBottom: "16.5px",
+                            },
+                          }}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              variant="outlined"
+                              label="Person"
+                            />
+                          )}
+                          renderOption={(props, option) => {
+                            const [start, match, end] = splitMatch(
+                              option,
+                              field.value || ""
+                            );
+                            return (
+                              <li {...props}>
+                                {match ? (
+                                  <>
+                                    {start}
+                                    <Highlight>{match}</Highlight>
+                                    {end}
+                                  </>
+                                ) : (
+                                  option
+                                )}
+                              </li>
+                            );
+                          }}
+                        />
+                      ) : (
+                        <TextField
+                          variant="outlined"
+                          label="Value"
+                          value={field.value}
+                          onChange={(e) =>
+                            updateCustomField(index, "value", e.target.value)
+                          }
+                          sx={{
+                            flex: 1,
+                            "& .MuiOutlinedInput-root": { height: 56 },
+                          }}
+                        />
+                      )}
+
+                      {/* RELATION (only for Relationship) */}
+                      {isRelationship && (
+                        <Autocomplete
+                          freeSolo
+                          options={RELATION_SUGGESTIONS}
+                          value={field.value2 || ""}
+                          onChange={(event, newValue) =>
+                            updateCustomField(index, "value2", newValue || "")
+                          }
+                          onInputChange={(event, newInputValue) =>
+                            updateCustomField(index, "value2", newInputValue)
+                          }
+                          sx={{
+                            flex: 3,
+                            "& .MuiOutlinedInput-root": { height: 56 },
+                            "& .MuiOutlinedInput-input": {
+                              paddingTop: "16.5px",
+                              paddingBottom: "16.5px",
+                            },
+                          }}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              variant="outlined"
+                              label="Relation"
+                            />
+                          )}
+                          renderOption={(props, option) => {
+                            const [start, match, end] = splitMatch(
+                              option,
+                              field.value2 || ""
+                            );
+                            return (
+                              <li {...props}>
+                                {match ? (
+                                  <>
+                                    {start}
+                                    <Highlight>{match}</Highlight>
+                                    {end}
+                                  </>
+                                ) : (
+                                  option
+                                )}
+                              </li>
+                            );
+                          }}
+                        />
+                      )}
+
+                      <MDButton
+                        variant="outlined"
+                        color="error"
+                        onClick={() => removeCustomField(index)}
+                      >
+                        Remove
+                      </MDButton>
+                    </MDBox>
+                  );
+                })}
+
                 <MDButton
                   variant="outlined"
                   color="info"
@@ -362,7 +597,10 @@ function PersonDetail() {
                 </MDTypography>
                 {extraFields.map((key) => (
                   <MDTypography key={key} variant="body2">
-                    {key}: {person[key]}
+                    {key}:{" "}
+                    {typeof person[key] === "object"
+                      ? JSON.stringify(person[key])
+                      : person[key]}
                   </MDTypography>
                 ))}
               </>
@@ -370,6 +608,7 @@ function PersonDetail() {
           </MDBox>
         </Card>
       </MDBox>
+
       <Dialog open={showNotFoundModal} onClose={handleCloseModal}>
         <DialogTitle>Person Not Found</DialogTitle>
         <DialogContent>
