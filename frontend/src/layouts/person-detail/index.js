@@ -2,31 +2,47 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Card from "@mui/material/Card";
 import TextField from "@mui/material/TextField";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
-import { updatePerson, fetchPeople } from "services/convo-broker.js";
+import {
+  updatePerson,
+  fetchPeople,
+  createPerson,
+} from "services/convo-broker.js";
 
 function PersonDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const isAddMode = id === "add";
   const [person, setPerson] = useState(null);
-  const [isEditing, setIsEditing] = useState(location.state?.edit || false);
-  const [editedPerson, setEditedPerson] = useState(null);
+  const [isEditing, setIsEditing] = useState(location.state?.edit || isAddMode);
+  const [editedPerson, setEditedPerson] = useState(isAddMode ? {} : null);
   const [customFields, setCustomFields] = useState([]);
+  const [showNotFoundModal, setShowNotFoundModal] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("people");
-    if (stored) {
-      const people = JSON.parse(stored);
-      const found = people.find((p) => p._id === id);
-      setPerson(found);
-      setEditedPerson(found);
+    if (!isAddMode) {
+      const stored = localStorage.getItem("people");
+      if (stored) {
+        const people = JSON.parse(stored);
+        const found = people.find((p) => p._id === id);
+        if (found) {
+          setPerson(found);
+          setEditedPerson(found);
+        } else {
+          setShowNotFoundModal(true);
+        }
+      }
     }
-  }, [id]);
+  }, [id, isAddMode]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -38,17 +54,24 @@ function PersonDetail() {
       customFields.forEach((field) => {
         if (field.key) dataToSave[field.key] = field.value;
       });
-      await updatePerson(id, dataToSave);
-      localStorage.removeItem("people");
-      await fetchPeople();
-      const stored = localStorage.getItem("people");
-      if (stored) {
-        const people = JSON.parse(stored);
-        const found = people.find((p) => p._id === id);
-        setPerson(found);
-        setEditedPerson(found);
+      if (isAddMode) {
+        await createPerson(dataToSave);
+        localStorage.removeItem("people");
+        await fetchPeople();
+        navigate("/tables");
+      } else {
+        await updatePerson(id, dataToSave);
+        localStorage.removeItem("people");
+        await fetchPeople();
+        const stored = localStorage.getItem("people");
+        if (stored) {
+          const people = JSON.parse(stored);
+          const found = people.find((p) => p._id === id);
+          setPerson(found);
+          setEditedPerson(found);
+        }
+        setIsEditing(false);
       }
-      setIsEditing(false);
       setCustomFields([]);
     } catch (error) {
       console.error("Failed to save:", error);
@@ -56,9 +79,13 @@ function PersonDetail() {
   };
 
   const handleDiscard = () => {
-    setEditedPerson(person);
-    setIsEditing(false);
-    setCustomFields([]);
+    if (isAddMode) {
+      navigate("/tables");
+    } else {
+      setEditedPerson(person);
+      setIsEditing(false);
+      setCustomFields([]);
+    }
   };
 
   const handleChange = (field, value) => {
@@ -79,7 +106,18 @@ function PersonDetail() {
     setCustomFields(customFields.filter((_, i) => i !== index));
   };
 
-  if (!person) return <div>Loading...</div>;
+  const removeExistingField = (key) => {
+    const updated = { ...editedPerson };
+    delete updated[key];
+    setEditedPerson(updated);
+  };
+
+  const handleCloseModal = () => {
+    setShowNotFoundModal(false);
+    navigate("/tables");
+  };
+
+  if (!isAddMode && !person && !showNotFoundModal) return <div>Loading...</div>;
 
   const knownFields = [
     "_id",
@@ -90,9 +128,9 @@ function PersonDetail() {
     "Address",
     "Contact",
   ];
-  const extraFields = Object.keys(person).filter(
-    (key) => !knownFields.includes(key)
-  );
+  const extraFields = person
+    ? Object.keys(person).filter((key) => !knownFields.includes(key))
+    : [];
 
   return (
     <DashboardLayout>
@@ -107,28 +145,30 @@ function PersonDetail() {
               mb={2}
             >
               <MDTypography variant="h4">
-                {isEditing
+                {isAddMode
+                  ? "Add Person"
+                  : isEditing
                   ? "Edit Person"
-                  : `${person.Name}${
-                      person.NameChi ? ", " + person.NameChi : ""
+                  : `${person?.Name || ""}${
+                      person?.NameChi ? ", " + person.NameChi : ""
                     }`}
               </MDTypography>
               <MDBox display="flex" gap={1}>
-                {isEditing ? (
+                {isEditing || isAddMode ? (
                   <>
                     <MDButton
                       variant="gradient"
                       color="info"
                       onClick={handleSave}
                     >
-                      Save
+                      {isAddMode ? "Add" : "Save"}
                     </MDButton>
                     <MDButton
                       variant="outlined"
                       color="secondary"
                       onClick={handleDiscard}
                     >
-                      Discard
+                      {isAddMode ? "Cancel" : "Discard"}
                     </MDButton>
                   </>
                 ) : (
@@ -142,7 +182,7 @@ function PersonDetail() {
                 )}
               </MDBox>
             </MDBox>
-            {isEditing ? (
+            {isEditing || isAddMode ? (
               <MDBox display="flex" flexDirection="column" gap={2}>
                 <TextField
                   label="Name"
@@ -174,17 +214,23 @@ function PersonDetail() {
                   onChange={(e) => handleChange("Contact", e.target.value)}
                   fullWidth
                 />
-
                 {extraFields.map((key) => (
-                  <TextField
-                    key={key}
-                    label={key}
-                    value={editedPerson?.[key] || ""}
-                    onChange={(e) => handleChange(key, e.target.value)}
-                    fullWidth
-                  />
+                  <MDBox key={key} display="flex" gap={2}>
+                    <TextField
+                      label={key}
+                      value={editedPerson?.[key] || ""}
+                      onChange={(e) => handleChange(key, e.target.value)}
+                      fullWidth
+                    />
+                    <MDButton
+                      variant="outlined"
+                      color="error"
+                      onClick={() => removeExistingField(key)}
+                    >
+                      Remove
+                    </MDButton>
+                  </MDBox>
                 ))}
-
                 {customFields.map((field, index) => (
                   <MDBox key={index} display="flex" gap={2}>
                     <TextField
@@ -212,7 +258,6 @@ function PersonDetail() {
                     </MDButton>
                   </MDBox>
                 ))}
-
                 <MDButton
                   variant="outlined"
                   color="info"
@@ -224,13 +269,13 @@ function PersonDetail() {
             ) : (
               <>
                 <MDTypography variant="body2">
-                  District: {person.District}
+                  District: {person?.District}
                 </MDTypography>
                 <MDTypography variant="body2">
-                  Address: {person.Address}
+                  Address: {person?.Address}
                 </MDTypography>
                 <MDTypography variant="body2">
-                  Contact: {person.Contact}
+                  Contact: {person?.Contact}
                 </MDTypography>
                 {extraFields.map((key) => (
                   <MDTypography key={key} variant="body2">
@@ -242,6 +287,20 @@ function PersonDetail() {
           </MDBox>
         </Card>
       </MDBox>
+
+      <Dialog open={showNotFoundModal} onClose={handleCloseModal}>
+        <DialogTitle>Person Not Found</DialogTitle>
+        <DialogContent>
+          <MDTypography variant="body2">
+            The person you are looking for does not exist.
+          </MDTypography>
+        </DialogContent>
+        <DialogActions>
+          <MDButton onClick={handleCloseModal} color="info">
+            OK
+          </MDButton>
+        </DialogActions>
+      </Dialog>
     </DashboardLayout>
   );
 }

@@ -6,6 +6,7 @@ import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import MDButton from "components/MDButton";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
@@ -13,10 +14,12 @@ import DataTable from "examples/Tables/DataTable";
 import peopleTableData from "layouts/tables/data/peopleTableData";
 import projectsTableData from "layouts/tables/data/projectsTableData";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function Tables() {
   const { columns, rows } = peopleTableData();
   const { columns: pColumns, rows: pRows } = projectsTableData();
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [inputValue, setInputValue] = useState("1");
   const rowsPerPage = 5;
@@ -25,11 +28,9 @@ function Tables() {
     (page - 1) * rowsPerPage,
     page * rowsPerPage
   );
-
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
   };
-
   const handleInputBlur = () => {
     const value = parseInt(inputValue);
     if (value >= 1 && value <= totalPages) {
@@ -41,13 +42,11 @@ function Tables() {
       setInputValue(page.toString());
     }
   };
-
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
       handleInputBlur();
     }
   };
-
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -64,10 +63,22 @@ function Tables() {
                 bgColor="info"
                 borderRadius="lg"
                 coloredShadow="info"
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
               >
                 <MDTypography variant="h6" color="white">
                   Brothers & Sisters
                 </MDTypography>
+                <MDButton
+                  variant="contained"
+                  color="white"
+                  onClick={() =>
+                    navigate("/person/add", { state: { add: true } })
+                  }
+                >
+                  Add
+                </MDButton>
               </MDBox>
               <MDBox
                 pt={3}

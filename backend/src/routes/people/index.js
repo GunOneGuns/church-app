@@ -6,11 +6,21 @@ const router = express.Router();
 
 router.get("/", async (req, res) => {
   try {
-    const people = await peopleModel.find({}); // Fetch all people
+    const people = await peopleModel.find({});
     res.status(200).json(people);
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error: "Failed to fetch people" });
+  }
+});
+
+router.post("/", async (req, res) => {
+  try {
+    const person = new peopleModel(req.body);
+    await person.save();
+    res.json(person);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

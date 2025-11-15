@@ -14,6 +14,15 @@ export const fetchPeople = async () => {
   }
 };
 
+export const createPerson = async (personData) => {
+  const response = await fetch(`${baseURL}/people`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(personData),
+  });
+  return response.json();
+};
+
 export const updatePerson = async (id, personData) => {
   try {
     const response = await axios.put(`${baseURL}/people/${id}`, personData);

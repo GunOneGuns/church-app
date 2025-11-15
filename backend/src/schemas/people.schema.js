@@ -20,7 +20,7 @@ const peopleSchema = new mongoose.Schema(
     // created_at: { type: Date },
     // updated_at: { type: Date },
   },
-  { strict: false }
+  { strict: false, versionKey: false }
 );
 // peopleSchema.set("toJSON", { virtuals: true });
 
