@@ -32,3 +32,10 @@ export const updatePerson = async (id, personData) => {
     throw error;
   }
 };
+
+export const deletePerson = async (id) => {
+  const response = await fetch(`${baseURL}/people/${id}`, {
+    method: "DELETE",
+  });
+  return response.json();
+};

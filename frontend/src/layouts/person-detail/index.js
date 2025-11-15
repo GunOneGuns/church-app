@@ -15,6 +15,7 @@ import {
   updatePerson,
   fetchPeople,
   createPerson,
+  deletePerson,
 } from "services/convo-broker.js";
 
 function PersonDetail() {
@@ -27,6 +28,7 @@ function PersonDetail() {
   const [editedPerson, setEditedPerson] = useState(isAddMode ? {} : null);
   const [customFields, setCustomFields] = useState([]);
   const [showNotFoundModal, setShowNotFoundModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     if (!isAddMode) {
@@ -117,6 +119,18 @@ function PersonDetail() {
     navigate("/tables");
   };
 
+  const handleDelete = async () => {
+    try {
+      await deletePerson(id);
+      localStorage.removeItem("people");
+      await fetchPeople();
+      navigate("/tables");
+    } catch (error) {
+      console.error("Failed to delete:", error);
+    }
+    setShowDeleteModal(false);
+  };
+
   if (!isAddMode && !person && !showNotFoundModal) return <div>Loading...</div>;
 
   const knownFields = [
@@ -172,13 +186,22 @@ function PersonDetail() {
                     </MDButton>
                   </>
                 ) : (
-                  <MDButton
-                    variant="gradient"
-                    color="info"
-                    onClick={handleEdit}
-                  >
-                    Edit
-                  </MDButton>
+                  <>
+                    <MDButton
+                      variant="gradient"
+                      color="info"
+                      onClick={handleEdit}
+                    >
+                      Edit
+                    </MDButton>
+                    <MDButton
+                      variant="gradient"
+                      color="error"
+                      onClick={() => setShowDeleteModal(true)}
+                    >
+                      Delete
+                    </MDButton>
+                  </>
                 )}
               </MDBox>
             </MDBox>
@@ -287,7 +310,6 @@ function PersonDetail() {
           </MDBox>
         </Card>
       </MDBox>
-
       <Dialog open={showNotFoundModal} onClose={handleCloseModal}>
         <DialogTitle>Person Not Found</DialogTitle>
         <DialogContent>
@@ -298,6 +320,21 @@ function PersonDetail() {
         <DialogActions>
           <MDButton onClick={handleCloseModal} color="info">
             OK
+          </MDButton>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
+        <DialogTitle>Delete Person</DialogTitle>
+        <DialogContent>
+          <MDTypography variant="body2">Delete this person?</MDTypography>
+        </DialogContent>
+        <DialogActions>
+          <MDButton onClick={() => setShowDeleteModal(false)} color="secondary">
+            Cancel
+          </MDButton>
+          <MDButton onClick={handleDelete} color="error">
+            Delete
           </MDButton>
         </DialogActions>
       </Dialog>
