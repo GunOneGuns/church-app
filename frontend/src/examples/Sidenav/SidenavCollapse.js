@@ -36,27 +36,40 @@ import {
 // Material Dashboard 2 React context
 import { useMaterialUIController } from "context";
 
-function SidenavCollapse({ icon, name, active, ...rest }) {
+function SidenavCollapse({ icon, name, active, disabled, ...rest }) {
   const [controller] = useMaterialUIController();
-  const { miniSidenav, transparentSidenav, whiteSidenav, darkMode, sidenavColor } = controller;
-
+  const {
+    miniSidenav,
+    transparentSidenav,
+    whiteSidenav,
+    darkMode,
+    sidenavColor,
+  } = controller;
   return (
     <ListItem component="li">
       <MDBox
         {...rest}
-        sx={(theme) =>
-          collapseItem(theme, {
+        sx={(theme) => ({
+          ...collapseItem(theme, {
             active,
             transparentSidenav,
             whiteSidenav,
             darkMode,
             sidenavColor,
-          })
-        }
+          }),
+          opacity: disabled ? 0.5 : 1,
+          pointerEvents: disabled ? "none" : "auto",
+          cursor: disabled ? "not-allowed" : "pointer",
+        })}
       >
         <ListItemIcon
           sx={(theme) =>
-            collapseIconBox(theme, { transparentSidenav, whiteSidenav, darkMode, active })
+            collapseIconBox(theme, {
+              transparentSidenav,
+              whiteSidenav,
+              darkMode,
+              active,
+            })
           }
         >
           {typeof icon === "string" ? (
@@ -65,7 +78,6 @@ function SidenavCollapse({ icon, name, active, ...rest }) {
             icon
           )}
         </ListItemIcon>
-
         <ListItemText
           primary={name}
           sx={(theme) =>
@@ -82,16 +94,16 @@ function SidenavCollapse({ icon, name, active, ...rest }) {
   );
 }
 
-// Setting default values for the props of SidenavCollapse
 SidenavCollapse.defaultProps = {
   active: false,
+  disabled: false,
 };
 
-// Typechecking props for the SidenavCollapse
 SidenavCollapse.propTypes = {
   icon: PropTypes.node.isRequired,
   name: PropTypes.string.isRequired,
   active: PropTypes.bool,
+  disabled: PropTypes.bool,
 };
 
 export default SidenavCollapse;
