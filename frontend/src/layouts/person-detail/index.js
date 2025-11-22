@@ -21,6 +21,15 @@ import {
   deletePerson,
 } from "services/convo-broker.js";
 
+// Cloudinary
+import cld from "services/cloudinary/cloudinary";
+import { AdvancedImage } from "@cloudinary/react";
+import { fill } from "@cloudinary/url-gen/actions/resize";
+// Instantiate a CloudinaryImage object for the image with the public ID, 'docs/models'.
+const myImage = cld.image("images_mbi0cg");
+
+// Resize to 250 x 250 pixels using the 'fill' crop mode.
+myImage.resize(fill().width(250).height(250));
 const SG_DISTRICTS = [
   "Ang Mo Kio",
   "Bedok",
@@ -49,7 +58,6 @@ const SG_DISTRICTS = [
   "Woodlands",
   "Yishun",
 ];
-
 // suggestions for custom field names
 const FIELD_NAME_SUGGESTIONS = [
   "Baptism Date",
@@ -59,7 +67,6 @@ const FIELD_NAME_SUGGESTIONS = [
   "Emergency Contact",
   "Relationship",
 ];
-
 // suggestions for relationship type
 const RELATION_SUGGESTIONS = [
   "Father",
@@ -76,11 +83,9 @@ const RELATION_SUGGESTIONS = [
   "Aunt",
   "Cousin",
 ];
-
 const Highlight = styled("span")({
   fontWeight: 600,
 });
-
 function splitMatch(label, query) {
   if (!query) return [label, null, ""];
   const lowerLabel = label.toLowerCase();
@@ -94,20 +99,24 @@ function splitMatch(label, query) {
   ];
 }
 
+// Define a constant for the default profile picture URL
+const DEFAULT_PROFILE_PIC_URL = "team-2.jpg";
+
 function PersonDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const isAddMode = id === "add";
-
   const [person, setPerson] = useState(null);
   const [isEditing, setIsEditing] = useState(location.state?.edit || isAddMode);
-  const [editedPerson, setEditedPerson] = useState(isAddMode ? {} : null);
+  // Initialize editedPerson with a profilePic field
+  const [editedPerson, setEditedPerson] = useState(
+    isAddMode ? { profilePic: "" } : null // Added profilePic initialization
+  );
   const [customFields, setCustomFields] = useState([]);
   const [showNotFoundModal, setShowNotFoundModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [peopleList, setPeopleList] = useState([]); // for Person suggestions
-
   // load this person's data
   useEffect(() => {
     if (!isAddMode) {
@@ -124,7 +133,6 @@ function PersonDetail() {
       }
     }
   }, [id, isAddMode]);
-
   // always load full people list (for Person suggestions)
   useEffect(() => {
     const stored = localStorage.getItem("people");
@@ -133,25 +141,19 @@ function PersonDetail() {
       setPeopleList(people);
     }
   }, []);
-
   const personNameOptions = peopleList
     .map((p) => p.Name)
     .filter((name) => !!name);
-
   const handleEdit = () => {
     setIsEditing(true);
   };
-
   const handleSave = async () => {
     try {
       const dataToSave = { ...editedPerson };
-
       // apply custom fields
       customFields.forEach((field) => {
         if (!field.key) return;
-
         const keyLower = field.key.toLowerCase();
-
         if (keyLower === "relationship") {
           // nested structure: Relationship > person, relation
           dataToSave[field.key] = {
@@ -162,7 +164,6 @@ function PersonDetail() {
           dataToSave[field.key] = field.value;
         }
       });
-
       if (isAddMode) {
         await createPerson(dataToSave);
         localStorage.removeItem("people");
@@ -186,7 +187,6 @@ function PersonDetail() {
       console.error("Failed to save:", error);
     }
   };
-
   const handleDiscard = () => {
     if (isAddMode) {
       navigate("/tables");
@@ -196,37 +196,30 @@ function PersonDetail() {
       setCustomFields([]);
     }
   };
-
   const handleChange = (field, value) => {
     setEditedPerson({ ...editedPerson, [field]: value });
   };
-
   const addCustomField = () => {
     // include second value slot for relationship
     setCustomFields([...customFields, { key: "", value: "", value2: "" }]);
   };
-
   const updateCustomField = (index, field, value) => {
     const updated = [...customFields];
     updated[index][field] = value;
     setCustomFields(updated);
   };
-
   const removeCustomField = (index) => {
     setCustomFields(customFields.filter((_, i) => i !== index));
   };
-
   const removeExistingField = (key) => {
     const updated = { ...editedPerson };
     delete updated[key];
     setEditedPerson(updated);
   };
-
   const handleCloseModal = () => {
     setShowNotFoundModal(false);
     navigate("/tables");
   };
-
   const handleDelete = async () => {
     try {
       await deletePerson(id);
@@ -238,9 +231,7 @@ function PersonDetail() {
     }
     setShowDeleteModal(false);
   };
-
   if (!isAddMode && !person && !showNotFoundModal) return <div>Loading...</div>;
-
   const knownFields = [
     "_id",
     "id",
@@ -249,12 +240,11 @@ function PersonDetail() {
     "District",
     "Address",
     "Contact",
+    "profilePic", // Added profilePic to known fields
   ];
-
   const extraFields = person
     ? Object.keys(person).filter((key) => !knownFields.includes(key))
     : [];
-
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -314,9 +304,53 @@ function PersonDetail() {
                 )}
               </MDBox>
             </MDBox>
+            <AdvancedImage cldImg={myImage} />
+
+            {/* Profile Picture Display - View Mode (always shows an image) */}
+            {!isEditing && !isAddMode && (
+              <MDBox display="flex" justifyContent="center" mb={3}>
+                <MDBox
+                  component="img"
+                  src={person?.profilePic || myImage} // Use default if no profilePic
+                  alt={`${person?.Name || "User"}'s profile`}
+                  width="120px"
+                  height="120px"
+                  borderRadius="50%"
+                  sx={{ objectFit: "cover" }}
+                />
+              </MDBox>
+            )}
 
             {isEditing || isAddMode ? (
               <MDBox display="flex" flexDirection="column" gap={2}>
+                {/* Profile Picture Input & Preview - Edit/Add Mode (always shows an image preview) */}
+                <MDBox
+                  display="flex"
+                  alignItems="center"
+                  mb={1}
+                  mt={1}
+                  justifyContent="center"
+                  flexDirection="column"
+                >
+                  <MDBox
+                    component="img"
+                    src={editedPerson?.profilePic || DEFAULT_PROFILE_PIC_URL} // Use default if no profilePic
+                    alt="Profile preview"
+                    width="120px"
+                    height="120px"
+                    borderRadius="50%"
+                    sx={{ objectFit: "cover", mt: 1 }}
+                  />
+                </MDBox>
+                <TextField
+                  variant="outlined"
+                  label="Profile Picture URL"
+                  value={editedPerson?.profilePic || ""}
+                  onChange={(e) => handleChange("profilePic", e.target.value)}
+                  fullWidth
+                  sx={{ mb: 2 }}
+                />
+
                 <TextField
                   variant="outlined"
                   label="Name"
@@ -377,7 +411,6 @@ function PersonDetail() {
                   onChange={(e) => handleChange("Contact", e.target.value)}
                   fullWidth
                 />
-
                 {extraFields.map((key) => (
                   <MDBox key={key} display="flex" gap={2}>
                     <TextField
@@ -400,11 +433,9 @@ function PersonDetail() {
                     </MDButton>
                   </MDBox>
                 ))}
-
                 {customFields.map((field, index) => {
                   const isRelationship =
                     (field.key || "").toLowerCase() === "relationship";
-
                   return (
                     <MDBox key={index} display="flex" gap={2}>
                       {/* FIELD NAME */}
@@ -453,7 +484,6 @@ function PersonDetail() {
                           );
                         }}
                       />
-
                       {/* PERSON / VALUE */}
                       {isRelationship ? (
                         <Autocomplete
@@ -515,7 +545,6 @@ function PersonDetail() {
                           }}
                         />
                       )}
-
                       {/* RELATION (only for Relationship) */}
                       {isRelationship && (
                         <Autocomplete
@@ -564,7 +593,6 @@ function PersonDetail() {
                           }}
                         />
                       )}
-
                       <MDButton
                         variant="outlined"
                         color="error"
@@ -575,7 +603,6 @@ function PersonDetail() {
                     </MDBox>
                   );
                 })}
-
                 <MDButton
                   variant="outlined"
                   color="info"
@@ -608,7 +635,6 @@ function PersonDetail() {
           </MDBox>
         </Card>
       </MDBox>
-
       <Dialog open={showNotFoundModal} onClose={handleCloseModal}>
         <DialogTitle>Person Not Found</DialogTitle>
         <DialogContent>
@@ -622,7 +648,6 @@ function PersonDetail() {
           </MDButton>
         </DialogActions>
       </Dialog>
-
       <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
         <DialogTitle>Delete Person</DialogTitle>
         <DialogContent>
@@ -640,5 +665,4 @@ function PersonDetail() {
     </DashboardLayout>
   );
 }
-
 export default PersonDetail;
