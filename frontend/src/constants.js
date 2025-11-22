@@ -1,0 +1,57 @@
+// Global constants for the frontend application
+
+export const SG_DISTRICTS = [
+  "Ang Mo Kio",
+  "Bedok",
+  "Bishan",
+  "Bukit Batok",
+  "Bukit Merah",
+  "Bukit Panjang",
+  "Bukit Timah",
+  "Central Area",
+  "Choa Chu Kang",
+  "Clementi",
+  "Geylang",
+  "Hougang",
+  "Jurong East",
+  "Jurong West",
+  "Kallang",
+  "Marine Parade",
+  "Pasir Ris",
+  "Punggol",
+  "Queenstown",
+  "Sembawang",
+  "Sengkang",
+  "Serangoon",
+  "Tampines",
+  "Toa Payoh",
+  "Woodlands",
+  "Yishun",
+];
+
+export const FIELD_NAME_SUGGESTIONS = [
+  "Baptism Date",
+  "Cell Group",
+  "Role",
+  "Notes",
+  "Emergency Contact",
+];
+
+export const RELATION_SUGGESTIONS = [
+  "Father",
+  "Mother",
+  "Son",
+  "Daughter",
+  "Brother",
+  "Sister",
+  "Husband",
+  "Wife",
+  "Grandfather",
+  "Grandmother",
+  "Uncle",
+  "Aunt",
+  "Cousin",
+  "Friend",
+  "Colleague",
+  "Spouse",
+];
