@@ -58,6 +58,38 @@ function PersonEditForm({
       (suggestion) => suggestion.toLowerCase() === trimmed.toLowerCase()
     );
   };
+  const getRelationCategory = (relation = "") => {
+    const normalized = normalizeRelation(relation);
+    const categoryMap = {
+      son: "child", daughter: "child", child: "child",
+      father: "parent", mother: "parent", parent: "parent",
+      husband: "spouse", wife: "spouse", spouse: "spouse",
+      brother: "sibling", sister: "sibling", sibling: "sibling"
+    };
+    return categoryMap[normalized] || null;
+  };
+
+  const getExistingReciprocalForRelation = (theirRelation = "", currentIndex = -1) => {
+    const category = getRelationCategory(theirRelation);
+    if (!category) return "";
+    const existing = relationshipCustomFieldsForRender.find(
+      (f, idx) => idx !== currentIndex && getRelationCategory(f.value2) === category && f.value3
+    );
+    return existing?.value3 || "";
+  };
+
+  const syncReciprocalAcrossCategory = (changedIndex, newReciprocal) => {
+    const changedField = relationshipCustomFieldsForRender[changedIndex];
+    if (!changedField) return;
+    const category = getRelationCategory(changedField.value2);
+    if (!category) return;
+
+    relationshipCustomFieldsForRender.forEach((field, idx) => {
+      if (idx !== changedIndex && getRelationCategory(field.value2) === category) {
+        updateCustomField(field.originalIndex, "value3", newReciprocal);
+      }
+    });
+  };
 
   const DRAG_CONTAINER_SIZE = 180;
   const PREVIEW_BOX_SIZE = 260;
@@ -618,12 +650,17 @@ function PersonEditForm({
                 ? getReciprocalOptions(relationInput)
                 : [];
               const showReciprocalField = relationIsValid;
+              const personErrorMessage = fieldError.person || "";
               const relationErrorMessage =
                 fieldError.relationType ||
                 (relationHasValue && !relationIsValid
                   ? "Please select a relation from the list."
                   : "");
               const reciprocalErrorMessage = fieldError.reciprocal || "";
+              const alreadyAddedIds = relationshipCustomFieldsForRender
+                .filter((f, idx) => idx !== index && f.personId)
+                .map(f => f.personId);
+              const availablePeople = peopleList.filter(p => !alreadyAddedIds.includes(p._id));
               return (
                 <MDBox
                   key={`rcf-${fieldIndex}`}
@@ -631,67 +668,95 @@ function PersonEditForm({
                   gap={2}
                   alignItems="center"
                 >
-                  <Autocomplete
-                    freeSolo
-                    options={peopleList}
-                    getOptionLabel={(option) =>
-                      option?.Name || option?.value || ""
-                    }
-                    value={selectedPerson}
-                    inputValue={field.value || ""}
-                    isOptionEqualToValue={(option, value) =>
-                      option?._id && value?._id
-                        ? option._id === value._id
-                        : option?.Name === value?.Name
-                    }
-                    onChange={(event, newValue) => {
-                      if (typeof newValue === "string") {
-                        updateCustomField(fieldIndex, "value", newValue);
-                        updateCustomField(fieldIndex, "personId", "");
-                      } else if (newValue && typeof newValue === "object") {
-                        updateCustomField(
-                          fieldIndex,
-                          "value",
-                          newValue.Name || ""
-                        );
-                        updateCustomField(
-                          fieldIndex,
-                          "personId",
-                          newValue._id || ""
-                        );
-                      } else {
-                        updateCustomField(fieldIndex, "value", "");
-                        updateCustomField(fieldIndex, "personId", "");
-                      }
-                    }}
-                    onInputChange={(event, newInputValue, reason) => {
-                      if (reason === "input") {
-                        updateCustomField(fieldIndex, "value", newInputValue);
-                        updateCustomField(fieldIndex, "personId", "");
-                      }
-                    }}
-                    renderOption={(props, option, { index }) => (
-                      <li
-                        {...props}
-                        key={`${
-                          option?._id || option?.Name || "option"
-                        }-${index}`}
-                      >
-                        {option?.Name || ""}
-                      </li>
+                  <MDBox
+                    display="flex"
+                    flexDirection="column"
+                    flex={1.5}
+                    gap={0.5}
+                  >
+                    {personErrorMessage && (
+                      <MDTypography variant="caption" color="error">
+                        {personErrorMessage}
+                      </MDTypography>
                     )}
-                    sx={{ flex: 1.5 }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        variant="outlined"
-                        label="Person's Name"
-                        sx={{
-                          "& .MuiOutlinedInput-root": { height: "56px" },
-                        }}
-                      />
-                    )}
-                  />
+                    <Autocomplete
+                      freeSolo
+                      options={availablePeople}
+                      getOptionLabel={(option) =>
+                        option?.Name || option?.value || ""
+                      }
+                      value={selectedPerson}
+                      inputValue={field.value || ""}
+                      isOptionEqualToValue={(option, value) =>
+                        option?._id && value?._id
+                          ? option._id === value._id
+                          : option?.Name === value?.Name
+                      }
+                      filterOptions={(options, { inputValue }) => {
+                        if (!inputValue) return options;
+                        const input = inputValue.toLowerCase();
+                        return options.filter(option => {
+                          const name = (option?.Name || "").toLowerCase();
+                          if (name.includes(input)) return true;
+                          // Fuzzy match: check if all input chars appear in order
+                          let nameIdx = 0;
+                          for (let i = 0; i < input.length; i++) {
+                            nameIdx = name.indexOf(input[i], nameIdx);
+                            if (nameIdx === -1) return false;
+                            nameIdx++;
+                          }
+                          return true;
+                        });
+                      }}
+                      onChange={(_, newValue) => {
+                        if (typeof newValue === "string") {
+                          updateCustomField(fieldIndex, "value", newValue);
+                          updateCustomField(fieldIndex, "personId", "");
+                        } else if (newValue && typeof newValue === "object") {
+                          updateCustomField(
+                            fieldIndex,
+                            "value",
+                            newValue.Name || ""
+                          );
+                          updateCustomField(
+                            fieldIndex,
+                            "personId",
+                            newValue._id || ""
+                          );
+                        } else {
+                          updateCustomField(fieldIndex, "value", "");
+                          updateCustomField(fieldIndex, "personId", "");
+                        }
+                      }}
+                      onInputChange={(_, newInputValue, reason) => {
+                        if (reason === "input") {
+                          updateCustomField(fieldIndex, "value", newInputValue);
+                          updateCustomField(fieldIndex, "personId", "");
+                        }
+                      }}
+                      renderOption={(props, option, { index }) => (
+                        <li
+                          {...props}
+                          key={`${
+                            option?._id || option?.Name || "option"
+                          }-${index}`}
+                        >
+                          {option?.Name || ""}
+                        </li>
+                      )}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          variant="outlined"
+                          label="Person's Name"
+                          error={Boolean(personErrorMessage)}
+                          sx={{
+                            "& .MuiOutlinedInput-root": { height: "56px" },
+                          }}
+                        />
+                      )}
+                    />
+                  </MDBox>
                   <MDBox
                     display="flex"
                     flexDirection="column"
@@ -707,12 +772,27 @@ function PersonEditForm({
                       freeSolo
                       options={RELATION_SUGGESTIONS}
                       value={field.value2 || ""}
+                      filterOptions={(options, { inputValue }) => {
+                        if (!inputValue) return options;
+                        const input = inputValue.toLowerCase();
+                        return options.filter(option => {
+                          const rel = option.toLowerCase();
+                          if (rel.includes(input)) return true;
+                          let relIdx = 0;
+                          for (let i = 0; i < input.length; i++) {
+                            relIdx = rel.indexOf(input[i], relIdx);
+                            if (relIdx === -1) return false;
+                            relIdx++;
+                          }
+                          return true;
+                        });
+                      }}
                       onChange={(event, newValue) => {
                         const updatedValue = newValue || "";
                         updateCustomField(fieldIndex, "value2", updatedValue);
                         if (isValidRelationSuggestion(updatedValue)) {
-                          const autoValue =
-                            getAutoReciprocalValue(updatedValue);
+                          const autoValue = getAutoReciprocalValue(updatedValue) ||
+                            getExistingReciprocalForRelation(updatedValue, index);
                           updateCustomField(
                             fieldIndex,
                             "value3",
@@ -725,8 +805,8 @@ function PersonEditForm({
                       onInputChange={(event, newInputValue) => {
                         updateCustomField(fieldIndex, "value2", newInputValue);
                         if (isValidRelationSuggestion(newInputValue)) {
-                          const autoValue =
-                            getAutoReciprocalValue(newInputValue);
+                          const autoValue = getAutoReciprocalValue(newInputValue) ||
+                            getExistingReciprocalForRelation(newInputValue, index);
                           updateCustomField(
                             fieldIndex,
                             "value3",
@@ -777,20 +857,30 @@ function PersonEditForm({
                           freeSolo
                           options={reciprocalOptions}
                           value={field.value3 || ""}
-                          onChange={(event, newValue) =>
-                            updateCustomField(
-                              fieldIndex,
-                              "value3",
-                              newValue || ""
-                            )
-                          }
-                          onInputChange={(event, newInputValue) =>
-                            updateCustomField(
-                              fieldIndex,
-                              "value3",
-                              newInputValue
-                            )
-                          }
+                          filterOptions={(options, { inputValue }) => {
+                            if (!inputValue) return options;
+                            const input = inputValue.toLowerCase();
+                            return options.filter(option => {
+                              const rel = option.toLowerCase();
+                              if (rel.includes(input)) return true;
+                              let relIdx = 0;
+                              for (let i = 0; i < input.length; i++) {
+                                relIdx = rel.indexOf(input[i], relIdx);
+                                if (relIdx === -1) return false;
+                                relIdx++;
+                              }
+                              return true;
+                            });
+                          }}
+                          onChange={(event, newValue) => {
+                            const newReciprocal = newValue || "";
+                            updateCustomField(fieldIndex, "value3", newReciprocal);
+                            syncReciprocalAcrossCategory(index, newReciprocal);
+                          }}
+                          onInputChange={(event, newInputValue) => {
+                            updateCustomField(fieldIndex, "value3", newInputValue);
+                            syncReciprocalAcrossCategory(index, newInputValue);
+                          }}
                           renderInput={(params) => (
                             <TextField
                               {...params}
@@ -847,7 +937,7 @@ function PersonEditForm({
           <MDBox
             width={`${PREVIEW_BOX_SIZE}px`}
             height={`${PREVIEW_BOX_SIZE}px`}
-            borderRadius={2}
+            borderRadius="16px"
             overflow="hidden"
             position="relative"
             border="1px solid rgba(255,255,255,0.2)"

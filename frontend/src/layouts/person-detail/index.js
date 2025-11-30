@@ -75,15 +75,16 @@ const propagateImmediateFamilyRelationships = async ({
   const siblingEntries = [];
 
   const addChildEntry = (person, gender = "") => {
-    if (!person || !person._id) return;
+    if (!person || !person._id) return false;
     const existing = childEntryMap.get(person._id);
     if (existing) {
       if (!existing.gender && gender) {
         existing.gender = gender;
       }
-      return;
+      return false;
     }
     childEntryMap.set(person._id, { person, gender });
+    return true;
   };
 
   const collectChildrenFromFields = (fields) => {
@@ -98,6 +99,36 @@ const propagateImmediateFamilyRelationships = async ({
         getGenderFromRelationType(field.value2 || "")
       );
     });
+  };
+
+  const expandChildrenViaSiblingRelationships = () => {
+    const visited = new Set();
+    const queue = Array.from(childEntryMap.values());
+    while (queue.length > 0) {
+      const entry = queue.shift();
+      const childId = entry?.person?._id;
+      if (!childId || visited.has(childId)) {
+        continue;
+      }
+      visited.add(childId);
+      const childFields = getFieldsForPerson(entry.person);
+      if (!childFields) continue;
+      childFields.forEach((field) => {
+        if (!("value2" in field)) return;
+        if (getRelationCategory(field.value2) !== "sibling") return;
+        const siblingPerson = resolvePersonFromField(field);
+        if (!siblingPerson || siblingPerson._id === childId) {
+          return;
+        }
+        const siblingGender = getGenderFromRelationType(field.value2 || "");
+        if (addChildEntry(siblingPerson, siblingGender)) {
+          const siblingEntry = childEntryMap.get(siblingPerson._id);
+          if (siblingEntry) {
+            queue.push(siblingEntry);
+          }
+        }
+      });
+    }
   };
 
   relationDetails.forEach(
@@ -118,16 +149,36 @@ const propagateImmediateFamilyRelationships = async ({
     }
   );
 
-  collectChildrenFromFields(getFieldsForPerson(currentPerson));
-  spouseEntries.forEach((spouse) => {
-    collectChildrenFromFields(getFieldsForPerson(spouse.person));
-  });
-
-  const childEntries = Array.from(childEntryMap.values());
+  // Only collect existing spouses and children if we're adding parent relationships
+  // This ensures we link grandparents to existing family members
   const currentPersonFields =
     currentPerson && currentPerson._id
       ? getFieldsForPerson(currentPerson)
       : null;
+
+  if (currentPersonFields && parentEntries.length > 0) {
+    currentPersonFields.forEach((field) => {
+      if (!("value2" in field)) return;
+      const category = getRelationCategory(field.value2);
+      const relatedPerson = resolvePersonFromField(field);
+      if (!relatedPerson) return;
+
+      if (category === "spouse" && !spouseEntries.some(s => s.person._id === relatedPerson._id)) {
+        spouseEntries.push({ person: relatedPerson, gender: getGenderFromRelationType(field.value2 || "") });
+      } else if (category === "child" && !childEntryMap.has(relatedPerson._id)) {
+        addChildEntry(relatedPerson, getGenderFromRelationType(field.value2 || ""));
+      }
+    });
+  }
+
+  collectChildrenFromFields(currentPersonFields);
+  spouseEntries.forEach((spouse) => {
+    collectChildrenFromFields(getFieldsForPerson(spouse.person));
+  });
+
+  expandChildrenViaSiblingRelationships();
+
+  const childEntries = Array.from(childEntryMap.values());
 
   // Create sibling relationships among all child entries (when editing a parent)
   for (let i = 0; i < childEntries.length; i += 1) {
@@ -325,6 +376,111 @@ const propagateImmediateFamilyRelationships = async ({
       }
     }
   }
+
+  // Link spouses with current person's parents (in-laws)
+  if (parentEntries.length > 0 && spouseEntries.length > 0) {
+    spouseEntries.forEach((spouse) => {
+      const spouseFields = getFieldsForPerson(spouse.person);
+      if (!spouseFields) return;
+      const childInLawLabel = getChildInLawLabelForGender(spouse.gender);
+      parentEntries.forEach((parent) => {
+        if (!parent.person?._id) return;
+        const parentFields = getFieldsForPerson(parent.person);
+        if (!parentFields) return;
+        const parentInLawLabel = getParentInLawLabelForGender(parent.gender);
+        if (
+          upsertRelationshipField(
+            spouseFields,
+            parent.person,
+            parentInLawLabel,
+            childInLawLabel
+          )
+        ) {
+          markPersonDirty(spouse.person);
+        }
+        if (
+          upsertRelationshipField(
+            parentFields,
+            spouse.person,
+            childInLawLabel,
+            parentInLawLabel
+          )
+        ) {
+          markPersonDirty(parent.person);
+        }
+      });
+    });
+  }
+
+  // Link spouses with current person's siblings (siblings-in-law)
+  if (siblingEntries.length > 0 && spouseEntries.length > 0) {
+    spouseEntries.forEach((spouse) => {
+      const spouseFields = getFieldsForPerson(spouse.person);
+      if (!spouseFields) return;
+      const spouseSiblingLabel = getSiblingInLawLabelForGender(spouse.gender);
+      siblingEntries.forEach((sibling) => {
+        if (!sibling.person?._id) return;
+        const siblingFields = getFieldsForPerson(sibling.person);
+        if (!siblingFields) return;
+        const siblingLabel = getSiblingInLawLabelForGender(sibling.gender);
+        if (
+          upsertRelationshipField(
+            spouseFields,
+            sibling.person,
+            siblingLabel,
+            spouseSiblingLabel
+          )
+        ) {
+          markPersonDirty(spouse.person);
+        }
+        if (
+          upsertRelationshipField(
+            siblingFields,
+            spouse.person,
+            spouseSiblingLabel,
+            siblingLabel
+          )
+        ) {
+          markPersonDirty(sibling.person);
+        }
+      });
+    });
+  }
+
+  // Link grandparents (parent entries) with all known children (grandchildren)
+  if (parentEntries.length > 0 && childEntries.length > 0) {
+    parentEntries.forEach((grandparent) => {
+      const grandparentFields = getFieldsForPerson(grandparent.person);
+      if (!grandparentFields) return;
+      const grandparentLabel = getGrandparentLabelForGender(grandparent.gender);
+      childEntries.forEach((child) => {
+        if (!child.person?._id) return;
+        const childFields = getFieldsForPerson(child.person);
+        if (!childFields) return;
+        const grandchildLabel = getGrandchildLabelForGender(child.gender);
+        if (
+          upsertRelationshipField(
+            grandparentFields,
+            child.person,
+            grandchildLabel,
+            grandparentLabel
+          )
+        ) {
+          markPersonDirty(grandparent.person);
+        }
+        if (
+          upsertRelationshipField(
+            childFields,
+            grandparent.person,
+            grandparentLabel,
+            grandchildLabel
+          )
+        ) {
+          markPersonDirty(child.person);
+        }
+      });
+    });
+  }
 };
 
 const RELATION_CATEGORY_MAP = {
@@ -340,6 +496,12 @@ const RELATION_CATEGORY_MAP = {
   brother: "sibling",
   sister: "sibling",
   sibling: "sibling",
+  grandson: "grandchild",
+  granddaughter: "grandchild",
+  grandchild: "grandchild",
+  grandfather: "grandparent",
+  grandmother: "grandparent",
+  grandparent: "grandparent",
 };
 
 const RELATION_GENDER_MAP = {
@@ -348,11 +510,19 @@ const RELATION_GENDER_MAP = {
   father: "male",
   husband: "male",
   grandson: "male",
+  grandfather: "male",
+  "father-in-law": "male",
+  "son-in-law": "male",
+  "brother-in-law": "male",
   daughter: "female",
   sister: "female",
   mother: "female",
   wife: "female",
   granddaughter: "female",
+  grandmother: "female",
+  "mother-in-law": "female",
+  "daughter-in-law": "female",
+  "sister-in-law": "female",
 };
 
 const getRelationCategory = (relation = "") =>
@@ -377,6 +547,36 @@ const getSiblingLabelForGender = (gender = "") => {
   if (gender === "male") return "Brother";
   if (gender === "female") return "Sister";
   return "Sibling";
+};
+
+const getGrandparentLabelForGender = (gender = "") => {
+  if (gender === "male") return "Grandfather";
+  if (gender === "female") return "Grandmother";
+  return "Grandparent";
+};
+
+const getGrandchildLabelForGender = (gender = "") => {
+  if (gender === "male") return "Grandson";
+  if (gender === "female") return "Granddaughter";
+  return "Grandchild";
+};
+
+const getParentInLawLabelForGender = (gender = "") => {
+  if (gender === "male") return "Father-in-law";
+  if (gender === "female") return "Mother-in-law";
+  return "Parent-in-law";
+};
+
+const getChildInLawLabelForGender = (gender = "") => {
+  if (gender === "male") return "Son-in-law";
+  if (gender === "female") return "Daughter-in-law";
+  return "Child-in-law";
+};
+
+const getSiblingInLawLabelForGender = (gender = "") => {
+  if (gender === "male") return "Brother-in-law";
+  if (gender === "female") return "Sister-in-law";
+  return "Sibling-in-law";
 };
 
 function PersonDetail() {
@@ -718,15 +918,17 @@ function PersonDetail() {
         }
       }
 
-      await propagateImmediateFamilyRelationships({
-        relationDetails,
-        currentPerson: currentPersonRef,
-        currentPersonGender: currentPersonGenderGuess,
-        getFieldsForPerson,
-        resolvePersonFromField: (field) => findPersonForField(people, field),
-        upsertRelationshipField,
-        markPersonDirty,
-      });
+      if (relationDetails.length > 0) {
+        await propagateImmediateFamilyRelationships({
+          relationDetails,
+          currentPerson: currentPersonRef,
+          currentPersonGender: currentPersonGenderGuess,
+          getFieldsForPerson,
+          resolvePersonFromField: (field) => findPersonForField(people, field),
+          upsertRelationshipField,
+          markPersonDirty,
+        });
+      }
 
       if (dirtyPersonIds.size > 0) {
         await Promise.all(
@@ -835,14 +1037,18 @@ function PersonDetail() {
     [selectedFile, id]
   );
 
-  const handleSave = useCallback(async () => {
-    try {
-      const errors = {};
-      let isValid = true;
-      customFields.forEach((field, index) => {
+  const handleSave = useCallback(
+    async (fieldsOverride = null) => {
+      const fieldsToUse = fieldsOverride || customFields;
+      try {
+        const errors = {};
+        let isValid = true;
+
+        fieldsToUse.forEach((field, index) => {
         if (!("value2" in field)) {
           return;
         }
+
         const relationValue = field.value2 || "";
         const normalizedRelation = normalizeTextValue(relationValue);
         const relationValid = RELATION_SUGGESTIONS.some(
@@ -864,29 +1070,29 @@ function PersonDetail() {
             reciprocal: "Please fill in this relation.",
           };
         }
-      });
-      setRelationshipFieldErrors(errors);
-      if (!isValid) {
-        return;
-      }
+        });
+        setRelationshipFieldErrors(errors);
+        if (!isValid) {
+          return;
+        }
       let pendingProfilePicFile = null;
       if (profilePicProcessorRef.current) {
         pendingProfilePicFile = await profilePicProcessorRef.current();
       }
-      const dataToSave = buildPersonPayloadWithCustomFields(
-        editedPerson,
-        customFields
-      );
-      const currentRelationshipFields = customFields.filter((field) =>
-        Object.prototype.hasOwnProperty.call(field, "value2")
-      );
+        const dataToSave = buildPersonPayloadWithCustomFields(
+          editedPerson,
+          fieldsToUse
+        );
+        const currentRelationshipFields = fieldsToUse.filter((field) =>
+          Object.prototype.hasOwnProperty.call(field, "value2")
+        );
       const previousRelationshipFields = isAddMode
         ? []
         : initializeCustomFields(person || {}).filter((field) =>
             Object.prototype.hasOwnProperty.call(field, "value2")
           );
-      if (isAddMode) {
-        const createdPerson = await createPerson(dataToSave);
+        if (isAddMode) {
+          const createdPerson = await createPerson(dataToSave);
         const createdPersonId = createdPerson?._id || createdPerson?.id;
         await syncReciprocalRelationships({
           currentPersonId: createdPersonId,
@@ -904,17 +1110,17 @@ function PersonDetail() {
           setPeopleList(JSON.parse(storedPeople));
         }
         navigate("/people");
-      } else {
-        await updatePerson(id, dataToSave);
+        } else {
+          await updatePerson(id, dataToSave);
         if (pendingProfilePicFile) {
           await handleProfilePicUpload(pendingProfilePicFile);
         }
-        await syncReciprocalRelationships({
-          currentPersonId: id,
-          currentPersonName: dataToSave.Name || person?.Name || "",
-          currentRelationships: currentRelationshipFields,
-          previousRelationships: previousRelationshipFields,
-        });
+          await syncReciprocalRelationships({
+            currentPersonId: id,
+            currentPersonName: dataToSave.Name || person?.Name || "",
+            currentRelationships: currentRelationshipFields,
+            previousRelationships: previousRelationshipFields,
+          });
         localStorage.removeItem("people");
         await fetchPeople();
         const stored = localStorage.getItem("people");
@@ -926,24 +1132,26 @@ function PersonDetail() {
           setCustomFields(initializeCustomFields(found));
           setPeopleList(people);
         }
-        setIsEditing(false);
+          setIsEditing(false);
+        }
+        setRelationshipFieldErrors({});
+      } catch (error) {
+        console.error("Failed to save:", error);
       }
-      setRelationshipFieldErrors({});
-    } catch (error) {
-      console.error("Failed to save:", error);
-    }
-  }, [
-    editedPerson,
-    customFields,
-    isAddMode,
-    id,
-    person,
-    navigate,
-    initializeCustomFields,
-    buildPersonPayloadWithCustomFields,
-    syncReciprocalRelationships,
-    handleProfilePicUpload,
-  ]); // Dependencies for useCallback
+    },
+    [
+      editedPerson,
+      customFields,
+      isAddMode,
+      id,
+      person,
+      navigate,
+      initializeCustomFields,
+      buildPersonPayloadWithCustomFields,
+      syncReciprocalRelationships,
+      handleProfilePicUpload,
+    ]
+  ); // Dependencies for useCallback
 
   const handleDiscard = useCallback(() => {
     if (isAddMode) {
@@ -980,6 +1188,12 @@ function PersonDetail() {
     setRelationshipFieldErrors({});
   }, []);
 
+  const stripRelationshipFields = useCallback((fields) => {
+    return fields.filter(
+      (field) => !Object.prototype.hasOwnProperty.call(field, "value2")
+    );
+  }, []);
+
   const addRelationshipField = useCallback(() => {
     const newRelationshipKey = `Relationship_${Date.now()}_${
       customFields.length
@@ -1003,6 +1217,20 @@ function PersonDetail() {
     setCustomFields((prev) => prev.filter((_, i) => i !== index));
     setRelationshipFieldErrors({});
   }, []);
+
+  const handleClearAllRelationshipsNow = useCallback(async () => {
+    const relationshipFields = customFields.filter((field) =>
+      Object.prototype.hasOwnProperty.call(field, "value2")
+    );
+    if (relationshipFields.length === 0) {
+      return;
+    }
+
+    const strippedFields = stripRelationshipFields(customFields);
+    setCustomFields(strippedFields);
+    setRelationshipFieldErrors({});
+    await handleSave(strippedFields);
+  }, [customFields, stripRelationshipFields, handleSave]);
 
   // Handlers for profile picture upload (passed to PersonEditForm)
   const handleFileChange = useCallback((event) => {
@@ -1065,7 +1293,7 @@ function PersonDetail() {
                   <MDButton
                     variant="gradient"
                     color="info"
-                    onClick={handleSave}
+                    onClick={() => handleSave()}
                   >
                     {isAddMode ? "Add" : "Save"}
                   </MDButton>
@@ -1110,7 +1338,7 @@ function PersonDetail() {
                   relationshipCustomFieldsForRender
                 }
                 relationshipFieldErrors={relationshipFieldErrors}
-                peopleList={peopleList}
+                peopleList={peopleList.filter(p => p._id !== id)}
                 defaultProfilePic={defaultProfilePic}
                 // Pass all relevant handlers and states
                 handleChange={handleChange}
@@ -1134,6 +1362,7 @@ function PersonDetail() {
                 }
                 peopleList={peopleList}
                 defaultProfilePic={defaultProfilePic}
+                onClearRelationships={handleClearAllRelationshipsNow}
               />
             )}
           </MDBox>

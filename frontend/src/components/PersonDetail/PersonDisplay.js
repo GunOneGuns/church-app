@@ -4,6 +4,7 @@ import Card from "@mui/material/Card";
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import MDButton from "components/MDButton";
 import { useNavigate } from "react-router-dom";
 
 function PersonDisplay({
@@ -12,6 +13,7 @@ function PersonDisplay({
   relationshipCustomFieldsForRender,
   peopleList, // Used for looking up related person's profile pic
   defaultProfilePic,
+  onClearRelationships,
 }) {
   const navigate = useNavigate();
   const handleRelatedPersonClick = (relatedPerson) => {
@@ -127,9 +129,26 @@ function PersonDisplay({
         </Card>
         {/* Panel 2: Related Persons */}
         <Card sx={{ p: 2 }}>
-          <MDTypography variant="h6" mb={2}>
-            Related Persons
-          </MDTypography>
+          <MDBox
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={2}
+            gap={1}
+          >
+            <MDTypography variant="h6">Related Persons</MDTypography>
+            {onClearRelationships && (
+              <MDButton
+                variant="outlined"
+                color="error"
+                size="small"
+                onClick={onClearRelationships}
+                disabled={relationshipCustomFieldsForRender.length === 0}
+              >
+                Clear All (Test)
+              </MDButton>
+            )}
+          </MDBox>
           <MDBox display="flex" flexWrap="wrap" gap={2}>
             {/* Display related persons in view mode */}
             {relationshipCustomFieldsForRender.map((field, index) => {
