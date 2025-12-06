@@ -165,10 +165,22 @@ const propagateImmediateFamilyRelationships = async ({
       const relatedPerson = resolvePersonFromField(field);
       if (!relatedPerson) return;
 
-      if (category === "spouse" && !spouseEntries.some(s => s.person._id === relatedPerson._id)) {
-        spouseEntries.push({ person: relatedPerson, gender: getGenderFromRelationType(field.value2 || "") });
-      } else if (category === "child" && !childEntryMap.has(relatedPerson._id)) {
-        addChildEntry(relatedPerson, getGenderFromRelationType(field.value2 || ""));
+      if (
+        category === "spouse" &&
+        !spouseEntries.some((s) => s.person._id === relatedPerson._id)
+      ) {
+        spouseEntries.push({
+          person: relatedPerson,
+          gender: getGenderFromRelationType(field.value2 || ""),
+        });
+      } else if (
+        category === "child" &&
+        !childEntryMap.has(relatedPerson._id)
+      ) {
+        addChildEntry(
+          relatedPerson,
+          getGenderFromRelationType(field.value2 || "")
+        );
       }
     });
   }
@@ -605,7 +617,7 @@ function PersonDetail() {
   const profilePicProcessorRef = useRef(null);
 
   const breadcrumbRoute = useMemo(() => {
-    const baseRoute = ["person"];
+    const baseRoute = ["people"];
     const trimmedEditedName = editedPerson?.Name?.trim() || "";
     const trimmedPersonName = person?.Name?.trim() || "";
     const displayName = trimmedEditedName || trimmedPersonName || "";
@@ -1047,40 +1059,40 @@ function PersonDetail() {
         let isValid = true;
 
         fieldsToUse.forEach((field, index) => {
-        if (!("value2" in field)) {
-          return;
-        }
+          if (!("value2" in field)) {
+            return;
+          }
 
-        const relationValue = field.value2 || "";
-        const normalizedRelation = normalizeTextValue(relationValue);
-        const relationValid = RELATION_SUGGESTIONS.some(
-          (option) => normalizeTextValue(option) === normalizedRelation
-        );
-        if (!relationValid) {
-          isValid = false;
-          errors[index] = {
-            ...(errors[index] || {}),
-            relationType: "Please select a relation from the list.",
-          };
-        }
-        const requiresReciprocal =
-          relationValid && !getAutoReciprocalForRelation(relationValue);
-        if (requiresReciprocal && !(field.value3 || "").trim()) {
-          isValid = false;
-          errors[index] = {
-            ...(errors[index] || {}),
-            reciprocal: "Please fill in this relation.",
-          };
-        }
+          const relationValue = field.value2 || "";
+          const normalizedRelation = normalizeTextValue(relationValue);
+          const relationValid = RELATION_SUGGESTIONS.some(
+            (option) => normalizeTextValue(option) === normalizedRelation
+          );
+          if (!relationValid) {
+            isValid = false;
+            errors[index] = {
+              ...(errors[index] || {}),
+              relationType: "Please select a relation from the list.",
+            };
+          }
+          const requiresReciprocal =
+            relationValid && !getAutoReciprocalForRelation(relationValue);
+          if (requiresReciprocal && !(field.value3 || "").trim()) {
+            isValid = false;
+            errors[index] = {
+              ...(errors[index] || {}),
+              reciprocal: "Please fill in this relation.",
+            };
+          }
         });
         setRelationshipFieldErrors(errors);
         if (!isValid) {
           return;
         }
-      let pendingProfilePicFile = null;
-      if (profilePicProcessorRef.current) {
-        pendingProfilePicFile = await profilePicProcessorRef.current();
-      }
+        let pendingProfilePicFile = null;
+        if (profilePicProcessorRef.current) {
+          pendingProfilePicFile = await profilePicProcessorRef.current();
+        }
         const dataToSave = buildPersonPayloadWithCustomFields(
           editedPerson,
           fieldsToUse
@@ -1088,52 +1100,55 @@ function PersonDetail() {
         const currentRelationshipFields = fieldsToUse.filter((field) =>
           Object.prototype.hasOwnProperty.call(field, "value2")
         );
-      const previousRelationshipFields = isAddMode
-        ? []
-        : initializeCustomFields(person || {}).filter((field) =>
-            Object.prototype.hasOwnProperty.call(field, "value2")
-          );
+        const previousRelationshipFields = isAddMode
+          ? []
+          : initializeCustomFields(person || {}).filter((field) =>
+              Object.prototype.hasOwnProperty.call(field, "value2")
+            );
         if (isAddMode) {
           const createdPerson = await createPerson(dataToSave);
-        const createdPersonId = createdPerson?._id || createdPerson?.id;
-        await syncReciprocalRelationships({
-          currentPersonId: createdPersonId,
-          currentPersonName: dataToSave.Name || createdPerson?.Name || "",
-          currentRelationships: currentRelationshipFields,
-          previousRelationships: [],
-        });
-        if (pendingProfilePicFile && createdPersonId) {
-          await handleProfilePicUpload(pendingProfilePicFile, createdPersonId);
-        }
-        localStorage.removeItem("people");
-        await fetchPeople();
-        const storedPeople = localStorage.getItem("people");
-        if (storedPeople) {
-          setPeopleList(JSON.parse(storedPeople));
-        }
-        navigate("/people");
+          const createdPersonId = createdPerson?._id || createdPerson?.id;
+          await syncReciprocalRelationships({
+            currentPersonId: createdPersonId,
+            currentPersonName: dataToSave.Name || createdPerson?.Name || "",
+            currentRelationships: currentRelationshipFields,
+            previousRelationships: [],
+          });
+          if (pendingProfilePicFile && createdPersonId) {
+            await handleProfilePicUpload(
+              pendingProfilePicFile,
+              createdPersonId
+            );
+          }
+          localStorage.removeItem("people");
+          await fetchPeople();
+          const storedPeople = localStorage.getItem("people");
+          if (storedPeople) {
+            setPeopleList(JSON.parse(storedPeople));
+          }
+          navigate("/people");
         } else {
           await updatePerson(id, dataToSave);
-        if (pendingProfilePicFile) {
-          await handleProfilePicUpload(pendingProfilePicFile);
-        }
+          if (pendingProfilePicFile) {
+            await handleProfilePicUpload(pendingProfilePicFile);
+          }
           await syncReciprocalRelationships({
             currentPersonId: id,
             currentPersonName: dataToSave.Name || person?.Name || "",
             currentRelationships: currentRelationshipFields,
             previousRelationships: previousRelationshipFields,
           });
-        localStorage.removeItem("people");
-        await fetchPeople();
-        const stored = localStorage.getItem("people");
-        if (stored) {
-          const people = JSON.parse(stored);
-          const found = people.find((p) => p._id === id);
-          setPerson(found);
-          setEditedPerson(found);
-          setCustomFields(initializeCustomFields(found));
-          setPeopleList(people);
-        }
+          localStorage.removeItem("people");
+          await fetchPeople();
+          const stored = localStorage.getItem("people");
+          if (stored) {
+            const people = JSON.parse(stored);
+            const found = people.find((p) => p._id === id);
+            setPerson(found);
+            setEditedPerson(found);
+            setCustomFields(initializeCustomFields(found));
+            setPeopleList(people);
+          }
           setIsEditing(false);
         }
         setRelationshipFieldErrors({});
@@ -1355,7 +1370,7 @@ function PersonDetail() {
                   relationshipCustomFieldsForRender
                 }
                 relationshipFieldErrors={relationshipFieldErrors}
-                peopleList={peopleList.filter(p => p._id !== id)}
+                peopleList={peopleList.filter((p) => p._id !== id)}
                 defaultProfilePic={defaultProfilePic}
                 // Pass all relevant handlers and states
                 handleChange={handleChange}
