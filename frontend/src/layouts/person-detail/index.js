@@ -1,6 +1,8 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"; // Added useCallback
 import Card from "@mui/material/Card";
+import IconButton from "@mui/material/IconButton";
+import Icon from "@mui/material/Icon";
 // REMOVED: TextField, MenuItem, Autocomplete, Grid, AddIcon, UploadFileIcon, CircularProgress
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -1280,13 +1282,28 @@ function PersonDetail() {
             p={3}
             sx={{ borderBottom: 1, borderColor: "divider" }}
           >
-            <MDTypography variant="h4">
-              {isAddMode
-                ? "Add Person"
-                : isEditing
-                ? "Edit Person"
-                : "Person Details"}{" "}
-            </MDTypography>
+            <MDBox display="flex" alignItems="center" gap={2}>
+              <IconButton
+                onClick={() => {
+                  const from = location.state?.from;
+                  if (from) {
+                    navigate(from);
+                  } else {
+                    navigate("/people");
+                  }
+                }}
+                size="small"
+              >
+                <Icon>arrow_back</Icon>
+              </IconButton>
+              <MDTypography variant="h4">
+                {isAddMode
+                  ? "Add Person"
+                  : isEditing
+                  ? "Edit Person"
+                  : "Person Details"}{" "}
+              </MDTypography>
+            </MDBox>
             <MDBox display="flex" gap={1}>
               {isEditing || isAddMode ? (
                 <>

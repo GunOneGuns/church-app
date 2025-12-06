@@ -56,7 +56,7 @@ function Job({ title, description }) {
 }
 
 // Build rows from a raw people array
-export function buildRows(rawPeople, navigate) {
+export function buildRows(rawPeople, navigate, from = "/people") {
   return rawPeople.map((person) => ({
     people: (
       <People
@@ -64,7 +64,7 @@ export function buildRows(rawPeople, navigate) {
         name={person.Name || "N/A"}
         district={person.District || ""}
         id={person._id}
-        onClick={() => navigate(`/person/${person._id}`)}
+        onClick={() => navigate(`/person/${person._id}`, { state: { from } })}
       />
     ),
     address: <Job title={person.Address || ""} description="" />,
@@ -93,7 +93,7 @@ export function buildRows(rawPeople, navigate) {
       <MDTypography
         component="a"
         onClick={() =>
-          navigate(`/person/${person._id}`, { state: { edit: true } })
+          navigate(`/person/${person._id}`, { state: { edit: true, from } })
         }
         variant="caption"
         color="text"

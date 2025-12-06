@@ -31,7 +31,7 @@ Coded by www.creative-tim.com
 import Dashboard from "layouts/dashboard";
 import People from "layouts/tables";
 import Billing from "layouts/billing";
-import RTL from "layouts/rtl";
+import Groups from "layouts/groups";
 import Notifications from "layouts/notifications";
 import Profile from "layouts/profile";
 import SignIn from "layouts/authentication/sign-in";
@@ -76,9 +76,17 @@ const routes = [
     type: "collapse",
     name: "People",
     key: "people",
-    icon: <Icon fontSize="small">groups</Icon>,
+    icon: <Icon fontSize="small">person</Icon>,
     route: "/people",
     component: <People />,
+  },
+  {
+    type: "collapse",
+    name: "Groups",
+    key: "groups",
+    icon: <Icon fontSize="small">groups</Icon>,
+    route: "/groups",
+    component: <Groups />,
   },
   {
     type: "collapse",
@@ -87,15 +95,6 @@ const routes = [
     icon: <Icon fontSize="small">receipt_long</Icon>,
     route: "/billing",
     component: <Billing />,
-    disabled: true,
-  },
-  {
-    type: "collapse",
-    name: "RTL",
-    key: "rtl",
-    icon: <Icon fontSize="small">format_textdirection_r_to_l</Icon>,
-    route: "/rtl",
-    component: <RTL />,
     disabled: true,
   },
   {

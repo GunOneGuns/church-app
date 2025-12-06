@@ -58,6 +58,7 @@ import { AuthContext } from "context";
 import UserProfile from "layouts/user-profile";
 import UserManagement from "layouts/user-management";
 import PersonDetail from "layouts/person-detail";
+import GroupDetail from "layouts/groups/group-detail";
 import { Helmet } from "react-helmet";
 
 export default function App() {
@@ -333,6 +334,16 @@ export default function App() {
                 </ProtectedRoute>
               }
               key="person-detail"
+            />
+            <Route
+              exact
+              path="group/:id"
+              element={
+                <ProtectedRoute isAuthenticated={true}>
+                  <GroupDetail />
+                </ProtectedRoute>
+              }
+              key="group-detail"
             />
             {getRoutes(routes)}
             <Route path="*" element={<Navigate to="/dashboard" />} />

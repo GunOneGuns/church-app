@@ -1,4 +1,4 @@
-// layouts/tables/index.js
+// layouts/groups/index.js
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import IconButton from "@mui/material/IconButton";
@@ -12,15 +12,15 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
-import peopleTableData, {
-  columns as peopleColumns,
-  buildRows as buildPeopleRows,
-} from "layouts/tables/data/peopleTableData";
+import groupsTableData, {
+  columns as groupsColumns,
+  buildRows as buildGroupsRows,
+} from "layouts/groups/data/groupsTableData";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-function People() {
-  const { people, rows: initialRows } = peopleTableData(); // now also returns people
+function Groups() {
+  const { groups, rows: initialRows } = groupsTableData();
   const navigate = useNavigate();
 
   // Search
@@ -31,17 +31,17 @@ function People() {
   const [inputValue, setInputValue] = useState("1");
   const rowsPerPage = 10;
 
-  // Filter people by name substring
-  const filteredPeople = useMemo(() => {
+  // Filter groups by name substring
+  const filteredGroups = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return people;
-    return people.filter((p) => (p?.Name || "").toLowerCase().includes(q));
-  }, [people, searchQuery]);
+    if (!q) return groups;
+    return groups.filter((g) => (g?.Name || "").toLowerCase().includes(q));
+  }, [groups, searchQuery]);
 
-  // Rebuild rows from filtered people
+  // Rebuild rows from filtered groups
   const rows = useMemo(
-    () => buildPeopleRows(filteredPeople, navigate),
-    [filteredPeople, navigate]
+    () => buildGroupsRows(filteredGroups, navigate),
+    [filteredGroups, navigate]
   );
 
   // Pagination derived from filtered rows
@@ -51,7 +51,7 @@ function People() {
     page * rowsPerPage
   );
 
-  // Reset to page 1 when search changes or filtered size shrinks below current page
+  // Reset to page 1 when search changes
   useEffect(() => {
     setPage(1);
     setInputValue("1");
@@ -83,11 +83,6 @@ function People() {
       setInputValue(page.toString());
     }
   };
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      handleInputBlur();
-    }
-  };
 
   return (
     <DashboardLayout>
@@ -110,13 +105,13 @@ function People() {
                 alignItems="center"
               >
                 <MDTypography variant="h6" color="white">
-                  Brothers & Sisters
+                  Groups
                 </MDTypography>
                 <MDButton
                   variant="contained"
                   color="white"
                   onClick={() =>
-                    navigate("/person/add", { state: { add: true } })
+                    navigate("/group/add", { state: { add: true } })
                   }
                 >
                   Add
@@ -128,7 +123,7 @@ function People() {
                 sx={{ maxHeight: "calc(100vh - 400px)", overflow: "auto" }}
               >
                 <DataTable
-                  table={{ columns: peopleColumns, rows: paginatedRows }}
+                  table={{ columns: groupsColumns, rows: paginatedRows }}
                   isSorted={false}
                   entriesPerPage={false}
                   showTotalEntries={false}
@@ -174,7 +169,7 @@ function People() {
                       value={inputValue}
                       onChange={handleInputChange}
                       onBlur={handleInputBlur}
-                      onKeyPress={handleKeyPress}
+                      onKeyDown={(e) => e.key === "Enter" && handleInputBlur()}
                       size="small"
                       sx={{ width: 60 }}
                       inputProps={{ style: { textAlign: "center" } }}
@@ -204,4 +199,4 @@ function People() {
   );
 }
 
-export default People;
+export default Groups;
