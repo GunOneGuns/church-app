@@ -750,8 +750,21 @@ Updivision Blog: <https://updivision.com/blog/?ref=mdl-readme>
 - [Creative Tim](https://creative-tim.com/?ref=mdl-readme)
 - [UPDIVISION](https://updivision.com) -->
 
-fe
-npm start dev
+## Local development
 
-be
-npm run start:dev
+Frontend:
+- `cd frontend && npm start`
+
+Backend:
+- `cd backend && npm run start:dev`
+
+## Docker development
+
+- Start: `docker compose up --build`
+- Seed default admin (optional): `docker compose exec backend npm run seed`
+- Optional env files: `cp backend/.env.example backend/.env` and `cp frontend/.env.example frontend/.env`
+- URLs: UI `http://localhost:3000`, API `http://localhost:8080`
+
+Use an existing MongoDB (instead of the bundled `mongo` container):
+- Local MongoDB on your machine: `DB_LINK="mongodb://host.docker.internal:27017/ChurchApp" docker compose up --build`
+- MongoDB Atlas: set `DB_LINK=...` or `MONGODB_URI=...` in `backend/.env`, then run `docker compose up --build`

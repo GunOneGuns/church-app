@@ -32,7 +32,7 @@ import Dashboard from "layouts/dashboard";
 import People from "layouts/tables";
 import Billing from "layouts/billing";
 import Groups from "layouts/groups";
-import Notifications from "layouts/notifications";
+import Events from "layouts/events";
 import Profile from "layouts/profile";
 import SignIn from "layouts/authentication/sign-in";
 import SignUp from "layouts/authentication/sign-up";
@@ -90,20 +90,19 @@ const routes = [
   },
   {
     type: "collapse",
+    name: "Events",
+    key: "events",
+    icon: <Icon fontSize="small">event</Icon>,
+    route: "/events",
+    component: <Events />,
+  },
+  {
+    type: "collapse",
     name: "Billing",
     key: "billing",
     icon: <Icon fontSize="small">receipt_long</Icon>,
     route: "/billing",
     component: <Billing />,
-    disabled: true,
-  },
-  {
-    type: "collapse",
-    name: "Notifications",
-    key: "notifications",
-    icon: <Icon fontSize="small">notifications</Icon>,
-    route: "/notifications",
-    component: <Notifications />,
     disabled: true,
   },
   {
