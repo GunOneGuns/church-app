@@ -274,7 +274,7 @@ export default function App() {
                 element={<Navigate to="/auth/forgot-password" />}
               />
               {getRoutes(routes)}
-              <Route path="*" element={<Navigate to="/dashboard" />} />
+              <Route path="*" element={<Navigate to="/people" />} />
             </Routes>
           </ThemeProvider>
         </CacheProvider>
@@ -346,7 +346,7 @@ export default function App() {
               key="group-detail"
             />
             {getRoutes(routes)}
-            <Route path="*" element={<Navigate to="/dashboard" />} />
+            <Route path="*" element={<Navigate to="/people" />} />
           </Routes>
         </ThemeProvider>
       )}
