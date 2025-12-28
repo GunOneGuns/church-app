@@ -158,7 +158,7 @@ export default function App() {
 
   const configsButton = (
     <MDBox
-      display="flex"
+      display={{ xs: "none", xl: "flex" }}
       justifyContent="center"
       alignItems="center"
       width="3.25rem"

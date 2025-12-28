@@ -27,6 +27,8 @@ import Toolbar from "@mui/material/Toolbar";
 import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
 import Icon from "@mui/material/Icon";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
@@ -74,6 +76,12 @@ function DashboardNavbar({ absolute, light, isMini, customRoute }) {
   const route =
     customRoute && customRoute.length ? customRoute : locationRoute;
   let navigate = useNavigate();
+  const theme = useTheme();
+  const hideOnMobile = useMediaQuery(theme.breakpoints.down("xl"));
+
+  if (hideOnMobile) {
+    return null;
+  }
 
   useEffect(() => {
     // Setting the navbar type

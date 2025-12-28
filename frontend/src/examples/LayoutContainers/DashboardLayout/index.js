@@ -21,16 +21,24 @@ import { useLocation } from "react-router-dom";
 // prop-types is a library for typechecking of props.
 import PropTypes from "prop-types";
 
+// @mui material components
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
+
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
 
 // Material Dashboard 2 React context
 import { useMaterialUIController, setLayout } from "context";
 
+import MobileBottomNav from "examples/Navbars/MobileBottomNav";
+
 function DashboardLayout({ children }) {
   const [controller, dispatch] = useMaterialUIController();
   const { miniSidenav } = controller;
   const { pathname } = useLocation();
+  const theme = useTheme();
+  const showBottomNav = useMediaQuery(theme.breakpoints.down("xl"));
 
   useEffect(() => {
     setLayout(dispatch, "dashboard");
@@ -40,6 +48,7 @@ function DashboardLayout({ children }) {
     <MDBox
       sx={({ breakpoints, transitions, functions: { pxToRem } }) => ({
         p: 3,
+        pb: showBottomNav ? `calc(${pxToRem(80)} + env(safe-area-inset-bottom))` : undefined,
         position: "relative",
 
         [breakpoints.up("xl")]: {
@@ -52,6 +61,7 @@ function DashboardLayout({ children }) {
       })}
     >
       {children}
+      {showBottomNav && <MobileBottomNav />}
     </MDBox>
   );
 }

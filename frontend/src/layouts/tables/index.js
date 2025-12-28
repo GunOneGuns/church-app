@@ -18,10 +18,14 @@ import peopleTableData, {
 } from "layouts/tables/data/peopleTableData";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 
 function People() {
   const { people, rows: initialRows } = peopleTableData(); // now also returns people
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("xl"));
 
   // Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,6 +47,11 @@ function People() {
     () => buildPeopleRows(filteredPeople, navigate),
     [filteredPeople, navigate]
   );
+
+  const responsiveColumns = useMemo(() => {
+    if (!isMobile) return peopleColumns;
+    return peopleColumns.filter((column) => column.accessor === "people");
+  }, [isMobile]);
 
   // Pagination derived from filtered rows
   const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
@@ -128,7 +137,7 @@ function People() {
                 sx={{ maxHeight: "calc(100vh - 400px)", overflow: "auto" }}
               >
                 <DataTable
-                  table={{ columns: peopleColumns, rows: paginatedRows }}
+                  table={{ columns: responsiveColumns, rows: paginatedRows }}
                   isSorted={false}
                   entriesPerPage={false}
                   showTotalEntries={false}
@@ -141,7 +150,8 @@ function People() {
               <MDBox
                 display="flex"
                 justifyContent="space-between"
-                alignItems="center"
+                alignItems={{ xs: "stretch", sm: "center" }}
+                flexDirection={{ xs: "column", sm: "row" }}
                 p={2}
                 gap={2}
               >
@@ -151,12 +161,21 @@ function People() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   size="small"
-                  sx={{ minWidth: 240 }}
+                  sx={{
+                    width: { xs: "100%", sm: 280 },
+                    maxWidth: "100%",
+                  }}
                 />
 
                 {/* Pagination controls on the right */}
                 {totalPages > 1 && (
-                  <MDBox display="flex" alignItems="center" gap={1}>
+                  <MDBox
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="flex-end"
+                    gap={1}
+                    sx={{ width: { xs: "100%", sm: "auto" } }}
+                  >
                     {page > 1 && (
                       <IconButton
                         onClick={() => {
