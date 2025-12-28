@@ -22,4 +22,4 @@ function startProcess(command, args, options) {
 startProcess("npm", ["run", "start:dev"], { cwd: "./backend", shell: true });
 
 // Start the frontend
-startProcess("npm", ["start", "dev"], { cwd: "./frontend", shell: true });
+startProcess("npm", ["start"], { cwd: "./frontend", shell: true });

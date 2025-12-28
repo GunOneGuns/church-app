@@ -16,10 +16,21 @@ dotenv.config();
 const PORT = process.env.PORT || 8080;
 const app = express();
 
-const whitelist = [process.env.APP_URL_CLIENT];
+// Updated CORS configuration
 const corsOptions = {
-  origin: true,
+  origin: [
+    process.env.APP_URL_CLIENT,
+    "http://localhost:3000",
+    "http://10.0.0.8:3000",
+  ],
   credentials: true,
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "cache-control",
+    "X-Requested-With",
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
 };
 
 dbConnect();
@@ -27,7 +38,9 @@ dbConnect();
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
 app.use("/people", peopleRoutes);
+
 app.get("/", function (req, res) {
   const __dirname = fs.realpathSync(".");
   res.sendFile(path.join(__dirname, "/src/landing/index.html"));
@@ -42,4 +55,8 @@ if (process.env.SCHEDULE_HOUR) {
   });
 }
 
-app.listen(PORT, () => console.log(`Server listening to port ${PORT}`));
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server listening on:`);
+  console.log(`  - Local:   http://localhost:${PORT}`);
+  console.log(`  - Network: http://10.0.0.8:${PORT}`);
+});

@@ -18,6 +18,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "App";
 import { AuthContextProvider } from "context";
+import * as serviceWorkerRegistration from "serviceWorkerRegistration";
 
 // Material Dashboard 2 React Context Provider
 import { MaterialUIControllerProvider } from "context";
@@ -34,3 +35,5 @@ root.render(
     </AuthContextProvider>
   </BrowserRouter>
 );
+
+serviceWorkerRegistration.register();
