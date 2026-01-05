@@ -768,3 +768,6 @@ Backend:
 Use an existing MongoDB (instead of the bundled `mongo` container):
 - Local MongoDB on your machine: `DB_LINK="mongodb://host.docker.internal:27017/ChurchApp" docker compose up --build`
 - MongoDB Atlas: set `DB_LINK=...` or `MONGODB_URI=...` in `backend/.env`, then run `docker compose up --build`
+
+## PWA
+npm run build && npx serve -s build
