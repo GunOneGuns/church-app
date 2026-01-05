@@ -27,12 +27,21 @@ Coded by www.creative-tim.com
   10. The `title` key is only for the item with the type of `title` and its used for the title text on the Sidenav.
   10. The `component` key is used to store the component of its route.
 */
+import Home from "layouts/home";
 import People from "layouts/tables";
 import Groups from "layouts/groups";
 import Events from "layouts/events";
 // @mui icons
 import Icon from "@mui/material/Icon";
 const routes = [
+  {
+    type: "collapse",
+    name: "Home",
+    key: "home",
+    icon: <Icon fontSize="small">home</Icon>,
+    route: "/home",
+    component: <Home />,
+  },
   {
     type: "collapse",
     name: "People",
@@ -43,7 +52,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Groups",
+    name: "Group",
     key: "groups",
     icon: <Icon fontSize="small">groups</Icon>,
     route: "/groups",
@@ -51,7 +60,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Events",
+    name: "Event",
     key: "events",
     icon: <Icon fontSize="small">event</Icon>,
     route: "/events",

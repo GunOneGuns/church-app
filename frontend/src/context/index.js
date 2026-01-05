@@ -60,7 +60,7 @@ const AuthContextProvider = ({ children }) => {
   const login = (token) => {
     localStorage.setItem("token", token);
     setIsAuthenticated(true);
-    navigate("/people");
+    navigate("/home");
   };
 
   const logout = () => {

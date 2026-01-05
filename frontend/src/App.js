@@ -16,7 +16,6 @@ import Icon from "@mui/material/Icon";
 
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
-import MobileStartOverlays from "components/MobileStartOverlays";
 
 // Material Dashboard 2 React example components
 import Sidenav from "examples/Sidenav";
@@ -245,7 +244,6 @@ export default function App() {
         <CacheProvider value={rtlCache}>
           <ThemeProvider theme={darkMode ? themeDarkRTL : themeRTL}>
             <CssBaseline />
-            <MobileStartOverlays />
             {layout === "dashboard" && (
               <>
                 <Sidenav
@@ -276,14 +274,13 @@ export default function App() {
                 element={<Navigate to="/auth/forgot-password" />}
               />
               {getRoutes(routes)}
-              <Route path="*" element={<Navigate to="/people" />} />
+              <Route path="*" element={<Navigate to="/home" />} />
             </Routes>
           </ThemeProvider>
         </CacheProvider>
       ) : (
         <ThemeProvider theme={darkMode ? themeDark : theme}>
           <CssBaseline />
-          <MobileStartOverlays />
           {layout === "dashboard" && (
             <>
               <Sidenav
@@ -349,7 +346,7 @@ export default function App() {
               key="group-detail"
             />
             {getRoutes(routes)}
-            <Route path="*" element={<Navigate to="/people" />} />
+            <Route path="*" element={<Navigate to="/home" />} />
           </Routes>
         </ThemeProvider>
       )}
