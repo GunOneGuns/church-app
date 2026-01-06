@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 // react-router components
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { setMiniSidenav, useMaterialUIController } from "context";
+import { setMiniSidenav, setMobileNavbarTitle, useMaterialUIController } from "context";
 
 import MobileStartOverlays from "components/MobileStartOverlays";
 
@@ -34,14 +34,26 @@ const getActiveTab = (pathname = "") => {
 export default function MobileBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [, dispatch] = useMaterialUIController();
+  const [controller, dispatch] = useMaterialUIController();
+  const { mobileNavbarTitle } = controller;
   const [peopleOverlayOpen, setPeopleOverlayOpen] = useState(false);
 
   const value = useMemo(() => getActiveTab(location.pathname), [location.pathname]);
 
+  useEffect(() => {
+    if (peopleOverlayOpen) return;
+
+    if (mobileNavbarTitle && !location.pathname.toLowerCase().startsWith("/people")) {
+      setMobileNavbarTitle(dispatch, null);
+    }
+  }, [dispatch, location.pathname, mobileNavbarTitle, peopleOverlayOpen]);
+
   const handleChange = (_event, nextValue) => {
     if (nextValue !== "people") {
       setPeopleOverlayOpen(false);
+      if (mobileNavbarTitle) {
+        setMobileNavbarTitle(dispatch, null);
+      }
     }
 
     if (nextValue === "settings") {
@@ -52,6 +64,7 @@ export default function MobileBottomNav() {
     setMiniSidenav(dispatch, true);
 
     if (nextValue === "people") {
+      setMobileNavbarTitle(dispatch, "People");
       setPeopleOverlayOpen(true);
       return;
     }

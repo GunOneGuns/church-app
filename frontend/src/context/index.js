@@ -112,6 +112,10 @@ function reducer(state, action) {
     case "DARKMODE": {
       return { ...state, darkMode: action.value };
     }
+    case "MOBILE_NAVBAR_TITLE": {
+      if (state.mobileNavbarTitle === action.value) return state;
+      return { ...state, mobileNavbarTitle: action.value };
+    }
     default: {
       throw new Error(`Unhandled action type: ${action.type}`);
     }
@@ -131,6 +135,7 @@ function MaterialUIControllerProvider({ children }) {
     direction: "ltr",
     layout: "dashboard",
     darkMode: false,
+    mobileNavbarTitle: null,
   };
 
   const [controller, dispatch] = useReducer(reducer, initialState);
@@ -169,6 +174,8 @@ const setOpenConfigurator = (dispatch, value) => dispatch({ type: "OPEN_CONFIGUR
 const setDirection = (dispatch, value) => dispatch({ type: "DIRECTION", value });
 const setLayout = (dispatch, value) => dispatch({ type: "LAYOUT", value });
 const setDarkMode = (dispatch, value) => dispatch({ type: "DARKMODE", value });
+const setMobileNavbarTitle = (dispatch, value) =>
+  dispatch({ type: "MOBILE_NAVBAR_TITLE", value });
 
 export {
   AuthContextProvider,
@@ -184,4 +191,5 @@ export {
   setDirection,
   setLayout,
   setDarkMode,
+  setMobileNavbarTitle,
 };

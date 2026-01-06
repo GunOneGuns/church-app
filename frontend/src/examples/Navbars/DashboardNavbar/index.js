@@ -16,7 +16,7 @@ Coded by www.creative-tim.com
 import { useState, useEffect, useContext } from "react";
 
 // react-router components
-import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 
 // prop-types is a library for typechecking of props.
 import PropTypes from "prop-types";
@@ -33,6 +33,7 @@ import useMediaQuery from "@mui/material/useMediaQuery";
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
 import MDInput from "components/MDInput";
+import MDTypography from "components/MDTypography";
 
 // Material Dashboard 2 React example components
 import Breadcrumbs from "examples/Breadcrumbs";
@@ -59,6 +60,35 @@ import {
 import MDButton from "components/MDButton";
 import { AuthContext } from "context";
 
+const MOBILE_TITLES = {
+  home: "Home",
+  people: "People",
+  person: "People",
+  groups: "Group",
+  group: "Group",
+  events: "Event",
+  event: "Event",
+};
+
+const getMobileTitle = (routeSegments = []) => {
+  const normalizedSegments = Array.isArray(routeSegments)
+    ? routeSegments.filter(Boolean)
+    : [];
+
+  if (!normalizedSegments.length) {
+    return "Home";
+  }
+
+  const first = normalizedSegments[0];
+  const last = normalizedSegments[normalizedSegments.length - 1];
+
+  return (
+    MOBILE_TITLES[first] ||
+    MOBILE_TITLES[last] ||
+    String(last).replaceAll("-", " ")
+  );
+};
+
 function DashboardNavbar({ absolute, light, isMini, customRoute }) {
   const authContext = useContext(AuthContext);
   const [navbarType, setNavbarType] = useState();
@@ -68,20 +98,15 @@ function DashboardNavbar({ absolute, light, isMini, customRoute }) {
     transparentNavbar,
     fixedNavbar,
     openConfigurator,
+    mobileNavbarTitle,
     darkMode,
   } = controller;
   const [openMenu, setOpenMenu] = useState(false);
   const location = useLocation();
   const locationRoute = location.pathname.split("/").slice(1);
-  const route =
-    customRoute && customRoute.length ? customRoute : locationRoute;
-  let navigate = useNavigate();
+  const route = customRoute && customRoute.length ? customRoute : locationRoute;
   const theme = useTheme();
-  const hideOnMobile = useMediaQuery(theme.breakpoints.down("xl"));
-
-  if (hideOnMobile) {
-    return null;
-  }
+  const isMobileView = useMediaQuery(theme.breakpoints.down("xl"));
 
   useEffect(() => {
     // Setting the navbar type
@@ -143,26 +168,121 @@ function DashboardNavbar({ absolute, light, isMini, customRoute }) {
     </Menu>
   );
 
+  const getIconsStyle =
+    (isLight) =>
+    ({ palette: { dark, white, text }, functions: { rgba } }) => ({
+      color: () => {
+        let colorValue = isLight || darkMode ? white.main : dark.main;
+
+        if (transparentNavbar && !isLight) {
+          colorValue = darkMode ? rgba(text.main, 0.6) : text.main;
+        }
+
+        return colorValue;
+      },
+    });
+
   // Styles for the navbar icons
-  const iconsStyle = ({
-    palette: { dark, white, text },
-    functions: { rgba },
-  }) => ({
-    color: () => {
-      let colorValue = light || darkMode ? white.main : dark.main;
-
-      if (transparentNavbar && !light) {
-        colorValue = darkMode ? rgba(text.main, 0.6) : text.main;
-      }
-
-      return colorValue;
-    },
-  });
+  const iconsStyle = getIconsStyle(light);
 
   const handleLogOut = async () => {
-    const response = await AuthService.logout();
+    await AuthService.logout();
     authContext.logout();
   };
+
+  if (isMobileView) {
+    const isScrolled = !transparentNavbar && !absolute;
+
+    // Mobile "scrolled" navbar background options (try one at a time):
+    // const mobileScrolledBackground = theme.palette.background.paper;
+    // const mobileScrolledBackground = theme.palette.grey[100];
+    // const mobileScrolledBackground = theme.palette.grey[200];
+    // const mobileScrolledBackground = theme.functions.rgba(theme.palette.info.main, 0.12);
+    const mobileScrolledBackground = theme.functions.linearGradient(
+      theme.palette.gradients.dark.main,
+      theme.palette.gradients.dark.state
+    );
+    // const mobileScrolledBackground = theme.functions.linearGradient(
+    //   theme.palette.gradients.primary.main,
+    //   theme.palette.gradients.primary.state
+    // );
+    // const mobileScrolledBackground = theme.functions.linearGradient(
+    //   theme.palette.gradients.secondary.main,
+    //   theme.palette.gradients.secondary.state
+    // );
+    // const mobileScrolledBackground = theme.functions.linearGradient(
+    //   theme.palette.gradients.info.main,
+    //   theme.palette.gradients.primary.state
+    // );
+
+    // Set this to `true` when using a dark background above.
+    // const mobileScrolledUsesLightText = false;
+    const mobileScrolledUsesLightText = true;
+
+    const mobileTitle = mobileNavbarTitle || getMobileTitle(route);
+    const mobileLight = light || (isScrolled && mobileScrolledUsesLightText);
+    const mobileIconsStyle = getIconsStyle(mobileLight);
+
+    return (
+      <AppBar
+        position={absolute ? "absolute" : navbarType}
+        color="inherit"
+        sx={(muiTheme) => {
+          const baseStyles = navbar(muiTheme, {
+            transparentNavbar,
+            absolute,
+            light: mobileLight,
+            darkMode,
+          });
+
+          if (transparentNavbar || absolute) {
+            return baseStyles;
+          }
+
+          return {
+            ...baseStyles,
+            background: mobileScrolledBackground,
+            backdropFilter: "none",
+          };
+        }}
+      >
+        <Toolbar
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+            px: 1.5,
+            py: 0.5,
+          }}
+        >
+          <IconButton
+            size="small"
+            disableRipple
+            color="inherit"
+            onClick={handleMiniSidenav}
+          >
+            <Icon sx={mobileIconsStyle} fontSize="medium">
+              {miniSidenav ? "menu" : "menu_open"}
+            </Icon>
+          </IconButton>
+
+          <MDTypography
+            variant="button"
+            fontWeight="bold"
+            textTransform="capitalize"
+            color={mobileLight ? "white" : "dark"}
+            sx={{ flex: 1, textAlign: "center", px: 1 }}
+            noWrap
+          >
+            {mobileTitle}
+          </MDTypography>
+
+          <MDBox sx={{ width: 40, flexShrink: 0 }} />
+        </Toolbar>
+      </AppBar>
+    );
+  }
 
   return (
     <AppBar
