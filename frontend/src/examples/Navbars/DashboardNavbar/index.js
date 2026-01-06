@@ -193,30 +193,11 @@ function DashboardNavbar({ absolute, light, isMini, customRoute }) {
   if (isMobileView) {
     const isScrolled = !transparentNavbar && !absolute;
 
-    // Mobile "scrolled" navbar background options (try one at a time):
-    // const mobileScrolledBackground = theme.palette.background.paper;
-    // const mobileScrolledBackground = theme.palette.grey[100];
-    // const mobileScrolledBackground = theme.palette.grey[200];
-    // const mobileScrolledBackground = theme.functions.rgba(theme.palette.info.main, 0.12);
     const mobileScrolledBackground = theme.functions.linearGradient(
       theme.palette.gradients.dark.main,
       theme.palette.gradients.dark.state
     );
-    // const mobileScrolledBackground = theme.functions.linearGradient(
-    //   theme.palette.gradients.primary.main,
-    //   theme.palette.gradients.primary.state
-    // );
-    // const mobileScrolledBackground = theme.functions.linearGradient(
-    //   theme.palette.gradients.secondary.main,
-    //   theme.palette.gradients.secondary.state
-    // );
-    // const mobileScrolledBackground = theme.functions.linearGradient(
-    //   theme.palette.gradients.info.main,
-    //   theme.palette.gradients.primary.state
-    // );
 
-    // Set this to `true` when using a dark background above.
-    // const mobileScrolledUsesLightText = false;
     const mobileScrolledUsesLightText = true;
 
     const mobileTitle = mobileNavbarTitle || getMobileTitle(route);

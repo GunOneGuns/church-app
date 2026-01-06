@@ -301,12 +301,14 @@ function GroupDetail() {
                 <MDButton
                   variant="contained"
                   color="white"
+                  iconOnly
+                  aria-label="Add member"
                   onClick={() => {
                     // TODO: Implement add member functionality
                     console.log("Add member to group");
                   }}
                 >
-                  Add
+                  <Icon>add</Icon>
                 </MDButton>
               </MDBox>
 

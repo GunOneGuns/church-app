@@ -1,6 +1,7 @@
 // layouts/tables/index.js
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
+import Icon from "@mui/material/Icon";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
@@ -124,11 +125,13 @@ function People() {
                 <MDButton
                   variant="contained"
                   color="white"
+                  iconOnly
+                  aria-label="Add person"
                   onClick={() =>
                     navigate("/person/add", { state: { add: true } })
                   }
                 >
-                  Add
+                  <Icon>add</Icon>
                 </MDButton>
               </MDBox>
 
