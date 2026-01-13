@@ -253,7 +253,7 @@ function DashboardNavbar({ absolute, light, isMini, customRoute }) {
             fontWeight="bold"
             textTransform="capitalize"
             color={mobileLight ? "white" : "dark"}
-            sx={{ flex: 1, textAlign: "center", px: 1 }}
+            sx={{ flex: 1, textAlign: "center", px: 1, fontSize: "25px" }}
             noWrap
           >
             {mobileTitle}

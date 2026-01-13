@@ -43,7 +43,8 @@ export default function MobileBottomNav() {
   useEffect(() => {
     if (peopleOverlayOpen) return;
 
-    if (mobileNavbarTitle && !location.pathname.toLowerCase().startsWith("/people")) {
+    const pathname = location.pathname.toLowerCase();
+    if (mobileNavbarTitle === "People" && !pathname.startsWith("/people")) {
       setMobileNavbarTitle(dispatch, null);
     }
   }, [dispatch, location.pathname, mobileNavbarTitle, peopleOverlayOpen]);

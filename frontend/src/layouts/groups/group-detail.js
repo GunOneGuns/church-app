@@ -9,6 +9,11 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemAvatar from "@mui/material/ListItemAvatar";
+import ListItemText from "@mui/material/ListItemText";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
@@ -21,6 +26,11 @@ import DataTable from "examples/Tables/DataTable";
 import Icon from "@mui/material/Icon";
 import { columns as peopleColumns } from "layouts/tables/data/peopleTableData";
 import defaultProfilePic from "assets/images/default-profile-picture.png";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { setMobileNavbarTitle, useMaterialUIController } from "context";
+
+const MOBILE_PAGINATION_HEIGHT = 64;
 
 function ActionMenu({ person, navigate, slug }) {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -153,6 +163,9 @@ function buildGroupMemberRows(rawPeople, navigate, slug) {
 function GroupDetail() {
   const { id: slug } = useParams();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("xl"));
+  const [, dispatch] = useMaterialUIController();
   const [group, setGroup] = useState(null);
   const [members, setMembers] = useState([]);
 
@@ -216,8 +229,12 @@ function GroupDetail() {
     [filteredMembers, navigate, slug]
   );
 
-  // Pagination derived from filtered rows
-  const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
+  // Pagination derived from filtered members
+  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / rowsPerPage));
+  const paginatedMembers = filteredMembers.slice(
+    (page - 1) * rowsPerPage,
+    page * rowsPerPage
+  );
   const paginatedRows = rows.slice(
     (page - 1) * rowsPerPage,
     page * rowsPerPage
@@ -256,11 +273,104 @@ function GroupDetail() {
     }
   };
 
+  useEffect(() => {
+    if (!isMobile) {
+      setMobileNavbarTitle(dispatch, null);
+      return undefined;
+    }
+
+    if (group?.Name) {
+      setMobileNavbarTitle(dispatch, group.Name);
+    }
+
+    return () => setMobileNavbarTitle(dispatch, null);
+  }, [dispatch, group?.Name, isMobile]);
+
+  const goToPage = (nextPage) => {
+    const normalizedPage = Math.min(totalPages, Math.max(1, nextPage));
+    setPage(normalizedPage);
+    setInputValue(normalizedPage.toString());
+  };
+
+  const renderPaginationControls = ({
+    alwaysShow = false,
+    justifyContent = "flex-end",
+    showTotal = false,
+  }) => {
+    if (totalPages <= 1 && !alwaysShow) {
+      return null;
+    }
+
+    if (totalPages <= 1) {
+      return (
+        <MDTypography variant="caption" color="text">
+          Page {page} / {totalPages}
+        </MDTypography>
+      );
+    }
+
+    return (
+      <MDBox
+        display="flex"
+        alignItems="center"
+        justifyContent={justifyContent}
+        gap={1}
+        sx={{ width: { xs: "100%", sm: "auto" } }}
+      >
+        <IconButton
+          onClick={() => goToPage(page - 1)}
+          size="small"
+          disabled={page <= 1}
+          sx={{ visibility: page <= 1 ? "hidden" : "visible" }}
+        >
+          <ArrowBackIosNewIcon fontSize="small" />
+        </IconButton>
+
+        <TextField
+          value={inputValue}
+          onChange={handleInputChange}
+          onBlur={handleInputBlur}
+          onKeyDown={(e) => e.key === "Enter" && handleInputBlur()}
+          size="small"
+          sx={{ width: 60 }}
+          inputProps={{ style: { textAlign: "center" } }}
+        />
+
+        {showTotal && (
+          <MDTypography variant="caption" color="text">
+            / {totalPages}
+          </MDTypography>
+        )}
+
+        <IconButton
+          onClick={() => goToPage(page + 1)}
+          size="small"
+          disabled={page >= totalPages}
+          sx={{ visibility: page >= totalPages ? "hidden" : "visible" }}
+        >
+          <ArrowForwardIosIcon fontSize="small" />
+        </IconButton>
+      </MDBox>
+    );
+  };
+
+  const desktopPaginationControls = renderPaginationControls({
+    alwaysShow: false,
+    justifyContent: "flex-end",
+    showTotal: false,
+  });
+
+  const mobilePaginationControls = renderPaginationControls({
+    alwaysShow: true,
+    justifyContent: "center",
+    showTotal: true,
+  });
+
   if (!group) {
     return (
       <DashboardLayout>
         <DashboardNavbar />
-        <MDBox pt={6} pb={3}>
+        <MDBox pt={{ xs: 3, xl: 6 }} pb={{ xs: 2, xl: 3 }}>
           <MDTypography variant="h4">Group not found</MDTypography>
         </MDBox>
         <Footer />
@@ -271,119 +381,192 @@ function GroupDetail() {
   return (
     <DashboardLayout>
       <DashboardNavbar customRoute={["groups", group.Name]} />
-      <MDBox pt={6} pb={3}>
-        <Grid container spacing={6}>
+      <MDBox pt={{ xs: 3, xl: 6 }} pb={{ xs: 2, xl: 3 }}>
+        <Grid container spacing={{ xs: 2, xl: 6 }}>
           <Grid item xs={12}>
-            <Card>
-              <MDBox
-                mx={2}
-                mt={-3}
-                py={3}
-                px={2}
-                variant="gradient"
-                bgColor="info"
-                borderRadius="lg"
-                coloredShadow="info"
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <MDBox display="flex" alignItems="center" gap={2}>
-                  <MDBox>
-                    <MDTypography variant="h6" color="white">
-                      {group.Name}
-                    </MDTypography>
-                    <MDTypography variant="caption" color="white">
-                      {group.Category} • {members.length} members
-                    </MDTypography>
-                  </MDBox>
-                </MDBox>
-                <MDButton
-                  variant="contained"
-                  color="white"
-                  iconOnly
-                  aria-label="Add member"
-                  onClick={() => {
-                    // TODO: Implement add member functionality
-                    console.log("Add member to group");
-                  }}
-                >
-                  <Icon>add</Icon>
-                </MDButton>
-              </MDBox>
-
-              <MDBox
-                pt={3}
-                sx={{ maxHeight: "calc(100vh - 400px)", overflow: "auto" }}
-              >
-                <DataTable
-                  table={{ columns: peopleColumns, rows: paginatedRows }}
-                  isSorted={false}
-                  entriesPerPage={false}
-                  showTotalEntries={false}
-                  noEndBorder
-                  pagination={false}
-                />
-              </MDBox>
-
-              {/* Row with search (left) and pagination (right) */}
-              <MDBox
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                p={2}
-                gap={2}
-              >
-                {/* Search on the far left */}
-                <TextField
-                  placeholder="Search by name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  size="small"
-                  sx={{ minWidth: 240 }}
-                />
-
-                {/* Pagination controls on the right */}
-                {totalPages > 1 && (
-                  <MDBox display="flex" alignItems="center" gap={1}>
-                    {page > 1 && (
-                      <IconButton
-                        onClick={() => {
-                          const newPage = Math.max(1, page - 1);
-                          setPage(newPage);
-                          setInputValue(newPage.toString());
-                        }}
+            <Card
+              sx={
+                isMobile
+                  ? {
+                      height: "calc(100dvh - 220px)",
+                      display: "flex",
+                      flexDirection: "column",
+                      overflow: "hidden",
+                    }
+                  : undefined
+              }
+            >
+              {isMobile ? (
+                <>
+                  <MDBox
+                    sx={{
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      overflow: "hidden",
+                      width: "100%",
+                    }}
+                  >
+                    <MDBox p={2} display="flex" alignItems="center" gap={1}>
+                      <TextField
+                        placeholder="Search members..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         size="small"
+                        sx={{ flex: 1 }}
+                      />
+                      <MDButton
+                        variant="contained"
+                        color="info"
+                        iconOnly
+                        aria-label="Add member"
+                        onClick={() => {
+                          // TODO: Implement add member functionality
+                          console.log("Add member to group");
+                        }}
                       >
-                        <ArrowBackIosNewIcon fontSize="small" />
-                      </IconButton>
-                    )}
+                        <Icon>add</Icon>
+                      </MDButton>
+                    </MDBox>
 
+                    <MDBox sx={{ flex: 1, overflow: "auto", width: "100%" }}>
+                      {paginatedMembers.length ? (
+                        <List disablePadding sx={{ width: "100%" }}>
+                          {paginatedMembers.map((person, index) => {
+                            const personId = person?._id || person?.id;
+                            const key = personId || person?.Name || index;
+                            return (
+                              <ListItem key={key} disablePadding divider>
+                                <ListItemButton
+                                  onClick={() => {
+                                    if (!personId) return;
+                                    navigate(`/person/${personId}`, {
+                                      state: { from: `/group/${slug}` },
+                                    });
+                                  }}
+                                  sx={{ width: "100%" }}
+                                >
+                                  <ListItemAvatar>
+                                    <MDAvatar
+                                      src={
+                                        person?.ProfilePic || defaultProfilePic
+                                      }
+                                      name={person?.Name || "N/A"}
+                                      size="sm"
+                                    />
+                                  </ListItemAvatar>
+                                  <ListItemText
+                                    primary={person?.Name || "N/A"}
+                                    secondary={person?.District || ""}
+                                    primaryTypographyProps={{ noWrap: true }}
+                                    secondaryTypographyProps={{ noWrap: true }}
+                                  />
+                                </ListItemButton>
+                              </ListItem>
+                            );
+                          })}
+                        </List>
+                      ) : (
+                        <MDBox p={2}>
+                          <MDTypography variant="button" color="text">
+                            No members found.
+                          </MDTypography>
+                        </MDBox>
+                      )}
+                    </MDBox>
+                  </MDBox>
+
+                  <MDBox
+                    sx={(muiTheme) => ({
+                      flex: "0 0 auto",
+                      height: MOBILE_PAGINATION_HEIGHT,
+                      minHeight: MOBILE_PAGINATION_HEIGHT,
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderTop: `1px solid ${muiTheme.palette.divider}`,
+                      px: 2,
+                    })}
+                  >
+                    {mobilePaginationControls}
+                  </MDBox>
+                </>
+              ) : (
+                <>
+                  <MDBox
+                    mx={2}
+                    mt={-3}
+                    py={3}
+                    px={2}
+                    variant="gradient"
+                    bgColor="info"
+                    borderRadius="lg"
+                    coloredShadow="info"
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <MDBox display="flex" alignItems="center" gap={2}>
+                      <MDBox>
+                        <MDTypography variant="h6" color="white">
+                          {group.Name}
+                        </MDTypography>
+                        <MDTypography variant="caption" color="white">
+                          {group.Category} • {members.length} members
+                        </MDTypography>
+                      </MDBox>
+                    </MDBox>
+                    <MDButton
+                      variant="contained"
+                      color="white"
+                      iconOnly
+                      aria-label="Add member"
+                      onClick={() => {
+                        // TODO: Implement add member functionality
+                        console.log("Add member to group");
+                      }}
+                    >
+                      <Icon>add</Icon>
+                    </MDButton>
+                  </MDBox>
+
+                  <MDBox
+                    pt={3}
+                    sx={{ maxHeight: "calc(100vh - 400px)", overflow: "auto" }}
+                  >
+                    <DataTable
+                      table={{ columns: peopleColumns, rows: paginatedRows }}
+                      isSorted={false}
+                      entriesPerPage={false}
+                      showTotalEntries={false}
+                      noEndBorder
+                      pagination={false}
+                    />
+                  </MDBox>
+
+                  {/* Row with search (left) and pagination (right) */}
+                  <MDBox
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    p={2}
+                    gap={2}
+                  >
+                    {/* Search on the far left */}
                     <TextField
-                      value={inputValue}
-                      onChange={handleInputChange}
-                      onBlur={handleInputBlur}
-                      onKeyDown={(e) => e.key === "Enter" && handleInputBlur()}
+                      placeholder="Search by name..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                       size="small"
-                      sx={{ width: 60 }}
-                      inputProps={{ style: { textAlign: "center" } }}
+                      sx={{ minWidth: 240 }}
                     />
 
-                    {page < totalPages && (
-                      <IconButton
-                        onClick={() => {
-                          const newPage = Math.min(totalPages, page + 1);
-                          setPage(newPage);
-                          setInputValue(newPage.toString());
-                        }}
-                        size="small"
-                      >
-                        <ArrowForwardIosIcon fontSize="small" />
-                      </IconButton>
-                    )}
+                    {/* Pagination controls on the right */}
+                    {desktopPaginationControls}
                   </MDBox>
-                )}
-              </MDBox>
+                </>
+              )}
             </Card>
           </Grid>
         </Grid>
