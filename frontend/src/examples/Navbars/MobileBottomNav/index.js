@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-
-// react-router components
 import { useLocation, useNavigate } from "react-router-dom";
-
-import { setMiniSidenav, setMobileNavbarTitle, useMaterialUIController } from "context";
-
+import {
+  setMiniSidenav,
+  setMobileNavbarTitle,
+  useMaterialUIController,
+} from "context";
 import MobileStartOverlays from "components/MobileStartOverlays";
 
-// @mui material components
 import Paper from "@mui/material/Paper";
 import BottomNavigation from "@mui/material/BottomNavigation";
 import BottomNavigationAction from "@mui/material/BottomNavigationAction";
@@ -15,20 +14,14 @@ import Icon from "@mui/material/Icon";
 
 const getActiveTab = (pathname = "") => {
   const normalized = pathname.toLowerCase();
-
-  if (normalized === "/" || normalized.startsWith("/home")) {
-    return "home";
-  }
-
-  if (normalized.startsWith("/groups") || normalized.startsWith("/group")) {
+  if (normalized === "/" || normalized.startsWith("/home")) return "home";
+  if (normalized.startsWith("/groups") || normalized.startsWith("/group"))
     return "groups";
-  }
-
-  if (normalized.startsWith("/events") || normalized.startsWith("/event")) {
+  if (normalized.startsWith("/events") || normalized.startsWith("/event"))
     return "events";
-  }
-
-  return "people";
+  if (normalized.startsWith("/people") || normalized.startsWith("/person"))
+    return "people";
+  return "home";
 };
 
 export default function MobileBottomNav() {
@@ -36,13 +29,30 @@ export default function MobileBottomNav() {
   const navigate = useNavigate();
   const [controller, dispatch] = useMaterialUIController();
   const { mobileNavbarTitle } = controller;
+
   const [peopleOverlayOpen, setPeopleOverlayOpen] = useState(false);
 
-  const value = useMemo(() => getActiveTab(location.pathname), [location.pathname]);
+  const value = useMemo(
+    () => getActiveTab(location.pathname),
+    [location.pathname],
+  );
 
+  // Open overlay when we arrive at /people via navigation state
+  // IMPORTANT: we do NOT clear location.state here (People page needs it)
+  useEffect(() => {
+    const shouldOpen =
+      location.pathname.toLowerCase().startsWith("/people") &&
+      location.state?.openPeopleOverlay === true;
+
+    if (!shouldOpen) return;
+
+    setPeopleOverlayOpen(true);
+    setMobileNavbarTitle(dispatch, "People");
+  }, [location.pathname, location.state, dispatch]);
+
+  // Clear title when leaving people (and overlay isn't open)
   useEffect(() => {
     if (peopleOverlayOpen) return;
-
     const pathname = location.pathname.toLowerCase();
     if (mobileNavbarTitle === "People" && !pathname.startsWith("/people")) {
       setMobileNavbarTitle(dispatch, null);
@@ -52,9 +62,7 @@ export default function MobileBottomNav() {
   const handleChange = (_event, nextValue) => {
     if (nextValue !== "people") {
       setPeopleOverlayOpen(false);
-      if (mobileNavbarTitle) {
-        setMobileNavbarTitle(dispatch, null);
-      }
+      if (mobileNavbarTitle) setMobileNavbarTitle(dispatch, null);
     }
 
     if (nextValue === "settings") {
@@ -66,7 +74,7 @@ export default function MobileBottomNav() {
 
     if (nextValue === "people") {
       setMobileNavbarTitle(dispatch, "People");
-      setPeopleOverlayOpen(true);
+      navigate("/people", { state: { openPeopleOverlay: true } });
       return;
     }
 
@@ -79,9 +87,13 @@ export default function MobileBottomNav() {
         open={peopleOverlayOpen}
         onComplete={() => {
           setPeopleOverlayOpen(false);
-          navigate("/people");
+
+          // IMPORTANT: only after user passes overlay, clear the state
+          // so People page switches title to "Brothers & Sisters" and shows FAB
+          navigate("/people", { replace: true, state: null });
         }}
       />
+
       <Paper
         elevation={8}
         sx={(theme) => ({
