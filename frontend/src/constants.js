@@ -27,6 +27,7 @@ export const SG_DISTRICTS = [
   "Toa Payoh",
   "Woodlands",
   "Yishun",
+  "Simei",
 ];
 
 export const FIELD_NAME_SUGGESTIONS = [

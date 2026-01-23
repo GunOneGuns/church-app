@@ -2,15 +2,13 @@ import mongoose from "mongoose";
 
 const peopleSchema = new mongoose.Schema(
   {
-    // name: { type: String },
-    // email: { type: String },
-    // function: { type: String },
-    // status: { type: String },
-    // mobile: { type: String },
-
     Name: { type: String },
     NameChi: { type: String },
-    Contact: { type: Number },
+    BirthYear: { type: String },
+    PhoneNumber: { type: Number },
+    AnnouncementGroup: { type: String },
+    ChatGroup: { type: String },
+    Email: { type: String },
     District: { type: String },
     Address: { type: String },
     ProfilePic: { type: String, default: "" },
@@ -21,7 +19,7 @@ const peopleSchema = new mongoose.Schema(
     // created_at: { type: Date },
     // updated_at: { type: Date },
   },
-  { strict: false, versionKey: false }
+  { strict: false, versionKey: false },
 );
 // peopleSchema.set("toJSON", { virtuals: true });
 

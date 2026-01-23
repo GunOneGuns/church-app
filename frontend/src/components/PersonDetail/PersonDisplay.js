@@ -1,7 +1,6 @@
 import React from "react";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
-
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
@@ -16,10 +15,20 @@ function PersonDisplay({
   onClearRelationships,
 }) {
   const navigate = useNavigate();
+
   const handleRelatedPersonClick = (relatedPerson) => {
     if (!relatedPerson?._id) return;
     navigate(`/person/${relatedPerson._id}`);
   };
+
+  const displayOrNil = (v) => {
+    if (v === undefined || v === null || v === "") return "NIL";
+    return String(v);
+  };
+
+  const profilePicSrc = person?.ProfilePic
+    ? person.ProfilePic
+    : defaultProfilePic;
 
   return (
     <Grid container spacing={3}>
@@ -40,13 +49,14 @@ function PersonDisplay({
           {/* Profile Picture Display */}
           <MDBox
             component="img"
-            src={person?.ProfilePic || defaultProfilePic}
+            src={profilePicSrc}
             alt={`${person?.Name || "User"}'s profile`}
             width="150px"
             height="150px"
             borderRadius="50%"
             sx={{ objectFit: "cover", border: "2px solid #ddd" }}
           />
+
           {/* Display Name */}
           <MDTypography variant="h5" mt={2}>
             {person?.Name || ""}
@@ -61,72 +71,90 @@ function PersonDisplay({
           <MDTypography variant="h6" mb={2}>
             Personal Information
           </MDTypography>
+
           <MDBox display="flex" flexDirection="column" gap={1}>
-            {/* Explicitly render core fields */}
-            {person?.Name && (
-              <MDTypography variant="body2">
-                <MDTypography component="span" fontWeight="bold">
-                  Name:
-                </MDTypography>{" "}
-                {person.Name}
-              </MDTypography>
-            )}
-            {person?.NameChi && (
-              <MDTypography variant="body2">
-                <MDTypography component="span" fontWeight="bold">
-                  Chinese Name:
-                </MDTypography>{" "}
-                {person.NameChi}
-              </MDTypography>
-            )}
-            {person?.District && (
-              <MDTypography variant="body2">
-                <MDTypography component="span" fontWeight="bold">
-                  District:
-                </MDTypography>{" "}
-                {person.District}
-              </MDTypography>
-            )}
-            {person?.Address && (
-              <MDTypography variant="body2">
-                <MDTypography component="span" fontWeight="bold">
-                  Address:
-                </MDTypography>{" "}
-                {person.Address}
-              </MDTypography>
-            )}
-            {person?.Contact && (
-              <MDTypography variant="body2">
-                <MDTypography component="span" fontWeight="bold">
-                  Contact:
-                </MDTypography>{" "}
-                {person.Contact}
-              </MDTypography>
-            )}
-            {/* Render generic custom fields, filtered to exclude ProfilePic */}
+            {/* Always render schema default fields; show NIL when missing */}
+            <MDTypography variant="body2">
+              <MDTypography component="span" fontWeight="bold">
+                Name:
+              </MDTypography>{" "}
+              {displayOrNil(person?.Name)}
+            </MDTypography>
+
+            <MDTypography variant="body2">
+              <MDTypography component="span" fontWeight="bold">
+                Chinese Name:
+              </MDTypography>{" "}
+              {displayOrNil(person?.NameChi)}
+            </MDTypography>
+
+            <MDTypography variant="body2">
+              <MDTypography component="span" fontWeight="bold">
+                Birth Year:
+              </MDTypography>{" "}
+              {displayOrNil(person?.BirthYear)}
+            </MDTypography>
+
+            <MDTypography variant="body2">
+              <MDTypography component="span" fontWeight="bold">
+                Phone Number:
+              </MDTypography>{" "}
+              {displayOrNil(person?.PhoneNumber)}
+            </MDTypography>
+
+            <MDTypography variant="body2">
+              <MDTypography component="span" fontWeight="bold">
+                Announcement Group:
+              </MDTypography>{" "}
+              {displayOrNil(person?.AnnouncementGroup)}
+            </MDTypography>
+
+            <MDTypography variant="body2">
+              <MDTypography component="span" fontWeight="bold">
+                Chat Group:
+              </MDTypography>{" "}
+              {displayOrNil(person?.ChatGroup)}
+            </MDTypography>
+
+            <MDTypography variant="body2">
+              <MDTypography component="span" fontWeight="bold">
+                Email:
+              </MDTypography>{" "}
+              {displayOrNil(person?.Email)}
+            </MDTypography>
+
+            <MDTypography variant="body2">
+              <MDTypography component="span" fontWeight="bold">
+                District:
+              </MDTypography>{" "}
+              {displayOrNil(person?.District)}
+            </MDTypography>
+
+            <MDTypography variant="body2">
+              <MDTypography component="span" fontWeight="bold">
+                Address:
+              </MDTypography>{" "}
+              {displayOrNil(person?.Address)}
+            </MDTypography>
+
+            {/* Render generic custom fields */}
             {personalInfoCustomFieldsForRender.map((field, index) => (
               <MDTypography key={`pcf-view-${index}`} variant="body2">
                 <MDTypography component="span" fontWeight="bold">
-                  {field.key}:
+                  {field.key || "Custom"}:
                 </MDTypography>{" "}
-                {typeof field.value === "object"
+                {field.value === undefined ||
+                field.value === null ||
+                field.value === ""
+                  ? "NIL"
+                  : typeof field.value === "object"
                   ? JSON.stringify(field.value)
-                  : field.value}
+                  : String(field.value)}
               </MDTypography>
             ))}
-            {/* Only show "No additional info" if NO standard fields AND NO custom fields are present */}
-            {!person?.Name &&
-              !person?.NameChi &&
-              !person?.District &&
-              !person?.Address &&
-              !person?.Contact &&
-              personalInfoCustomFieldsForRender.length === 0 && (
-                <MDTypography variant="body2" color="text">
-                  No additional personal information.
-                </MDTypography>
-              )}
           </MDBox>
         </Card>
+
         {/* Panel 2: Related Persons */}
         <Card sx={{ p: 2 }}>
           <MDBox
@@ -137,6 +165,7 @@ function PersonDisplay({
             gap={1}
           >
             <MDTypography variant="h6">Related Persons</MDTypography>
+
             {onClearRelationships && (
               <MDButton
                 variant="outlined"
@@ -149,16 +178,20 @@ function PersonDisplay({
               </MDButton>
             )}
           </MDBox>
+
           <MDBox display="flex" flexWrap="wrap" gap={2}>
-            {/* Display related persons in view mode */}
             {relationshipCustomFieldsForRender.map((field, index) => {
-              const relatedPersonName = field.value;
-              const relatedPersonRelation = field.value2;
-              const relatedPerson = peopleList.find(
-                (p) => p.Name === relatedPersonName
-              );
+              // Prefer ID-based lookup (more reliable than Name)
+              const relatedPerson = field.personId
+                ? peopleList.find((p) => p._id === field.personId)
+                : peopleList.find((p) => p.Name === field.value);
+
+              const relatedPersonName =
+                relatedPerson?.Name || field.value || "NIL";
+              const relatedPersonRelation = field.value2 || "NIL";
               const relatedPersonProfilePic =
                 relatedPerson?.ProfilePic || defaultProfilePic;
+
               return (
                 <MDBox
                   key={`rcf-view-${index}`}
@@ -177,7 +210,7 @@ function PersonDisplay({
                     }
                   }}
                   sx={{
-                    cursor: "pointer",
+                    cursor: relatedPerson?._id ? "pointer" : "default",
                     outline: "none",
                   }}
                 >
@@ -190,6 +223,7 @@ function PersonDisplay({
                     borderRadius="50%"
                     sx={{ objectFit: "cover", mb: 0.5 }}
                   />
+
                   <MDTypography
                     variant="caption"
                     fontWeight="medium"
@@ -197,12 +231,14 @@ function PersonDisplay({
                   >
                     {relatedPersonName}
                   </MDTypography>
+
                   <MDTypography variant="caption" color="text" lineHeight={1.2}>
                     {relatedPersonRelation}
                   </MDTypography>
                 </MDBox>
               );
             })}
+
             {relationshipCustomFieldsForRender.length === 0 && (
               <MDTypography variant="body2" color="text">
                 No related persons found.

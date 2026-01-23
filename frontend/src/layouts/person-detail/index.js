@@ -40,9 +40,13 @@ const knownFields = [
   "id",
   "Name",
   "NameChi",
+  "BirthYear",
+  "PhoneNumber",
+  "AnnouncementGroup",
+  "ChatGroup",
+  "Email",
   "District",
   "Address",
-  "Contact",
   "ProfilePic",
 ];
 
@@ -98,7 +102,7 @@ const propagateImmediateFamilyRelationships = async ({
       if (!relatedPerson) return;
       addChildEntry(
         relatedPerson,
-        getGenderFromRelationType(field.value2 || "")
+        getGenderFromRelationType(field.value2 || ""),
       );
     });
   };
@@ -148,7 +152,7 @@ const propagateImmediateFamilyRelationships = async ({
       } else if (category === "sibling") {
         siblingEntries.push({ person, gender: targetGender });
       }
-    }
+    },
   );
 
   // Only collect existing spouses and children if we're adding parent relationships
@@ -179,7 +183,7 @@ const propagateImmediateFamilyRelationships = async ({
       ) {
         addChildEntry(
           relatedPerson,
-          getGenderFromRelationType(field.value2 || "")
+          getGenderFromRelationType(field.value2 || ""),
         );
       }
     });
@@ -205,11 +209,11 @@ const propagateImmediateFamilyRelationships = async ({
 
       const labelFirstToSecond = getSiblingLabelForGender(secondChild.gender);
       const reciprocalFirstToSecond = getSiblingLabelForGender(
-        firstChild.gender
+        firstChild.gender,
       );
       const labelSecondToFirst = getSiblingLabelForGender(firstChild.gender);
       const reciprocalSecondToFirst = getSiblingLabelForGender(
-        secondChild.gender
+        secondChild.gender,
       );
 
       if (
@@ -217,7 +221,7 @@ const propagateImmediateFamilyRelationships = async ({
           firstFields,
           secondChild.person,
           labelFirstToSecond,
-          reciprocalFirstToSecond
+          reciprocalFirstToSecond,
         )
       ) {
         markPersonDirty(firstChild.person);
@@ -227,7 +231,7 @@ const propagateImmediateFamilyRelationships = async ({
           secondFields,
           firstChild.person,
           labelSecondToFirst,
-          reciprocalSecondToFirst
+          reciprocalSecondToFirst,
         )
       ) {
         markPersonDirty(secondChild.person);
@@ -250,7 +254,7 @@ const propagateImmediateFamilyRelationships = async ({
           spouseFields,
           child.person,
           childLabel,
-          parentLabel
+          parentLabel,
         )
       ) {
         markPersonDirty(spouse.person);
@@ -260,7 +264,7 @@ const propagateImmediateFamilyRelationships = async ({
           childFields,
           spouse.person,
           parentLabel,
-          childLabel
+          childLabel,
         )
       ) {
         markPersonDirty(child.person);
@@ -280,7 +284,7 @@ const propagateImmediateFamilyRelationships = async ({
           currentPersonFields,
           child.person,
           childLabel,
-          parentLabel
+          parentLabel,
         )
       ) {
         markPersonDirty(currentPerson);
@@ -290,7 +294,7 @@ const propagateImmediateFamilyRelationships = async ({
           childFields,
           currentPerson,
           parentLabel,
-          childLabel
+          childLabel,
         )
       ) {
         markPersonDirty(child.person);
@@ -325,7 +329,7 @@ const propagateImmediateFamilyRelationships = async ({
             parentFields,
             child.person,
             childLabel,
-            parentLabel
+            parentLabel,
           )
         ) {
           markPersonDirty(parent.person);
@@ -335,7 +339,7 @@ const propagateImmediateFamilyRelationships = async ({
             childFields,
             parent.person,
             parentLabel,
-            childLabel
+            childLabel,
           )
         ) {
           markPersonDirty(child.person);
@@ -360,11 +364,11 @@ const propagateImmediateFamilyRelationships = async ({
         if (!firstFields || !secondFields) continue;
         const labelFirstToSecond = getSiblingLabelForGender(secondChild.gender);
         const reciprocalFirstToSecond = getSiblingLabelForGender(
-          firstChild.gender
+          firstChild.gender,
         );
         const labelSecondToFirst = getSiblingLabelForGender(firstChild.gender);
         const reciprocalSecondToFirst = getSiblingLabelForGender(
-          secondChild.gender
+          secondChild.gender,
         );
 
         if (
@@ -372,7 +376,7 @@ const propagateImmediateFamilyRelationships = async ({
             firstFields,
             secondChild.person,
             labelFirstToSecond,
-            reciprocalFirstToSecond
+            reciprocalFirstToSecond,
           )
         ) {
           markPersonDirty(firstChild.person);
@@ -382,7 +386,7 @@ const propagateImmediateFamilyRelationships = async ({
             secondFields,
             firstChild.person,
             labelSecondToFirst,
-            reciprocalSecondToFirst
+            reciprocalSecondToFirst,
           )
         ) {
           markPersonDirty(secondChild.person);
@@ -407,7 +411,7 @@ const propagateImmediateFamilyRelationships = async ({
             spouseFields,
             parent.person,
             parentInLawLabel,
-            childInLawLabel
+            childInLawLabel,
           )
         ) {
           markPersonDirty(spouse.person);
@@ -417,7 +421,7 @@ const propagateImmediateFamilyRelationships = async ({
             parentFields,
             spouse.person,
             childInLawLabel,
-            parentInLawLabel
+            parentInLawLabel,
           )
         ) {
           markPersonDirty(parent.person);
@@ -442,7 +446,7 @@ const propagateImmediateFamilyRelationships = async ({
             spouseFields,
             sibling.person,
             siblingLabel,
-            spouseSiblingLabel
+            spouseSiblingLabel,
           )
         ) {
           markPersonDirty(spouse.person);
@@ -452,7 +456,7 @@ const propagateImmediateFamilyRelationships = async ({
             siblingFields,
             spouse.person,
             spouseSiblingLabel,
-            siblingLabel
+            siblingLabel,
           )
         ) {
           markPersonDirty(sibling.person);
@@ -477,7 +481,7 @@ const propagateImmediateFamilyRelationships = async ({
             grandparentFields,
             child.person,
             grandchildLabel,
-            grandparentLabel
+            grandparentLabel,
           )
         ) {
           markPersonDirty(grandparent.person);
@@ -487,7 +491,7 @@ const propagateImmediateFamilyRelationships = async ({
             childFields,
             grandparent.person,
             grandparentLabel,
-            grandchildLabel
+            grandchildLabel,
           )
         ) {
           markPersonDirty(child.person);
@@ -603,7 +607,7 @@ function PersonDetail() {
   const [person, setPerson] = useState(null); // The original person data (for view mode/discard)
   const [isEditing, setIsEditing] = useState(location.state?.edit || isAddMode);
   const [editedPerson, setEditedPerson] = useState(
-    isAddMode ? { ProfilePic: "" } : null
+    isAddMode ? { ProfilePic: "" } : null,
   );
   const [customFields, setCustomFields] = useState([]);
   const [showNotFoundModal, setShowNotFoundModal] = useState(false);
@@ -668,14 +672,14 @@ function PersonDetail() {
       });
       return initialCustomFields;
     },
-    [knownFields, isRelationshipFieldData]
+    [knownFields, isRelationshipFieldData],
   ); // Dependencies for useCallback
 
   const buildPersonPayloadWithCustomFields = useCallback(
     (basePersonData = {}, fields = []) => {
       const data = { ...basePersonData };
       const existingDynamicKeys = Object.keys(basePersonData || {}).filter(
-        (key) => !knownFields.includes(key)
+        (key) => !knownFields.includes(key),
       );
       existingDynamicKeys.forEach((key) => delete data[key]);
 
@@ -683,7 +687,7 @@ function PersonDetail() {
         let actualKey = field.key;
         if (actualKey === "ProfilePic") {
           console.warn(
-            "Attempted to save a custom field named 'ProfilePic'. Ignoring as this is a reserved field."
+            "Attempted to save a custom field named 'ProfilePic'. Ignoring as this is a reserved field.",
           );
           return;
         }
@@ -705,7 +709,7 @@ function PersonDetail() {
 
       return data;
     },
-    []
+    [],
   );
 
   const getRelationshipTargetKey = useCallback((field) => {
@@ -769,7 +773,7 @@ function PersonDetail() {
         Name: currentPersonName || "",
       };
       const currentPersonFieldsSnapshot = JSON.parse(
-        JSON.stringify(customFields || [])
+        JSON.stringify(customFields || []),
       );
       const personById = new Map(people.map((person) => [person._id, person]));
       const personFieldsCache = new Map();
@@ -804,7 +808,7 @@ function PersonDetail() {
         fields,
         targetPerson,
         relationLabel,
-        reciprocalLabel
+        reciprocalLabel,
       ) => {
         if (!fields || !targetPerson || !relationLabel) {
           return false;
@@ -815,14 +819,14 @@ function PersonDetail() {
         let matchIndex = -1;
         if (targetId) {
           matchIndex = fields.findIndex(
-            (field) => "value2" in field && field.personId === targetId
+            (field) => "value2" in field && field.personId === targetId,
           );
         }
         if (matchIndex === -1 && normalizedName) {
           matchIndex = fields.findIndex(
             (field) =>
               "value2" in field &&
-              normalizeTextValue(field.value || "") === normalizedName
+              normalizeTextValue(field.value || "") === normalizedName,
           );
         }
         if (matchIndex >= 0) {
@@ -897,13 +901,13 @@ function PersonDetail() {
           continue;
         }
         const relationCategory = getRelationCategory(
-          relationshipField.value2 || ""
+          relationshipField.value2 || "",
         );
         const targetGender = getGenderFromRelationType(
-          relationshipField.value2 || ""
+          relationshipField.value2 || "",
         );
         const selfGender = getGenderFromRelationType(
-          relationshipField.value3 || ""
+          relationshipField.value3 || "",
         );
         if (!currentPersonGenderGuess && selfGender) {
           currentPersonGenderGuess = selfGender;
@@ -925,7 +929,7 @@ function PersonDetail() {
             targetFields,
             currentPersonRef,
             inverseRelation,
-            relationshipField.value2 || ""
+            relationshipField.value2 || "",
           )
         ) {
           markPersonDirty(targetPerson);
@@ -957,7 +961,7 @@ function PersonDetail() {
             }
             const payload = buildPersonPayloadWithCustomFields(person, fields);
             return updatePerson(personId, payload);
-          })
+          }),
         );
       }
     },
@@ -969,7 +973,7 @@ function PersonDetail() {
       updatePerson,
       fetchPeople,
       customFields,
-    ]
+    ],
   );
 
   // Effect to load person data on component mount or ID change
@@ -1023,7 +1027,7 @@ function PersonDetail() {
       const targetPersonId = personIdOverride || id;
       if (!targetPersonId || targetPersonId === "add") {
         setUploadError(
-          "Please create the person first before uploading an image."
+          "Please create the person first before uploading an image.",
         );
         return;
       }
@@ -1031,7 +1035,7 @@ function PersonDetail() {
       try {
         const response = await uploadProfilePicture(
           targetPersonId,
-          fileToUpload
+          fileToUpload,
         );
         setEditedPerson((prev) => ({
           ...prev,
@@ -1044,11 +1048,11 @@ function PersonDetail() {
         console.error("Error uploading profile picture:", error);
         setUploadError(
           error.response?.data?.message ||
-            "Failed to upload image. Please try again."
+            "Failed to upload image. Please try again.",
         );
       }
     },
-    [selectedFile, id]
+    [selectedFile, id],
   );
 
   const handleSave = useCallback(
@@ -1066,7 +1070,7 @@ function PersonDetail() {
           const relationValue = field.value2 || "";
           const normalizedRelation = normalizeTextValue(relationValue);
           const relationValid = RELATION_SUGGESTIONS.some(
-            (option) => normalizeTextValue(option) === normalizedRelation
+            (option) => normalizeTextValue(option) === normalizedRelation,
           );
           if (!relationValid) {
             isValid = false;
@@ -1095,15 +1099,15 @@ function PersonDetail() {
         }
         const dataToSave = buildPersonPayloadWithCustomFields(
           editedPerson,
-          fieldsToUse
+          fieldsToUse,
         );
         const currentRelationshipFields = fieldsToUse.filter((field) =>
-          Object.prototype.hasOwnProperty.call(field, "value2")
+          Object.prototype.hasOwnProperty.call(field, "value2"),
         );
         const previousRelationshipFields = isAddMode
           ? []
           : initializeCustomFields(person || {}).filter((field) =>
-              Object.prototype.hasOwnProperty.call(field, "value2")
+              Object.prototype.hasOwnProperty.call(field, "value2"),
             );
         if (isAddMode) {
           const createdPerson = await createPerson(dataToSave);
@@ -1117,7 +1121,7 @@ function PersonDetail() {
           if (pendingProfilePicFile && createdPersonId) {
             await handleProfilePicUpload(
               pendingProfilePicFile,
-              createdPersonId
+              createdPersonId,
             );
           }
           localStorage.removeItem("people");
@@ -1167,7 +1171,7 @@ function PersonDetail() {
       buildPersonPayloadWithCustomFields,
       syncReciprocalRelationships,
       handleProfilePicUpload,
-    ]
+    ],
   ); // Dependencies for useCallback
 
   const handleDiscard = useCallback(() => {
@@ -1207,7 +1211,7 @@ function PersonDetail() {
 
   const stripRelationshipFields = useCallback((fields) => {
     return fields.filter(
-      (field) => !Object.prototype.hasOwnProperty.call(field, "value2")
+      (field) => !Object.prototype.hasOwnProperty.call(field, "value2"),
     );
   }, []);
 
@@ -1237,7 +1241,7 @@ function PersonDetail() {
 
   const handleClearAllRelationshipsNow = useCallback(async () => {
     const relationshipFields = customFields.filter((field) =>
-      Object.prototype.hasOwnProperty.call(field, "value2")
+      Object.prototype.hasOwnProperty.call(field, "value2"),
     );
     if (relationshipFields.length === 0) {
       return;
@@ -1278,10 +1282,10 @@ function PersonDetail() {
   // Filter customFields based on the presence of 'value2' (relationship)
   // and ensure 'ProfilePic' is not rendered as a generic custom field
   const personalInfoCustomFieldsForRender = annotatedCustomFields.filter(
-    (field) => !("value2" in field) && field.key !== "ProfilePic"
+    (field) => !("value2" in field) && field.key !== "ProfilePic",
   );
   const relationshipCustomFieldsForRender = annotatedCustomFields.filter(
-    (field) => "value2" in field
+    (field) => "value2" in field,
   );
 
   return (

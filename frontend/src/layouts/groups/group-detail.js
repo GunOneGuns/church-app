@@ -160,7 +160,7 @@ function buildGroupMemberRows(rawPeople, navigate, slug) {
         color="text"
         fontWeight="medium"
       >
-        {person.Contact || "N/A"}
+        {person.PhoneNumber || "N/A"}
       </MDTypography>
     ),
     action: <ActionMenu person={person} navigate={navigate} slug={slug} />,
