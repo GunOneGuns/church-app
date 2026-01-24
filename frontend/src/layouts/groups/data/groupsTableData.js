@@ -123,7 +123,7 @@ export default function data() {
         MemberCount: allPeople.filter((person) =>
           (person.Name || "")
             .toLowerCase()
-            .includes(group.filterLetter.toLowerCase())
+            .includes(group.filterLetter.toLowerCase()),
         ).length,
       }));
     }

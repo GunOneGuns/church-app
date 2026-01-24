@@ -1,5 +1,7 @@
 // Global constants for the frontend application
 
+export const ACCENT_CYAN = "#00bcd4";
+
 export const SG_DISTRICTS = [
   "Ang Mo Kio",
   "Bedok",

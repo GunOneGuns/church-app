@@ -29,6 +29,7 @@ import defaultProfilePic from "assets/images/default-profile-picture.png";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { setMobileNavbarTitle, useMaterialUIController } from "context";
+import { ACCENT_CYAN } from "constants.js";
 
 const MOBILE_PAGINATION_HEIGHT = 30;
 
@@ -124,7 +125,7 @@ function ActionMenu({ person, navigate, slug }) {
       <IconButton
         onClick={handleClick}
         size="small"
-        sx={{ color: "text.secondary" }}
+        sx={{ color: ACCENT_CYAN }}
       >
         <Icon fontSize="small">more_vert</Icon>
       </IconButton>
@@ -152,7 +153,12 @@ function PeopleCell({ image, name, district, onClick }) {
     >
       <MDAvatar src={image} name={name} size="sm" />
       <MDBox ml={2} lineHeight={1}>
-        <MDTypography display="block" variant="button" fontWeight="medium">
+        <MDTypography
+          display="block"
+          variant="button"
+          fontWeight="medium"
+          sx={{ color: ACCENT_CYAN }}
+        >
           {name}
         </MDTypography>
         <MDTypography variant="caption">{district}</MDTypography>
@@ -466,7 +472,10 @@ function GroupDetail() {
                           <ListItemText
                             primary={person?.Name || "N/A"}
                             secondary={person?.District || ""}
-                            primaryTypographyProps={{ noWrap: true }}
+                            primaryTypographyProps={{
+                              noWrap: true,
+                              sx: { color: ACCENT_CYAN },
+                            }}
                             secondaryTypographyProps={{ noWrap: true }}
                           />
                         </ListItemButton>

@@ -12,7 +12,7 @@ import BottomNavigation from "@mui/material/BottomNavigation";
 import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import Icon from "@mui/material/Icon";
 
-const ACTIVE_TAB_COLOR = "#00bcd4";
+import { ACCENT_CYAN } from "constants.js";
 
 const getActiveTab = (pathname = "") => {
   const normalized = pathname.toLowerCase();
@@ -117,7 +117,7 @@ export default function MobileBottomNav() {
               color: theme.palette.text.secondary,
             },
             "& .MuiBottomNavigationAction-root.Mui-selected": {
-              color: ACTIVE_TAB_COLOR,
+              color: ACCENT_CYAN,
             },
             "& .MuiBottomNavigationAction-root.Mui-selected::before": {
               content: '""',
@@ -127,7 +127,7 @@ export default function MobileBottomNav() {
               right: "20%",
               height: 3,
               borderRadius: 999,
-              backgroundColor: ACTIVE_TAB_COLOR,
+              backgroundColor: ACCENT_CYAN,
             },
           })}
         >

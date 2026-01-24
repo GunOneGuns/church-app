@@ -27,6 +27,7 @@ import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { setMobileNavbarTitle, useMaterialUIController } from "context";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import { ACCENT_CYAN } from "constants.js";
 
 const GROUPS_TABLE_TITLE = "Groups";
 const MOBILE_PAGINATION_HEIGHT = 30;
@@ -280,6 +281,7 @@ function Groups() {
                             onClick={(e) => {
                               e.stopPropagation();
                             }}
+                            sx={{ color: ACCENT_CYAN }}
                           >
                             <MoreVertIcon fontSize="small" />
                           </IconButton>
@@ -292,7 +294,10 @@ function Groups() {
                           <ListItemText
                             primary={groupName}
                             secondary={`${group.MemberCount || 0} members`}
-                            primaryTypographyProps={{ noWrap: true }}
+                            primaryTypographyProps={{
+                              noWrap: true,
+                              sx: { color: ACCENT_CYAN },
+                            }}
                             secondaryTypographyProps={{
                               noWrap: true,
                               color: "text.secondary",
@@ -389,6 +394,7 @@ function Groups() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                 }}
+                                sx={{ color: ACCENT_CYAN }}
                               >
                                 <MoreVertIcon fontSize="small" />
                               </IconButton>
@@ -400,7 +406,10 @@ function Groups() {
                             >
                               <ListItemText
                                 primary={groupName}
-                                primaryTypographyProps={{ noWrap: true }}
+                                primaryTypographyProps={{
+                                  noWrap: true,
+                                  sx: { color: ACCENT_CYAN },
+                                }}
                               />
                             </ListItemButton>
                           </ListItem>

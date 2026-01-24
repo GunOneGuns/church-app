@@ -29,6 +29,7 @@ import peopleTableData, {
 } from "layouts/tables/data/peopleTableData";
 import { setMobileNavbarTitle, useMaterialUIController } from "context";
 import defaultProfilePic from "assets/images/default-profile-picture.png";
+import { ACCENT_CYAN } from "constants.js";
 
 const PEOPLE_TABLE_TITLE = "Brothers & Sisters";
 const MOBILE_PAGINATION_HEIGHT = 30;
@@ -280,6 +281,7 @@ function People() {
                             onClick={(e) => {
                               e.stopPropagation();
                             }}
+                            sx={{ color: ACCENT_CYAN }}
                           >
                             <MoreVertIcon fontSize="small" />
                           </IconButton>
@@ -304,7 +306,10 @@ function People() {
                           <ListItemText
                             primary={person?.Name || "N/A"}
                             secondary={person?.District || ""}
-                            primaryTypographyProps={{ noWrap: true }}
+                            primaryTypographyProps={{
+                              noWrap: true,
+                              sx: { color: ACCENT_CYAN },
+                            }}
                             secondaryTypographyProps={{ noWrap: true }}
                           />
                         </ListItemButton>
