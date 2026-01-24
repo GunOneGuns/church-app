@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import Icon from "@mui/material/Icon";
@@ -14,59 +13,136 @@ import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemAvatar from "@mui/material/ListItemAvatar";
 import ListItemText from "@mui/material/ListItemText";
-
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
-
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import MDAvatar from "components/MDAvatar";
-
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
-
 import peopleTableData, {
   columns as peopleColumns,
   buildRows as buildPeopleRows,
 } from "layouts/tables/data/peopleTableData";
-
 import { setMobileNavbarTitle, useMaterialUIController } from "context";
 import defaultProfilePic from "assets/images/default-profile-picture.png";
 
 const PEOPLE_TABLE_TITLE = "Brothers & Sisters";
 const MOBILE_PAGINATION_HEIGHT = 30;
 
+/** Keep this OUTSIDE People() so it doesn't remount on every keystroke */
+function DesktopPaginationControls({
+  page,
+  totalPages,
+  inputValue,
+  onInputChange,
+  onCommit,
+  goToPage,
+}) {
+  if (totalPages <= 1) return null;
+
+  return (
+    <MDBox
+      display="flex"
+      alignItems="center"
+      justifyContent="flex-end"
+      gap={1}
+      sx={{ width: { xs: "100%", sm: "auto" } }}
+    >
+      <IconButton
+        onClick={() => goToPage(page - 1)}
+        size="small"
+        disabled={page <= 1}
+        sx={{ visibility: page <= 1 ? "hidden" : "visible" }}
+      >
+        <ArrowBackIosNewIcon fontSize="small" />
+      </IconButton>
+
+      <TextField
+        value={inputValue}
+        onChange={onInputChange}
+        onBlur={onCommit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onCommit();
+          }
+        }}
+        size="small"
+        sx={{ width: 60 }}
+        inputProps={{
+          style: { textAlign: "center" },
+          inputMode: "numeric", // mobile/desktop numeric keypad hint
+          pattern: "[0-9]*", // helps on mobile browsers
+        }}
+      />
+
+      <IconButton
+        onClick={() => goToPage(page + 1)}
+        size="small"
+        disabled={page >= totalPages}
+        sx={{ visibility: page >= totalPages ? "hidden" : "visible" }}
+      >
+        <ArrowForwardIosIcon fontSize="small" />
+      </IconButton>
+    </MDBox>
+  );
+}
+
+function MobilePaginationControls({ page, totalPages, goToPage }) {
+  return (
+    <MDBox
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      gap={1}
+      sx={{ width: "100%" }}
+    >
+      <IconButton
+        onClick={() => goToPage(page - 1)}
+        size="small"
+        disabled={page <= 1}
+        sx={{ visibility: page <= 1 ? "hidden" : "visible" }}
+      >
+        <ArrowBackIosNewIcon fontSize="small" />
+      </IconButton>
+
+      <MDTypography variant="caption" color="text">
+        {page} / {totalPages}
+      </MDTypography>
+
+      <IconButton
+        onClick={() => goToPage(page + 1)}
+        size="small"
+        disabled={page >= totalPages}
+        sx={{ visibility: page >= totalPages ? "hidden" : "visible" }}
+      >
+        <ArrowForwardIosIcon fontSize="small" />
+      </IconButton>
+    </MDBox>
+  );
+}
+
 function People() {
   const { people } = peopleTableData();
   const navigate = useNavigate();
   const location = useLocation();
-
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  // If we navigated here with { openPeopleOverlay: true }, overlay is active
   const overlayActive = location.state?.openPeopleOverlay === true;
-
   const [, dispatch] = useMaterialUIController();
 
-  // Mobile title logic:
-  // - While overlay is active: "People"
-  // - After overlay completed: "Brothers & Sisters"
   useEffect(() => {
     if (!isMobile) {
       setMobileNavbarTitle(dispatch, null);
       return undefined;
     }
-
-    if (overlayActive) {
-      setMobileNavbarTitle(dispatch, "People");
-    } else {
-      setMobileNavbarTitle(dispatch, PEOPLE_TABLE_TITLE);
-    }
-
+    if (overlayActive) setMobileNavbarTitle(dispatch, "People");
+    else setMobileNavbarTitle(dispatch, PEOPLE_TABLE_TITLE);
     return () => setMobileNavbarTitle(dispatch, null);
   }, [dispatch, isMobile, overlayActive]);
 
@@ -98,6 +174,7 @@ function People() {
     (page - 1) * rowsPerPage,
     page * rowsPerPage,
   );
+
   const paginatedRows = rows.slice(
     (page - 1) * rowsPerPage,
     page * rowsPerPage,
@@ -115,111 +192,41 @@ function People() {
     }
   }, [page, totalPages]);
 
-  const goToPage = (nextPage) => {
-    const normalized = Math.min(totalPages, Math.max(1, nextPage));
-    setPage(normalized);
-    setInputValue(normalized.toString());
-  };
+  const goToPage = useCallback(
+    (nextPage) => {
+      const normalized = Math.min(totalPages, Math.max(1, nextPage));
+      setPage(normalized);
+      setInputValue(normalized.toString());
+    },
+    [totalPages],
+  );
 
-  const handleInputChange = (e) => setInputValue(e.target.value);
+  // digits-only input
+  const handleInputChange = useCallback((e) => {
+    const digitsOnly = e.target.value.replace(/\D/g, "");
+    setInputValue(digitsOnly);
+  }, []);
 
-  const handleInputBlur = () => {
+  // commit on blur or Enter
+  const commitInputPage = useCallback(() => {
+    if (inputValue === "") {
+      // if they cleared it, revert to current page
+      setInputValue(page.toString());
+      return;
+    }
+
     const value = parseInt(inputValue, 10);
     if (Number.isNaN(value)) {
       setInputValue(page.toString());
       return;
     }
-    if (value >= 1 && value <= totalPages) {
-      setPage(value);
-    } else if (value > totalPages) {
-      setPage(totalPages);
-      setInputValue(totalPages.toString());
-    } else {
-      setInputValue(page.toString());
-    }
-  };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") handleInputBlur();
-  };
-
-  const DesktopPaginationControls = () => {
-    if (totalPages <= 1) return null;
-    return (
-      <MDBox
-        display="flex"
-        alignItems="center"
-        justifyContent="flex-end"
-        gap={1}
-        sx={{ width: { xs: "100%", sm: "auto" } }}
-      >
-        <IconButton
-          onClick={() => goToPage(page - 1)}
-          size="small"
-          disabled={page <= 1}
-          sx={{ visibility: page <= 1 ? "hidden" : "visible" }}
-        >
-          <ArrowBackIosNewIcon fontSize="small" />
-        </IconButton>
-
-        <TextField
-          value={inputValue}
-          onChange={handleInputChange}
-          onBlur={handleInputBlur}
-          onKeyPress={handleKeyPress}
-          size="small"
-          sx={{ width: 60 }}
-          inputProps={{ style: { textAlign: "center" } }}
-        />
-
-        <IconButton
-          onClick={() => goToPage(page + 1)}
-          size="small"
-          disabled={page >= totalPages}
-          sx={{ visibility: page >= totalPages ? "hidden" : "visible" }}
-        >
-          <ArrowForwardIosIcon fontSize="small" />
-        </IconButton>
-      </MDBox>
-    );
-  };
-
-  const MobilePaginationControls = () => (
-    <MDBox
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      gap={1}
-      sx={{ width: "100%" }}
-    >
-      <IconButton
-        onClick={() => goToPage(page - 1)}
-        size="small"
-        disabled={page <= 1}
-        sx={{ visibility: page <= 1 ? "hidden" : "visible" }}
-      >
-        <ArrowBackIosNewIcon fontSize="small" />
-      </IconButton>
-
-      <MDTypography variant="caption" color="text">
-        {page} / {totalPages}
-      </MDTypography>
-
-      <IconButton
-        onClick={() => goToPage(page + 1)}
-        size="small"
-        disabled={page >= totalPages}
-        sx={{ visibility: page >= totalPages ? "hidden" : "visible" }}
-      >
-        <ArrowForwardIosIcon fontSize="small" />
-      </IconButton>
-    </MDBox>
-  );
+    goToPage(value);
+  }, [inputValue, page, goToPage]);
 
   return (
     <DashboardLayout>
       <DashboardNavbar />
-
       <MDBox pt={{ xs: 3, xl: 6 }} pb={{ xs: 2, xl: 3 }}>
         {isMobile ? (
           <MDBox
@@ -261,7 +268,6 @@ function People() {
                   {paginatedPeople.map((person, index) => {
                     const personId = person?._id || person?.id;
                     const key = personId || person?.Name || index;
-
                     return (
                       <ListItem
                         key={key}
@@ -295,7 +301,6 @@ function People() {
                               size="sm"
                             />
                           </ListItemAvatar>
-
                           <ListItemText
                             primary={person?.Name || "N/A"}
                             secondary={person?.District || ""}
@@ -327,7 +332,11 @@ function People() {
                 px: 2,
               })}
             >
-              <MobilePaginationControls />
+              <MobilePaginationControls
+                page={page}
+                totalPages={totalPages}
+                goToPage={goToPage}
+              />
             </MDBox>
           </MDBox>
         ) : (
@@ -350,7 +359,6 @@ function People() {
                   <MDTypography variant="h6" color="white">
                     {PEOPLE_TABLE_TITLE}
                   </MDTypography>
-
                   <MDButton
                     variant="contained"
                     color="white"
@@ -394,7 +402,14 @@ function People() {
                     sx={{ width: { xs: "100%", sm: 280 }, maxWidth: "100%" }}
                   />
 
-                  <DesktopPaginationControls />
+                  <DesktopPaginationControls
+                    page={page}
+                    totalPages={totalPages}
+                    inputValue={inputValue}
+                    onInputChange={handleInputChange}
+                    onCommit={commitInputPage}
+                    goToPage={goToPage}
+                  />
                 </MDBox>
               </Card>
             </Grid>
@@ -402,7 +417,6 @@ function People() {
         )}
       </MDBox>
 
-      {/* MOBILE floating add button only (HIDDEN while overlay is active) */}
       {isMobile && !overlayActive && (
         <IconButton
           onClick={() => navigate("/person/add", { state: { add: true } })}
@@ -416,9 +430,7 @@ function People() {
             background: muiTheme.palette.info.main,
             color: "#fff",
             zIndex: muiTheme.zIndex.modal - 1,
-            "&:hover": {
-              background: muiTheme.palette.info.dark,
-            },
+            "&:hover": { background: muiTheme.palette.info.dark },
           })}
         >
           <Icon fontSize="large" sx={{ color: "#fff" }}>

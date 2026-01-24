@@ -26,10 +26,74 @@ import { useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { setMobileNavbarTitle, useMaterialUIController } from "context";
-import MoreVertIcon from "@mui/icons-material/MoreVert"; // Added import for more icon
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 
 const GROUPS_TABLE_TITLE = "Groups";
 const MOBILE_PAGINATION_HEIGHT = 30;
+
+/**
+ * Desktop/Web paginator (same behavior as People + GroupDetail):
+ * - Input keeps focus (component is outside Groups() so it won't remount every keystroke)
+ * - Digits only
+ * - Press Enter to jump
+ */
+function DesktopPaginationControls({
+  page,
+  totalPages,
+  inputValue,
+  onInputChange,
+  onCommit,
+  goToPage,
+}) {
+  if (totalPages <= 1) return null;
+
+  return (
+    <MDBox
+      display="flex"
+      alignItems="center"
+      justifyContent="flex-end"
+      gap={1}
+      sx={{ width: { xs: "100%", sm: "auto" } }}
+    >
+      <IconButton
+        onClick={() => goToPage(page - 1)}
+        size="small"
+        disabled={page <= 1}
+        sx={{ visibility: page <= 1 ? "hidden" : "visible" }}
+      >
+        <ArrowBackIosNewIcon fontSize="small" />
+      </IconButton>
+
+      <TextField
+        value={inputValue}
+        onChange={onInputChange}
+        onBlur={onCommit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onCommit();
+          }
+        }}
+        size="small"
+        sx={{ width: 60 }}
+        inputProps={{
+          style: { textAlign: "center" },
+          inputMode: "numeric",
+          pattern: "[0-9]*",
+        }}
+      />
+
+      <IconButton
+        onClick={() => goToPage(page + 1)}
+        size="small"
+        disabled={page >= totalPages}
+        sx={{ visibility: page >= totalPages ? "hidden" : "visible" }}
+      >
+        <ArrowForwardIosIcon fontSize="small" />
+      </IconButton>
+    </MDBox>
+  );
+}
 
 function Groups() {
   const { groups } = groupsTableData();
@@ -60,16 +124,17 @@ function Groups() {
 
   const rows = useMemo(
     () => buildGroupsRows(filteredGroups, navigate),
-    [filteredGroups, navigate]
+    [filteredGroups, navigate],
   );
 
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredGroups.length / rowsPerPage)
+    Math.ceil(filteredGroups.length / rowsPerPage),
   );
+
   const paginatedGroups = filteredGroups.slice(
     (page - 1) * rowsPerPage,
-    page * rowsPerPage
+    page * rowsPerPage,
   );
 
   useEffect(() => {
@@ -84,11 +149,30 @@ function Groups() {
     }
   }, [page, totalPages]);
 
-  const handleInputChange = (e) => setInputValue(e.target.value);
   const goToPage = (nextPage) => {
     const normalizedPage = Math.min(totalPages, Math.max(1, nextPage));
     setPage(normalizedPage);
     setInputValue(normalizedPage.toString());
+  };
+
+  // Desktop input: digits only
+  const handleInputChange = (e) => {
+    const digitsOnly = e.target.value.replace(/\D/g, "");
+    setInputValue(digitsOnly);
+  };
+
+  // Desktop commit: blur or Enter jumps to page
+  const handleInputCommit = () => {
+    if (inputValue === "") {
+      setInputValue(page.toString());
+      return;
+    }
+    const value = parseInt(inputValue, 10);
+    if (Number.isNaN(value)) {
+      setInputValue(page.toString());
+      return;
+    }
+    goToPage(value);
   };
 
   const renderPaginationControls = ({
@@ -104,7 +188,6 @@ function Groups() {
         </MDTypography>
       );
     }
-
     return (
       <MDBox
         display="flex"
@@ -123,7 +206,7 @@ function Groups() {
         </IconButton>
         <MDTypography variant="caption" color="text">
           {page}
-          {showTotal && ` / ${totalPages}`}
+          {showTotal && `/ ${totalPages}`}
         </MDTypography>
         <IconButton
           onClick={() => goToPage(page + 1)}
@@ -164,16 +247,9 @@ function Groups() {
                 size="small"
                 sx={{ flex: 1 }}
               />
-              {/* <MDButton
-                variant="contained"
-                color="info"
-                iconOnly
-                aria-label="Add group"
-                onClick={() => navigate("/group/add", { state: { add: true } })}
-              >
-                <Icon>add</Icon>
-              </MDButton> */}
+              {/* <MDButton ... /> */}
             </MDBox>
+
             <MDBox
               sx={{
                 flex: 1,
@@ -215,7 +291,7 @@ function Groups() {
                         >
                           <ListItemText
                             primary={groupName}
-                            secondary={`${group.MemberCount || 0} members`} // Display member count here
+                            secondary={`${group.MemberCount || 0} members`}
                             primaryTypographyProps={{ noWrap: true }}
                             secondaryTypographyProps={{
                               noWrap: true,
@@ -235,6 +311,7 @@ function Groups() {
                 </MDBox>
               )}
             </MDBox>
+
             <MDBox
               sx={(muiTheme) => ({
                 height: MOBILE_PAGINATION_HEIGHT,
@@ -285,6 +362,7 @@ function Groups() {
                     <Icon>add</Icon>
                   </MDButton>
                 </MDBox>
+
                 <MDBox
                   pt={3}
                   sx={{ maxHeight: "calc(100vh - 450px)", overflow: "auto" }}
@@ -337,6 +415,7 @@ function Groups() {
                     )}
                   </List>
                 </MDBox>
+
                 <MDBox
                   display="flex"
                   justifyContent="space-between"
@@ -350,17 +429,23 @@ function Groups() {
                     size="small"
                     sx={{ width: { xs: "100%", sm: 280 }, maxWidth: "100%" }}
                   />
-                  {renderPaginationControls({
-                    alwaysShow: false,
-                    justifyContent: "flex-end",
-                    showTotal: false,
-                  })}
+
+                  {/* Desktop/Web paginator now matches People + GroupDetail */}
+                  <DesktopPaginationControls
+                    page={page}
+                    totalPages={totalPages}
+                    inputValue={inputValue}
+                    onInputChange={handleInputChange}
+                    onCommit={handleInputCommit}
+                    goToPage={goToPage}
+                  />
                 </MDBox>
               </Card>
             </Grid>
           </Grid>
         )}
       </MDBox>
+
       {/* Floating action button for adding group */}
       {isMobile && (
         <IconButton

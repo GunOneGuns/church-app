@@ -1,7 +1,6 @@
 // layouts/groups/group-detail.js
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
-
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import IconButton from "@mui/material/IconButton";
@@ -9,50 +8,104 @@ import TextField from "@mui/material/TextField";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Icon from "@mui/material/Icon";
-
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
-
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemAvatar from "@mui/material/ListItemAvatar";
 import ListItemText from "@mui/material/ListItemText";
-
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import MDAvatar from "components/MDAvatar";
 import MDBadge from "components/MDBadge";
-
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
-
 import { columns as peopleColumns } from "layouts/tables/data/peopleTableData";
 import defaultProfilePic from "assets/images/default-profile-picture.png";
-
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { setMobileNavbarTitle, useMaterialUIController } from "context";
 
 const MOBILE_PAGINATION_HEIGHT = 30;
 
+/**
+ * FIX (web/desktop paginator):
+ * - Keep paginator component OUTSIDE GroupDetail so it doesn't remount on every keystroke.
+ * - Digits-only input + Enter to commit.
+ */
+function DesktopPaginationControls({
+  page,
+  totalPages,
+  inputValue,
+  onInputChange,
+  onCommit,
+  goToPage,
+}) {
+  if (totalPages <= 1) return null;
+
+  return (
+    <MDBox
+      display="flex"
+      alignItems="center"
+      justifyContent="flex-end"
+      gap={1}
+      sx={{ width: { xs: "100%", sm: "auto" } }}
+    >
+      <IconButton
+        onClick={() => goToPage(page - 1)}
+        size="small"
+        disabled={page <= 1}
+        sx={{ visibility: page <= 1 ? "hidden" : "visible" }}
+      >
+        <ArrowBackIosNewIcon fontSize="small" />
+      </IconButton>
+
+      <TextField
+        value={inputValue}
+        onChange={onInputChange}
+        onBlur={onCommit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onCommit();
+          }
+        }}
+        size="small"
+        sx={{ width: 60 }}
+        inputProps={{
+          style: { textAlign: "center" },
+          inputMode: "numeric",
+          pattern: "[0-9]*",
+        }}
+      />
+
+      <IconButton
+        onClick={() => goToPage(page + 1)}
+        size="small"
+        disabled={page >= totalPages}
+        sx={{ visibility: page >= totalPages ? "hidden" : "visible" }}
+      >
+        <ArrowForwardIosIcon fontSize="small" />
+      </IconButton>
+    </MDBox>
+  );
+}
+
 function ActionMenu({ person, navigate, slug }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
-
   const handleClick = (event) => {
     event.stopPropagation();
     setAnchorEl(event.currentTarget);
   };
-
   const handleClose = (event) => {
     event.stopPropagation();
     setAnchorEl(null);
   };
-
   const handleEdit = (event) => {
     event.stopPropagation();
     navigate(`/person/${person._id}`, {
@@ -60,14 +113,12 @@ function ActionMenu({ person, navigate, slug }) {
     });
     handleClose(event);
   };
-
   const handleRemove = (event) => {
     event.stopPropagation();
     // TODO: Implement remove from group functionality
     console.log("Remove from group:", person._id);
     handleClose(event);
   };
-
   return (
     <>
       <IconButton
@@ -77,7 +128,6 @@ function ActionMenu({ person, navigate, slug }) {
       >
         <Icon fontSize="small">more_vert</Icon>
       </IconButton>
-
       <Menu
         anchorEl={anchorEl}
         open={open}
@@ -170,19 +220,14 @@ function buildGroupMemberRows(rawPeople, navigate, slug) {
 function GroupDetail() {
   const { id: slug } = useParams();
   const navigate = useNavigate();
-
   const theme = useTheme();
   // Keep consistent with your Groups page "mobile" breakpoint
   const isMobile = useMediaQuery(theme.breakpoints.down("xl"));
-
   const [, dispatch] = useMaterialUIController();
-
   const [group, setGroup] = useState(null);
   const [members, setMembers] = useState([]);
-
   // Search
   const [searchQuery, setSearchQuery] = useState("");
-
   // Pagination
   const [page, setPage] = useState(1);
   const [inputValue, setInputValue] = useState("1");
@@ -204,12 +249,10 @@ function GroupDetail() {
         filterLetter: "B",
       },
     ];
-
     const currentGroup = mockGroups.find(
       (g) => g.Name.toLowerCase().replace(/\s+/g, "_") === slug,
     );
     setGroup(currentGroup);
-
     if (currentGroup) {
       const stored = localStorage.getItem("people");
       if (stored) {
@@ -234,11 +277,9 @@ function GroupDetail() {
       setMobileNavbarTitle(dispatch, null);
       return undefined;
     }
-
     if (group?.Name) {
       setMobileNavbarTitle(dispatch, group.Name);
     }
-
     return () => setMobileNavbarTitle(dispatch, null);
   }, [dispatch, group?.Name, isMobile]);
 
@@ -285,64 +326,23 @@ function GroupDetail() {
     setInputValue(normalized.toString());
   };
 
-  // Desktop page input handlers
-  const handleInputChange = (e) => setInputValue(e.target.value);
+  // Desktop page input handlers (FIXED: digits only + Enter commits without losing focus)
+  const handleInputChange = (e) => {
+    const digitsOnly = e.target.value.replace(/\D/g, "");
+    setInputValue(digitsOnly);
+  };
+
   const handleInputBlur = () => {
+    if (inputValue === "") {
+      setInputValue(page.toString());
+      return;
+    }
     const value = parseInt(inputValue, 10);
     if (Number.isNaN(value)) {
       setInputValue(page.toString());
       return;
     }
-    if (value >= 1 && value <= totalPages) {
-      setPage(value);
-    } else if (value > totalPages) {
-      setPage(totalPages);
-      setInputValue(totalPages.toString());
-    } else {
-      setInputValue(page.toString());
-    }
-  };
-
-  const DesktopPaginationControls = () => {
-    if (totalPages <= 1) return null;
-
-    return (
-      <MDBox
-        display="flex"
-        alignItems="center"
-        justifyContent="flex-end"
-        gap={1}
-        sx={{ width: { xs: "100%", sm: "auto" } }}
-      >
-        <IconButton
-          onClick={() => goToPage(page - 1)}
-          size="small"
-          disabled={page <= 1}
-          sx={{ visibility: page <= 1 ? "hidden" : "visible" }}
-        >
-          <ArrowBackIosNewIcon fontSize="small" />
-        </IconButton>
-
-        <TextField
-          value={inputValue}
-          onChange={handleInputChange}
-          onBlur={handleInputBlur}
-          onKeyDown={(e) => e.key === "Enter" && handleInputBlur()}
-          size="small"
-          sx={{ width: 60 }}
-          inputProps={{ style: { textAlign: "center" } }}
-        />
-
-        <IconButton
-          onClick={() => goToPage(page + 1)}
-          size="small"
-          disabled={page >= totalPages}
-          sx={{ visibility: page >= totalPages ? "hidden" : "visible" }}
-        >
-          <ArrowForwardIosIcon fontSize="small" />
-        </IconButton>
-      </MDBox>
-    );
+    goToPage(value);
   };
 
   // Mobile pagination (matches People page)
@@ -362,11 +362,9 @@ function GroupDetail() {
       >
         <ArrowBackIosNewIcon fontSize="small" />
       </IconButton>
-
       <MDTypography variant="caption" color="text">
         {page} / {totalPages}
       </MDTypography>
-
       <IconButton
         onClick={() => goToPage(page + 1)}
         size="small"
@@ -393,7 +391,6 @@ function GroupDetail() {
   return (
     <DashboardLayout>
       <DashboardNavbar customRoute={["groups", group.Name]} />
-
       <MDBox pt={{ xs: 3, xl: 6 }} pb={{ xs: 2, xl: 3 }}>
         {isMobile ? (
           // -------------------------
@@ -422,7 +419,6 @@ function GroupDetail() {
                 sx={{ flex: 1 }}
               />
             </MDBox>
-
             <MDBox
               sx={{
                 flex: 1,
@@ -438,7 +434,6 @@ function GroupDetail() {
                   {paginatedMembers.map((person, index) => {
                     const personId = person?._id || person?.id;
                     const key = personId || person?.Name || index;
-
                     return (
                       <ListItem
                         key={key}
@@ -468,7 +463,6 @@ function GroupDetail() {
                               size="sm"
                             />
                           </ListItemAvatar>
-
                           <ListItemText
                             primary={person?.Name || "N/A"}
                             secondary={person?.District || ""}
@@ -488,7 +482,6 @@ function GroupDetail() {
                 </MDBox>
               )}
             </MDBox>
-
             <MDBox
               sx={(muiTheme) => ({
                 height: MOBILE_PAGINATION_HEIGHT,
@@ -531,7 +524,6 @@ function GroupDetail() {
                       {group.Category} • {members.length} members
                     </MDTypography>
                   </MDBox>
-
                   <MDButton
                     variant="contained"
                     color="white"
@@ -545,7 +537,6 @@ function GroupDetail() {
                     <Icon>add</Icon>
                   </MDButton>
                 </MDBox>
-
                 <MDBox
                   pt={3}
                   sx={{ maxHeight: "calc(100vh - 400px)", overflow: "auto" }}
@@ -559,7 +550,6 @@ function GroupDetail() {
                     pagination={false}
                   />
                 </MDBox>
-
                 <MDBox
                   display="flex"
                   justifyContent="space-between"
@@ -574,7 +564,16 @@ function GroupDetail() {
                     size="small"
                     sx={{ minWidth: 240 }}
                   />
-                  <DesktopPaginationControls />
+
+                  {/* FIXED paginator (desktop/web) */}
+                  <DesktopPaginationControls
+                    page={page}
+                    totalPages={totalPages}
+                    inputValue={inputValue}
+                    onInputChange={handleInputChange}
+                    onCommit={handleInputBlur}
+                    goToPage={goToPage}
+                  />
                 </MDBox>
               </Card>
             </Grid>
@@ -609,7 +608,6 @@ function GroupDetail() {
           </Icon>
         </IconButton>
       )}
-
       <Footer />
     </DashboardLayout>
   );
