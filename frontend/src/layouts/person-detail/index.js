@@ -619,6 +619,7 @@ function PersonDetail() {
   const [showNotFoundModal, setShowNotFoundModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [actionMenuAnchorEl, setActionMenuAnchorEl] = useState(null);
+  const [pendingActionMenuAction, setPendingActionMenuAction] = useState(null);
   const [peopleList, setPeopleList] = useState([]); // List of all people for relationship suggestions
   const [relationshipFieldErrors, setRelationshipFieldErrors] = useState({});
 
@@ -632,6 +633,7 @@ function PersonDetail() {
   useEffect(() => {
     if (isEditing || isAddMode) {
       setActionMenuAnchorEl(null);
+      setPendingActionMenuAction(null);
     }
   }, [isEditing, isAddMode]);
 
@@ -1214,6 +1216,34 @@ function PersonDetail() {
     setShowDeleteModal(false);
   }, [id, navigate]);
 
+  const handleCloseActionMenu = useCallback(() => {
+    setActionMenuAnchorEl(null);
+    setPendingActionMenuAction(null);
+  }, []);
+
+  const runPendingActionMenuAction = useCallback(() => {
+    const action = pendingActionMenuAction;
+    if (!action) return;
+
+    setPendingActionMenuAction(null);
+
+    if (action === "save") {
+      handleSave();
+      return;
+    }
+    if (action === "discard") {
+      handleDiscard();
+      return;
+    }
+    if (action === "edit") {
+      handleEdit();
+      return;
+    }
+    if (action === "delete") {
+      setShowDeleteModal(true);
+    }
+  }, [handleDiscard, handleEdit, handleSave, pendingActionMenuAction]);
+
   // Handlers for editing person details (passed to PersonEditForm)
   const handleChange = useCallback((field, value) => {
     setEditedPerson((prev) => ({ ...prev, [field]: value }));
@@ -1339,7 +1369,93 @@ function PersonDetail() {
               </MDTypography>
             </MDBox>
             <MDBox display="flex" gap={1}>
-              {isEditing || isAddMode ? (
+              {isMobileView ? (
+                <>
+                  <IconButton
+                    size="small"
+                    onClick={(event) =>
+                      setActionMenuAnchorEl(event.currentTarget)
+                    }
+                    sx={{ color: ACCENT_CYAN }}
+                  >
+                    <Icon fontSize="small">more_vert</Icon>
+                  </IconButton>
+                  <Menu
+                    anchorEl={actionMenuAnchorEl}
+                    open={actionMenuOpen}
+                    onClose={handleCloseActionMenu}
+                    TransitionProps={{
+                      onExited: runPendingActionMenuAction,
+                    }}
+                  >
+                    {(isEditing || isAddMode
+                      ? [
+                          <MenuItem
+                            key="save"
+                            sx={{ color: ACCENT_CYAN }}
+                            onClick={() => {
+                              setPendingActionMenuAction("save");
+                              setActionMenuAnchorEl(null);
+                            }}
+                          >
+                            {isAddMode ? "Add" : "Save"}
+                          </MenuItem>,
+                          <MDBox
+                            key="divider"
+                            component="li"
+                            sx={{
+                              height: 2,
+                              width: "100%",
+                              backgroundColor: "grey.400",
+                              pointerEvents: "none",
+                            }}
+                          />,
+                          <MenuItem
+                            key="discard"
+                            sx={{ color: "error.main" }}
+                            onClick={() => {
+                              setPendingActionMenuAction("discard");
+                              setActionMenuAnchorEl(null);
+                            }}
+                          >
+                            {isAddMode ? "Cancel" : "Discard"}
+                          </MenuItem>,
+                        ]
+                      : [
+                          <MenuItem
+                            key="edit"
+                            sx={{ color: ACCENT_CYAN }}
+                            onClick={() => {
+                              setPendingActionMenuAction("edit");
+                              setActionMenuAnchorEl(null);
+                            }}
+                          >
+                            Edit
+                          </MenuItem>,
+                          <MDBox
+                            key="divider"
+                            component="li"
+                            sx={{
+                              height: 2,
+                              width: "100%",
+                              backgroundColor: "grey.400",
+                              pointerEvents: "none",
+                            }}
+                          />,
+                          <MenuItem
+                            key="delete"
+                            sx={{ color: "error.main" }}
+                            onClick={() => {
+                              setPendingActionMenuAction("delete");
+                              setActionMenuAnchorEl(null);
+                            }}
+                          >
+                            Delete
+                          </MenuItem>,
+                        ])}
+                  </Menu>
+                </>
+              ) : isEditing || isAddMode ? (
                 <>
                   <MDButton
                     variant="gradient"
@@ -1349,8 +1465,8 @@ function PersonDetail() {
                     {isAddMode ? "Add" : "Save"}
                   </MDButton>
                   <MDButton
-                    variant="outlined"
-                    color="secondary"
+                    variant="gradient"
+                    color="error"
                     onClick={handleDiscard}
                   >
                     {isAddMode ? "Cancel" : "Discard"}
@@ -1358,68 +1474,16 @@ function PersonDetail() {
                 </>
               ) : (
                 <>
-                  {isMobileView ? (
-                    <>
-                      <IconButton
-                        size="small"
-                        onClick={(event) =>
-                          setActionMenuAnchorEl(event.currentTarget)
-                        }
-                        sx={{ color: ACCENT_CYAN }}
-                      >
-                        <Icon fontSize="small">more_vert</Icon>
-                      </IconButton>
-                      <Menu
-                        anchorEl={actionMenuAnchorEl}
-                        open={actionMenuOpen}
-                        onClose={() => setActionMenuAnchorEl(null)}
-                      >
-                        <MenuItem
-                          sx={{ color: ACCENT_CYAN }}
-                          onClick={() => {
-                            setActionMenuAnchorEl(null);
-                            handleEdit();
-                          }}
-                        >
-                          Edit
-                        </MenuItem>
-                        <MDBox
-                          sx={{
-                            height: 2,
-                            width: "100%",
-                            backgroundColor: "grey.400",
-                            pointerEvents: "none",
-                          }}
-                        />
-                        <MenuItem
-                          sx={{ color: "error.main" }}
-                          onClick={() => {
-                            setActionMenuAnchorEl(null);
-                            setShowDeleteModal(true);
-                          }}
-                        >
-                          Delete
-                        </MenuItem>
-                      </Menu>
-                    </>
-                  ) : (
-                    <>
-                      <MDButton
-                        variant="gradient"
-                        color="info"
-                        onClick={handleEdit}
-                      >
-                        Edit
-                      </MDButton>
-                      <MDButton
-                        variant="gradient"
-                        color="error"
-                        onClick={() => setShowDeleteModal(true)}
-                      >
-                        Delete
-                      </MDButton>
-                    </>
-                  )}
+                  <MDButton variant="gradient" color="info" onClick={handleEdit}>
+                    Edit
+                  </MDButton>
+                  <MDButton
+                    variant="gradient"
+                    color="error"
+                    onClick={() => setShowDeleteModal(true)}
+                  >
+                    Delete
+                  </MDButton>
                 </>
               )}
             </MDBox>
