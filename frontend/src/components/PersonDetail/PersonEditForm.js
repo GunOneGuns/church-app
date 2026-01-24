@@ -6,7 +6,6 @@ import React, {
   useState,
 } from "react";
 import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
 import Autocomplete from "@mui/material/Autocomplete";
 import Grid from "@mui/material/Grid";
 import Slider from "@mui/material/Slider";
@@ -21,7 +20,6 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import {
-  SG_DISTRICTS,
   FIELD_NAME_SUGGESTIONS,
   RELATION_SUGGESTIONS,
   RELATION_AUTO_RECIPROCALS,
@@ -562,36 +560,14 @@ function PersonEditForm({
 
               <TextField
                 variant="outlined"
-                select
                 label="District"
                 value={editedPerson?.District ?? ""}
                 onChange={(e) => handleChange("District", e.target.value)}
                 fullWidth
-                SelectProps={{
-                  MenuProps: {
-                    PaperProps: { style: { maxHeight: 300 } },
-                  },
-                  sx: {
-                    ".MuiSelect-select": {
-                      height: "56px",
-                      paddingTop: 0,
-                      paddingBottom: 0,
-                      display: "flex",
-                      alignItems: "center",
-                    },
-                  },
-                }}
                 sx={{
                   "& .MuiOutlinedInput-root": { height: "56px" },
                 }}
-              >
-                <MenuItem value="">(None)</MenuItem>
-                {SG_DISTRICTS.map((district) => (
-                  <MenuItem key={district} value={district}>
-                    {district}
-                  </MenuItem>
-                ))}
-              </TextField>
+              />
 
               <TextField
                 variant="outlined"
