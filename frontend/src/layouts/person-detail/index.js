@@ -3,11 +3,14 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react"; // Ad
 import Card from "@mui/material/Card";
 import IconButton from "@mui/material/IconButton";
 import Icon from "@mui/material/Icon";
-// REMOVED: TextField, MenuItem, Autocomplete, Grid, AddIcon, UploadFileIcon, CircularProgress
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 
 import defaultProfilePic from "assets/images/default-profile-picture.png";
 import MDBox from "components/MDBox";
@@ -26,6 +29,7 @@ import {
   RELATION_INVERSE_MAP,
   RELATION_AUTO_RECIPROCALS,
   RELATION_SUGGESTIONS,
+  ACCENT_CYAN,
 } from "constants.js";
 
 // Import your new sub-components
@@ -602,6 +606,8 @@ function PersonDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const isAddMode = id === "add";
+  const theme = useTheme();
+  const isMobileView = useMediaQuery(theme.breakpoints.down("xl"));
 
   // Core State for the Person Detail View
   const [person, setPerson] = useState(null); // The original person data (for view mode/discard)
@@ -612,6 +618,7 @@ function PersonDetail() {
   const [customFields, setCustomFields] = useState([]);
   const [showNotFoundModal, setShowNotFoundModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [actionMenuAnchorEl, setActionMenuAnchorEl] = useState(null);
   const [peopleList, setPeopleList] = useState([]); // List of all people for relationship suggestions
   const [relationshipFieldErrors, setRelationshipFieldErrors] = useState({});
 
@@ -619,6 +626,14 @@ function PersonDetail() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadError, setUploadError] = useState(null);
   const profilePicProcessorRef = useRef(null);
+
+  const actionMenuOpen = Boolean(actionMenuAnchorEl);
+
+  useEffect(() => {
+    if (isEditing || isAddMode) {
+      setActionMenuAnchorEl(null);
+    }
+  }, [isEditing, isAddMode]);
 
   const breadcrumbRoute = useMemo(() => {
     const baseRoute = ["people"];
@@ -1343,20 +1358,68 @@ function PersonDetail() {
                 </>
               ) : (
                 <>
-                  <MDButton
-                    variant="gradient"
-                    color="info"
-                    onClick={handleEdit}
-                  >
-                    Edit
-                  </MDButton>
-                  <MDButton
-                    variant="gradient"
-                    color="error"
-                    onClick={() => setShowDeleteModal(true)}
-                  >
-                    Delete
-                  </MDButton>
+                  {isMobileView ? (
+                    <>
+                      <IconButton
+                        size="small"
+                        onClick={(event) =>
+                          setActionMenuAnchorEl(event.currentTarget)
+                        }
+                        sx={{ color: ACCENT_CYAN }}
+                      >
+                        <Icon fontSize="small">more_vert</Icon>
+                      </IconButton>
+                      <Menu
+                        anchorEl={actionMenuAnchorEl}
+                        open={actionMenuOpen}
+                        onClose={() => setActionMenuAnchorEl(null)}
+                      >
+                        <MenuItem
+                          sx={{ color: ACCENT_CYAN }}
+                          onClick={() => {
+                            setActionMenuAnchorEl(null);
+                            handleEdit();
+                          }}
+                        >
+                          Edit
+                        </MenuItem>
+                        <MDBox
+                          sx={{
+                            height: 2,
+                            width: "100%",
+                            backgroundColor: "grey.400",
+                            pointerEvents: "none",
+                          }}
+                        />
+                        <MenuItem
+                          sx={{ color: "error.main" }}
+                          onClick={() => {
+                            setActionMenuAnchorEl(null);
+                            setShowDeleteModal(true);
+                          }}
+                        >
+                          Delete
+                        </MenuItem>
+                      </Menu>
+                    </>
+                  ) : (
+                    <>
+                      <MDButton
+                        variant="gradient"
+                        color="info"
+                        onClick={handleEdit}
+                      >
+                        Edit
+                      </MDButton>
+                      <MDButton
+                        variant="gradient"
+                        color="error"
+                        onClick={() => setShowDeleteModal(true)}
+                      >
+                        Delete
+                      </MDButton>
+                    </>
+                  )}
                 </>
               )}
             </MDBox>
