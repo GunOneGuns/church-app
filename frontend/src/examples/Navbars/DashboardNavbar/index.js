@@ -29,6 +29,7 @@ import Menu from "@mui/material/Menu";
 import Icon from "@mui/material/Icon";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
+import chroma from "chroma-js";
 
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
@@ -59,6 +60,7 @@ import {
 } from "context";
 import MDButton from "components/MDButton";
 import { AuthContext } from "context";
+import { ACCENT_CYAN } from "constants.js";
 
 const MOBILE_TITLES = {
   home: "Home",
@@ -194,8 +196,8 @@ function DashboardNavbar({ absolute, light, isMini, customRoute }) {
     const isScrolled = !transparentNavbar && !absolute;
 
     const mobileScrolledBackground = theme.functions.linearGradient(
-      theme.palette.gradients.dark.main,
-      theme.palette.gradients.dark.state
+      ACCENT_CYAN,
+      chroma(ACCENT_CYAN).darken(1).hex(),
     );
 
     const mobileScrolledUsesLightText = true;
