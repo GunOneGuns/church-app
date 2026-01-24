@@ -432,10 +432,10 @@ function People() {
             width: 77,
             height: 77,
             borderRadius: "50%",
-            background: muiTheme.palette.info.main,
+            background: ACCENT_CYAN,
             color: "#fff",
             zIndex: muiTheme.zIndex.modal - 1,
-            "&:hover": { background: muiTheme.palette.info.dark },
+            "&:hover": { background: ACCENT_CYAN, filter: "brightness(0.9)" },
           })}
         >
           <Icon fontSize="large" sx={{ color: "#fff" }}>

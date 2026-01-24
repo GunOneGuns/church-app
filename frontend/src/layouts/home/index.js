@@ -7,6 +7,7 @@ import MDTypography from "components/MDTypography";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
+import { ACCENT_CYAN } from "constants.js";
 
 const HOME_STATS = [
   { title: "People", value: "200", detail: "Active members" },
@@ -18,6 +19,33 @@ const HOME_STATS = [
   { title: "Baptisms", value: "2", detail: "This quarter" },
   { title: "Prayer Requests", value: "9", detail: "Open" },
 ];
+
+const splitValueForHighlight = (value) => {
+  const text = String(value ?? "");
+  const match = text.match(/-?\d[\d,]*(?:\.\d+)?/);
+  if (!match) return { prefix: text, number: "", suffix: "" };
+  const start = match.index ?? 0;
+  const number = match[0] ?? "";
+  return {
+    prefix: text.slice(0, start),
+    number,
+    suffix: text.slice(start + number.length),
+  };
+};
+
+const renderCyanNumberValue = (value) => {
+  const { prefix, number, suffix } = splitValueForHighlight(value);
+  if (!number) return value;
+  return (
+    <>
+      {prefix}
+      <MDBox component="span" sx={{ color: ACCENT_CYAN }}>
+        {number}
+      </MDBox>
+      {suffix}
+    </>
+  );
+};
 
 function Home() {
   return (
@@ -39,7 +67,7 @@ function Home() {
                     {item.title}
                   </MDTypography>
                   <MDTypography variant="h4" fontWeight="bold" mt={1}>
-                    {item.value}
+                    {renderCyanNumberValue(item.value)}
                   </MDTypography>
                   <MDTypography variant="caption" color="text" mt={0.5}>
                     {item.detail}
@@ -56,4 +84,3 @@ function Home() {
 }
 
 export default Home;
-
