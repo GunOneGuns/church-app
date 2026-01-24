@@ -12,6 +12,8 @@ import BottomNavigation from "@mui/material/BottomNavigation";
 import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import Icon from "@mui/material/Icon";
 
+const ACTIVE_TAB_COLOR = "#00bcd4";
+
 const getActiveTab = (pathname = "") => {
   const normalized = pathname.toLowerCase();
   if (normalized === "/" || normalized.startsWith("/home")) return "home";
@@ -109,6 +111,25 @@ export default function MobileBottomNav() {
           showLabels
           value={peopleOverlayOpen ? "people" : value}
           onChange={handleChange}
+          sx={(theme) => ({
+            "& .MuiBottomNavigationAction-root": {
+              position: "relative",
+              color: theme.palette.text.secondary,
+            },
+            "& .MuiBottomNavigationAction-root.Mui-selected": {
+              color: ACTIVE_TAB_COLOR,
+            },
+            "& .MuiBottomNavigationAction-root.Mui-selected::before": {
+              content: '""',
+              position: "absolute",
+              top: 0,
+              left: "20%",
+              right: "20%",
+              height: 3,
+              borderRadius: 999,
+              backgroundColor: ACTIVE_TAB_COLOR,
+            },
+          })}
         >
           <BottomNavigationAction
             label="Home"
