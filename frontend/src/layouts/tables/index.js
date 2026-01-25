@@ -186,7 +186,11 @@ function People() {
   const filteredPeople = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return people;
-    return people.filter((p) => (p?.Name || "").toLowerCase().includes(q));
+    return people.filter((p) => {
+      const name = (p?.Name || "").toLowerCase();
+      const nameChi = (p?.NameChi || "").toLowerCase(); // Chinese name field
+      return name.includes(q) || nameChi.includes(q);
+    });
   }, [people, searchQuery]);
 
   const rows = useMemo(

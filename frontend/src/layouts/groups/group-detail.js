@@ -292,7 +292,12 @@ function GroupDetail() {
   const filteredMembers = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return members;
-    return members.filter((p) => (p?.Name || "").toLowerCase().includes(q));
+
+    return members.filter((p) => {
+      const name = (p?.Name || "").toLowerCase();
+      const nameChi = (p?.NameChi || "").toLowerCase();
+      return name.includes(q) || nameChi.includes(q);
+    });
   }, [members, searchQuery]);
 
   const rows = useMemo(
