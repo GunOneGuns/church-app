@@ -3,12 +3,11 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react"; // Ad
 import Card from "@mui/material/Card";
 import IconButton from "@mui/material/IconButton";
 import Icon from "@mui/material/Icon";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
+import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 
@@ -18,6 +17,7 @@ import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
+import Toast from "components/Toast";
 import {
   updatePerson,
   fetchPeople,
@@ -37,6 +37,59 @@ import PersonEditForm from "../../components/PersonDetail/PersonEditForm"; // Ad
 import PersonDisplay from "../../components/PersonDetail/PersonDisplay"; // Adjust path as needed
 
 // REMOVED: Highlight, splitMatch (now imported in PersonEditForm)
+
+const MOBILE_FAB_BOTTOM_OFFSET = "calc(env(safe-area-inset-bottom) + 88px)";
+
+const stableStringify = (value) => {
+  const seen = new WeakSet();
+  const stringify = (input) => {
+    if (input === null || typeof input !== "object") return input;
+    if (seen.has(input)) return undefined;
+    seen.add(input);
+    if (Array.isArray(input)) return input.map(stringify);
+    return Object.keys(input)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = stringify(input[key]);
+        return acc;
+      }, {});
+  };
+  return JSON.stringify(stringify(value));
+};
+
+const sanitizeTextInput = (value, { maxLength = 200 } = {}) => {
+  if (value === null || value === undefined) return "";
+  const text = String(value)
+    // remove control chars (incl. newlines/tabs)
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+  return text.length > maxLength ? text.slice(0, maxLength) : text;
+};
+
+// Client-side guard only. Real injection prevention must be enforced server-side
+// (parameterized queries, escaping, validation).
+const looksLikeSqlInjection = (value) => {
+  const text = String(value || "").toLowerCase();
+  // Very conservative checks for a *name* field; avoids blocking normal names.
+  if (/[;`]/.test(text)) return true;
+  if (text.includes("--")) return true;
+  if (text.includes("/*") || text.includes("*/")) return true;
+  if (/\b(union\s+select|drop\s+table|insert\s+into|delete\s+from)\b/.test(text))
+    return true;
+  if (/\b(or|and)\b\s+\d+\s*=\s*\d+/.test(text)) return true;
+  return false;
+};
+
+const hasMeaningfulValue = (value) => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "number") return !Number.isNaN(value);
+  if (typeof value === "boolean") return true;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") return Object.keys(value).length > 0;
+  return false;
+};
 
 // Define known fields that should NOT be treated as generic custom fields
 const knownFields = [
@@ -608,6 +661,11 @@ function PersonDetail() {
   const isAddMode = id === "add";
   const theme = useTheme();
   const isMobileView = useMediaQuery(theme.breakpoints.down("xl"));
+  const openedFromGroup = useMemo(() => {
+    const from = location.state?.from;
+    if (typeof from !== "string") return false;
+    return from.toLowerCase().startsWith("/group/");
+  }, [location.state]);
 
   // Core State for the Person Detail View
   const [person, setPerson] = useState(null); // The original person data (for view mode/discard)
@@ -618,8 +676,12 @@ function PersonDetail() {
   const [customFields, setCustomFields] = useState([]);
   const [showNotFoundModal, setShowNotFoundModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [actionMenuAnchorEl, setActionMenuAnchorEl] = useState(null);
-  const [pendingActionMenuAction, setPendingActionMenuAction] = useState(null);
+  const [showDiscardConfirmModal, setShowDiscardConfirmModal] = useState(false);
+  const [toast, setToast] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
   const [peopleList, setPeopleList] = useState([]); // List of all people for relationship suggestions
   const [relationshipFieldErrors, setRelationshipFieldErrors] = useState({});
 
@@ -627,15 +689,7 @@ function PersonDetail() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadError, setUploadError] = useState(null);
   const profilePicProcessorRef = useRef(null);
-
-  const actionMenuOpen = Boolean(actionMenuAnchorEl);
-
-  useEffect(() => {
-    if (isEditing || isAddMode) {
-      setActionMenuAnchorEl(null);
-      setPendingActionMenuAction(null);
-    }
-  }, [isEditing, isAddMode]);
+  const pendingDiscardActionRef = useRef(null);
 
   const breadcrumbRoute = useMemo(() => {
     const baseRoute = ["people"];
@@ -1035,6 +1089,15 @@ function PersonDetail() {
     setIsEditing(true);
   }, []);
 
+  const handleCloseToast = useCallback(() => {
+    setToast((prev) => ({ ...prev, open: false }));
+  }, []);
+
+  const closeDiscardConfirmModal = useCallback(() => {
+    setShowDiscardConfirmModal(false);
+    pendingDiscardActionRef.current = null;
+  }, []);
+
   const handleProfilePicUpload = useCallback(
     async (fileOverride = null, personIdOverride = null) => {
       const fileToUpload = fileOverride || selectedFile;
@@ -1076,6 +1139,33 @@ function PersonDetail() {
     async (fieldsOverride = null) => {
       const fieldsToUse = fieldsOverride || customFields;
       try {
+        // Add-person guard: require Name OR Chinese Name
+        if (isAddMode) {
+          const name = sanitizeTextInput(editedPerson?.Name, { maxLength: 120 });
+          const nameChi = sanitizeTextInput(editedPerson?.NameChi, {
+            maxLength: 120,
+          });
+
+          if (!name && !nameChi) {
+            setToast({
+              open: true,
+              message: "Please fill in Name or Chinese Name.",
+              severity: "error",
+            });
+            return;
+          }
+
+          if (looksLikeSqlInjection(name) || looksLikeSqlInjection(nameChi)) {
+            setToast({
+              open: true,
+              message:
+                "Invalid characters detected in Name/Chinese Name. Please remove special symbols.",
+              severity: "error",
+            });
+            return;
+          }
+        }
+
         const errors = {};
         let isValid = true;
 
@@ -1114,9 +1204,40 @@ function PersonDetail() {
         if (profilePicProcessorRef.current) {
           pendingProfilePicFile = await profilePicProcessorRef.current();
         }
+
+        // Basic sanitization for common string fields before saving.
+        const sanitizedEditedPerson = {
+          ...editedPerson,
+          Name: sanitizeTextInput(editedPerson?.Name, { maxLength: 120 }),
+          NameChi: sanitizeTextInput(editedPerson?.NameChi, { maxLength: 120 }),
+          Email: sanitizeTextInput(editedPerson?.Email, { maxLength: 200 }),
+          District: sanitizeTextInput(editedPerson?.District, { maxLength: 120 }),
+          Address: sanitizeTextInput(editedPerson?.Address, { maxLength: 240 }),
+          AnnouncementGroup: sanitizeTextInput(
+            editedPerson?.AnnouncementGroup,
+            { maxLength: 10 },
+          ),
+          ChatGroup: sanitizeTextInput(editedPerson?.ChatGroup, { maxLength: 10 }),
+        };
+
         const dataToSave = buildPersonPayloadWithCustomFields(
-          editedPerson,
-          fieldsToUse,
+          sanitizedEditedPerson,
+          fieldsToUse.map((field) => ({
+            ...field,
+            key: sanitizeTextInput(field?.key, { maxLength: 60 }),
+            value:
+              typeof field?.value === "string"
+                ? sanitizeTextInput(field.value, { maxLength: 240 })
+                : field?.value,
+            value2:
+              typeof field?.value2 === "string"
+                ? sanitizeTextInput(field.value2, { maxLength: 60 })
+                : field?.value2,
+            value3:
+              typeof field?.value3 === "string"
+                ? sanitizeTextInput(field.value3, { maxLength: 60 })
+                : field?.value3,
+          })),
         );
         const currentRelationshipFields = fieldsToUse.filter((field) =>
           Object.prototype.hasOwnProperty.call(field, "value2"),
@@ -1147,7 +1268,9 @@ function PersonDetail() {
           if (storedPeople) {
             setPeopleList(JSON.parse(storedPeople));
           }
-          navigate("/people");
+          navigate("/people", {
+            state: { toast: { message: "Created", severity: "success" } },
+          });
         } else {
           await updatePerson(id, dataToSave);
           if (pendingProfilePicFile) {
@@ -1171,6 +1294,7 @@ function PersonDetail() {
             setPeopleList(people);
           }
           setIsEditing(false);
+          setToast({ open: true, message: "Saved", severity: "success" });
         }
         setRelationshipFieldErrors({});
       } catch (error) {
@@ -1204,6 +1328,78 @@ function PersonDetail() {
     }
   }, [isAddMode, navigate, person, initializeCustomFields]);
 
+  const isDirty = useMemo(() => {
+    if (selectedFile) return true;
+
+    if (isAddMode) {
+      if (hasMeaningfulValue(editedPerson?.ProfilePic)) return true;
+      if (hasMeaningfulValue(editedPerson?.Name)) return true;
+      if (hasMeaningfulValue(editedPerson?.NameChi)) return true;
+      if (hasMeaningfulValue(editedPerson?.BirthYear)) return true;
+      if (hasMeaningfulValue(editedPerson?.PhoneNumber)) return true;
+      if (hasMeaningfulValue(editedPerson?.Email)) return true;
+      if (hasMeaningfulValue(editedPerson?.District)) return true;
+      if (hasMeaningfulValue(editedPerson?.Address)) return true;
+      if (hasMeaningfulValue(editedPerson?.AnnouncementGroup)) return true;
+      if (hasMeaningfulValue(editedPerson?.ChatGroup)) return true;
+      return customFields.some(
+        (field) =>
+          hasMeaningfulValue(field?.key) ||
+          hasMeaningfulValue(field?.value) ||
+          hasMeaningfulValue(field?.value2) ||
+          hasMeaningfulValue(field?.value3) ||
+          hasMeaningfulValue(field?.personId),
+      );
+    }
+
+    if (!person) return false;
+    const baselineFields = initializeCustomFields(person);
+    const baselinePayload = buildPersonPayloadWithCustomFields(
+      person,
+      baselineFields,
+    );
+    const currentPayload = buildPersonPayloadWithCustomFields(
+      editedPerson,
+      customFields,
+    );
+
+    return stableStringify(baselinePayload) !== stableStringify(currentPayload);
+  }, [
+    buildPersonPayloadWithCustomFields,
+    customFields,
+    editedPerson,
+    initializeCustomFields,
+    isAddMode,
+    person,
+    selectedFile,
+  ]);
+
+  const requestDiscardIfDirty = useCallback(
+    (action) => {
+      if (!isDirty) {
+        action();
+        return;
+      }
+      pendingDiscardActionRef.current = action;
+      setShowDiscardConfirmModal(true);
+    },
+    [isDirty],
+  );
+
+  const confirmDiscard = useCallback(() => {
+    const action = pendingDiscardActionRef.current;
+    closeDiscardConfirmModal();
+    if (action) action();
+  }, [closeDiscardConfirmModal]);
+
+  const handleRemoveFromGroup = useCallback(() => {
+    // UI only for now
+    console.log("Remove From Group clicked", {
+      personId: id,
+      from: location.state?.from,
+    });
+  }, [id, location.state]);
+
   const handleDelete = useCallback(async () => {
     try {
       await deletePerson(id);
@@ -1215,34 +1411,6 @@ function PersonDetail() {
     }
     setShowDeleteModal(false);
   }, [id, navigate]);
-
-  const handleCloseActionMenu = useCallback(() => {
-    setActionMenuAnchorEl(null);
-    setPendingActionMenuAction(null);
-  }, []);
-
-  const runPendingActionMenuAction = useCallback(() => {
-    const action = pendingActionMenuAction;
-    if (!action) return;
-
-    setPendingActionMenuAction(null);
-
-    if (action === "save") {
-      handleSave();
-      return;
-    }
-    if (action === "discard") {
-      handleDiscard();
-      return;
-    }
-    if (action === "edit") {
-      handleEdit();
-      return;
-    }
-    if (action === "delete") {
-      setShowDeleteModal(true);
-    }
-  }, [handleDiscard, handleEdit, handleSave, pendingActionMenuAction]);
 
   // Handlers for editing person details (passed to PersonEditForm)
   const handleChange = useCallback((field, value) => {
@@ -1317,6 +1485,12 @@ function PersonDetail() {
     navigate("/people");
   }, [navigate]);
 
+  useEffect(() => {
+    if (!isEditing && !isAddMode) {
+      closeDiscardConfirmModal();
+    }
+  }, [closeDiscardConfirmModal, isAddMode, isEditing]);
+
   if (!isAddMode && !person && !showNotFoundModal) return <div>Loading...</div>;
 
   // Attach original indices so remove/update actions work correctly after filtering
@@ -1340,153 +1514,109 @@ function PersonDetail() {
         <Card>
           {/* Header and Action Buttons (remain in parent as they control edit state) */}
           <MDBox
-            display="flex"
-            justifyContent="space-between"
+            display={isMobileView ? "grid" : "flex"}
+            gridTemplateColumns={isMobileView ? "48px 1fr 48px" : undefined}
+            justifyContent={isMobileView ? undefined : "space-between"}
             alignItems="center"
             p={3}
             sx={{ borderBottom: 1, borderColor: "divider" }}
           >
-            <MDBox display="flex" alignItems="center" gap={2}>
-              <IconButton
-                onClick={() => {
-                  const from = location.state?.from;
-                  if (from) {
-                    navigate(from);
-                  } else {
-                    navigate("/people");
-                  }
-                }}
-                size="small"
-              >
-                <Icon>arrow_back</Icon>
-              </IconButton>
-              <MDTypography variant="h4">
-                {isAddMode
-                  ? "Add Person"
-                  : isEditing
-                  ? "Edit Person"
-                  : "Person Details"}{" "}
-              </MDTypography>
-            </MDBox>
-            <MDBox display="flex" gap={1}>
-              {isMobileView ? (
-                <>
-                  <IconButton
-                    size="small"
-                    onClick={(event) =>
-                      setActionMenuAnchorEl(event.currentTarget)
+            <IconButton
+              onClick={() => {
+                if (isEditing && !isAddMode) {
+                  requestDiscardIfDirty(handleDiscard);
+                  return;
+                }
+                const from = location.state?.from;
+                if (from) {
+                  navigate(from);
+                } else {
+                  navigate("/people");
+                }
+              }}
+              size={isMobileView ? "medium" : "small"}
+              sx={
+                isMobileView
+                  ? {
+                      "& .MuiSvgIcon-root": { fontSize: 28 },
                     }
-                    sx={{ color: ACCENT_CYAN }}
-                  >
-                    <Icon fontSize="small">more_vert</Icon>
-                  </IconButton>
-                  <Menu
-                    anchorEl={actionMenuAnchorEl}
-                    open={actionMenuOpen}
-                    onClose={handleCloseActionMenu}
-                    TransitionProps={{
-                      onExited: runPendingActionMenuAction,
-                    }}
-                  >
-                    {(isEditing || isAddMode
-                      ? [
-                          <MenuItem
-                            key="save"
-                            sx={{ color: ACCENT_CYAN }}
-                            onClick={() => {
-                              setPendingActionMenuAction("save");
-                              setActionMenuAnchorEl(null);
-                            }}
-                          >
-                            {isAddMode ? "Add" : "Save"}
-                          </MenuItem>,
-                          <MDBox
-                            key="divider"
-                            component="li"
-                            sx={{
-                              height: 2,
-                              width: "100%",
-                              backgroundColor: "grey.400",
-                              pointerEvents: "none",
-                            }}
-                          />,
-                          <MenuItem
-                            key="discard"
-                            sx={{ color: "error.main" }}
-                            onClick={() => {
-                              setPendingActionMenuAction("discard");
-                              setActionMenuAnchorEl(null);
-                            }}
-                          >
-                            {isAddMode ? "Cancel" : "Discard"}
-                          </MenuItem>,
-                        ]
-                      : [
-                          <MenuItem
-                            key="edit"
-                            sx={{ color: ACCENT_CYAN }}
-                            onClick={() => {
-                              setPendingActionMenuAction("edit");
-                              setActionMenuAnchorEl(null);
-                            }}
-                          >
-                            Edit
-                          </MenuItem>,
-                          <MDBox
-                            key="divider"
-                            component="li"
-                            sx={{
-                              height: 2,
-                              width: "100%",
-                              backgroundColor: "grey.400",
-                              pointerEvents: "none",
-                            }}
-                          />,
-                          <MenuItem
-                            key="delete"
-                            sx={{ color: "error.main" }}
-                            onClick={() => {
-                              setPendingActionMenuAction("delete");
-                              setActionMenuAnchorEl(null);
-                            }}
-                          >
-                            Delete
-                          </MenuItem>,
-                        ])}
-                  </Menu>
-                </>
-              ) : isEditing || isAddMode ? (
-                <>
-                  <MDButton
-                    variant="gradient"
-                    color="info"
-                    onClick={() => handleSave()}
-                  >
-                    {isAddMode ? "Add" : "Save"}
-                  </MDButton>
-                  <MDButton
-                    variant="gradient"
-                    color="error"
-                    onClick={handleDiscard}
-                  >
-                    {isAddMode ? "Cancel" : "Discard"}
-                  </MDButton>
-                </>
+                  : undefined
+              }
+            >
+              {isMobileView ? (
+                <ArrowBackIosNewIcon />
               ) : (
-                <>
-                  <MDButton variant="gradient" color="info" onClick={handleEdit}>
-                    Edit
-                  </MDButton>
-                  <MDButton
-                    variant="gradient"
-                    color="error"
-                    onClick={() => setShowDeleteModal(true)}
-                  >
-                    Delete
-                  </MDButton>
-                </>
+                <Icon sx={{ fontSize: 28 }}>arrow_back</Icon>
               )}
-            </MDBox>
+            </IconButton>
+
+            <MDTypography
+              variant="h4"
+              sx={
+                isMobileView
+                  ? { textAlign: "center", m: 0, lineHeight: 1.1 }
+                  : undefined
+              }
+            >
+              {isAddMode
+                ? "Add Person"
+                : isEditing
+                ? "Edit Person"
+                : "Person Details"}
+            </MDTypography>
+
+            {isMobileView ? (
+              <MDBox />
+            ) : (
+              <MDBox display="flex" gap={1}>
+                {isEditing || isAddMode ? (
+                  <>
+                    <MDButton
+                      variant="gradient"
+                      color="info"
+                      onClick={() => handleSave()}
+                    >
+                      {isAddMode ? "Add" : "Save"}
+                    </MDButton>
+                    <MDButton
+                      variant="gradient"
+                      color="error"
+                      onClick={() => requestDiscardIfDirty(handleDiscard)}
+                    >
+                      {isAddMode ? "Cancel" : "Discard"}
+                    </MDButton>
+                  </>
+                ) : (
+                  <>
+                    <MDButton
+                      variant="gradient"
+                      color="info"
+                      onClick={handleEdit}
+                    >
+                      Edit
+                    </MDButton>
+                    <MDBox display="flex" flexDirection="column" gap={1}>
+                      <MDButton
+                        variant="gradient"
+                        color="error"
+                        onClick={() => setShowDeleteModal(true)}
+                      >
+                        Delete Person
+                      </MDButton>
+                      {openedFromGroup && (
+                        <MDButton
+                          variant="outlined"
+                          color="error"
+                          onClick={handleRemoveFromGroup}
+                        >
+                          Remove From Group
+                        </MDButton>
+                      )}
+                    </MDBox>
+                  </>
+                )}
+              </MDBox>
+            )}
           </MDBox>
 
           {/* Main content area: Conditionally render EditForm or Display */}
@@ -1530,9 +1660,147 @@ function PersonDetail() {
             )}
           </MDBox>
         </Card>
+
+      {/* MOBILE action card (button as its own card) */}
+      {isMobileView && (
+        <MDBox>
+          <Card
+            onClick={() => {
+              if (isEditing || isAddMode) {
+                requestDiscardIfDirty(handleDiscard);
+              } else {
+                setShowDeleteModal(true);
+              }
+            }}
+            sx={{
+              mt: 2,
+              p: 2,
+              cursor: "pointer",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "error.main",
+              boxShadow: "none",
+            }}
+          >
+            <MDTypography
+              variant="button"
+              fontWeight="medium"
+              sx={{ color: "white.main", fontSize: "17px" }}
+            >
+              {isEditing || isAddMode
+                ? isAddMode
+                  ? "Cancel"
+                  : "Discard Changes"
+                : "Delete Person"}
+            </MDTypography>
+          </Card>
+
+          {openedFromGroup && !isEditing && !isAddMode && (
+            <Card
+              onClick={handleRemoveFromGroup}
+              sx={{
+                mt: 1,
+                p: 2,
+                cursor: "pointer",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: "error.main",
+                boxShadow: "none",
+              }}
+            >
+              <MDTypography
+                variant="button"
+                fontWeight="medium"
+                sx={{ color: "white.main", fontSize: "17px" }}
+              >
+                Remove From Group
+              </MDTypography>
+            </Card>
+          )}
+        </MDBox>
+      )}
       </MDBox>
 
+      {/* MOBILE floating edit button (matches list FAB styling) */}
+      {isMobileView && !isEditing && !isAddMode && (
+        <IconButton
+          onClick={handleEdit}
+          sx={(muiTheme) => ({
+            position: "fixed",
+            right: 17,
+            bottom: MOBILE_FAB_BOTTOM_OFFSET,
+            width: 77,
+            height: 77,
+            borderRadius: "50%",
+            background: ACCENT_CYAN,
+            color: "#fff",
+            zIndex: muiTheme.zIndex.modal - 1,
+            "&:hover": {
+              background: ACCENT_CYAN,
+              filter: "brightness(0.9)",
+            },
+          })}
+        >
+          <Icon fontSize="large" sx={{ color: "#fff" }}>
+            edit
+          </Icon>
+        </IconButton>
+      )}
+
+      {/* MOBILE floating save button (add/edit form) */}
+      {isMobileView && (isEditing || isAddMode) && (
+        <IconButton
+          onClick={() => handleSave()}
+          sx={(muiTheme) => ({
+            position: "fixed",
+            right: 17,
+            bottom: MOBILE_FAB_BOTTOM_OFFSET,
+            width: 77,
+            height: 77,
+            borderRadius: "50%",
+            background: ACCENT_CYAN,
+            color: "#fff",
+            zIndex: muiTheme.zIndex.modal - 1,
+            "&:hover": {
+              background: ACCENT_CYAN,
+              filter: "brightness(0.9)",
+            },
+          })}
+        >
+          <Icon fontSize="large" sx={{ color: "#fff" }}>
+            save
+          </Icon>
+        </IconButton>
+      )}
+
       {/* Dialogs (remain in parent as they are general UI for the page) */}
+      <Toast
+        open={toast.open}
+        message={toast.message}
+        severity={toast.severity}
+        onClose={handleCloseToast}
+      />
+      <Dialog
+        open={showDiscardConfirmModal}
+        onClose={closeDiscardConfirmModal}
+      >
+        <DialogTitle>Discard changes?</DialogTitle>
+        <DialogContent>
+          <MDTypography variant="body2">
+            You have unsaved changes. Discard them?
+          </MDTypography>
+        </DialogContent>
+        <DialogActions>
+          <MDButton onClick={closeDiscardConfirmModal} color="secondary">
+            Keep editing
+          </MDButton>
+          <MDButton onClick={confirmDiscard} color="error">
+            Discard
+          </MDButton>
+        </DialogActions>
+      </Dialog>
       <Dialog open={showNotFoundModal} onClose={handleCloseModal}>
         <DialogTitle>Person Not Found</DialogTitle>
         <DialogContent>
@@ -1556,7 +1824,7 @@ function PersonDetail() {
             Cancel
           </MDButton>
           <MDButton onClick={handleDelete} color="error">
-            Delete
+            Delete Person
           </MDButton>
         </DialogActions>
       </Dialog>

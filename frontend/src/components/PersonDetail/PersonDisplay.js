@@ -68,70 +68,106 @@ function PersonDisplay({
       <Grid item xs={12} md={8} lg={9}>
         {/* Panel 1: Personal Information */}
         <Card sx={{ mb: 3, p: 2 }}>
-          <MDTypography variant="h6" mb={2}>
+          <MDTypography variant="h5" fontWeight="bold" mb={2}>
             Personal Information
           </MDTypography>
 
           <MDBox display="flex" flexDirection="column" gap={1}>
             {/* Always render schema default fields; show NIL when missing */}
             <MDTypography variant="body2">
-              <MDTypography component="span" fontWeight="bold">
+              <MDTypography
+                component="span"
+                fontWeight="bold"
+                sx={{ fontSize: "1rem" }}
+              >
                 Name:
               </MDTypography>{" "}
               {displayOrNil(person?.Name)}
             </MDTypography>
 
             <MDTypography variant="body2">
-              <MDTypography component="span" fontWeight="bold">
+              <MDTypography
+                component="span"
+                fontWeight="bold"
+                sx={{ fontSize: "1rem" }}
+              >
                 Chinese Name:
               </MDTypography>{" "}
               {displayOrNil(person?.NameChi)}
             </MDTypography>
 
             <MDTypography variant="body2">
-              <MDTypography component="span" fontWeight="bold">
+              <MDTypography
+                component="span"
+                fontWeight="bold"
+                sx={{ fontSize: "1rem" }}
+              >
                 Birth Year:
               </MDTypography>{" "}
               {displayOrNil(person?.BirthYear)}
             </MDTypography>
 
             <MDTypography variant="body2">
-              <MDTypography component="span" fontWeight="bold">
+              <MDTypography
+                component="span"
+                fontWeight="bold"
+                sx={{ fontSize: "1rem" }}
+              >
                 Phone Number:
               </MDTypography>{" "}
               {displayOrNil(person?.PhoneNumber)}
             </MDTypography>
 
             <MDTypography variant="body2">
-              <MDTypography component="span" fontWeight="bold">
+              <MDTypography
+                component="span"
+                fontWeight="bold"
+                sx={{ fontSize: "1rem" }}
+              >
                 Announcement Group:
               </MDTypography>{" "}
               {displayOrNil(person?.AnnouncementGroup)}
             </MDTypography>
 
             <MDTypography variant="body2">
-              <MDTypography component="span" fontWeight="bold">
+              <MDTypography
+                component="span"
+                fontWeight="bold"
+                sx={{ fontSize: "1rem" }}
+              >
                 Chat Group:
               </MDTypography>{" "}
               {displayOrNil(person?.ChatGroup)}
             </MDTypography>
 
             <MDTypography variant="body2">
-              <MDTypography component="span" fontWeight="bold">
+              <MDTypography
+                component="span"
+                fontWeight="bold"
+                sx={{ fontSize: "1rem" }}
+              >
                 Email:
               </MDTypography>{" "}
               {displayOrNil(person?.Email)}
             </MDTypography>
 
             <MDTypography variant="body2">
-              <MDTypography component="span" fontWeight="bold">
+              <MDTypography
+                component="span"
+                fontWeight="bold"
+                sx={{ fontSize: "1rem" }}
+              >
                 District:
               </MDTypography>{" "}
               {displayOrNil(person?.District)}
             </MDTypography>
 
             <MDTypography variant="body2">
-              <MDTypography component="span" fontWeight="bold">
+              <MDTypography
+                component="span"
+                fontWeight="bold"
+                sx={{ fontSize: "1rem" }}
+              >
                 Address:
               </MDTypography>{" "}
               {displayOrNil(person?.Address)}
@@ -140,7 +176,11 @@ function PersonDisplay({
             {/* Render generic custom fields */}
             {personalInfoCustomFieldsForRender.map((field, index) => (
               <MDTypography key={`pcf-view-${index}`} variant="body2">
-                <MDTypography component="span" fontWeight="bold">
+                <MDTypography
+                  component="span"
+                  fontWeight="bold"
+                  sx={{ fontSize: "1rem" }}
+                >
                   {field.key || "Custom"}:
                 </MDTypography>{" "}
                 {field.value === undefined ||
@@ -164,7 +204,9 @@ function PersonDisplay({
             mb={2}
             gap={1}
           >
-            <MDTypography variant="h6">Related Persons</MDTypography>
+            <MDTypography variant="h5" fontWeight="bold">
+              Related Persons
+            </MDTypography>
 
             {onClearRelationships && (
               <MDButton

@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
 import Autocomplete from "@mui/material/Autocomplete";
 import Grid from "@mui/material/Grid";
 import Slider from "@mui/material/Slider";
@@ -16,6 +17,8 @@ import DialogActions from "@mui/material/DialogActions";
 import AddIcon from "@mui/icons-material/Add";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import Card from "@mui/material/Card";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
@@ -26,6 +29,12 @@ import {
   RELATION_RECIPROCAL_SUGGESTIONS,
 } from "../../constants";
 import { Highlight, splitMatch } from "../../utils/stringUtils";
+
+const YES_NO_OPTIONS = ["Y", "N"];
+const normalizeSelectValue = (value) =>
+  value === null || value === undefined ? "" : String(value);
+
+const FIELD_LABEL_SX = { fontSize: "1rem" };
 
 function PersonEditForm({
   editedPerson,
@@ -46,6 +55,9 @@ function PersonEditForm({
   selectedFile,
   uploadError,
 }) {
+  const theme = useTheme();
+  const isMobileView = useMediaQuery(theme.breakpoints.down("xl"));
+
   const findPersonById = (id) =>
     peopleList.find((person) => person._id === id) || null;
 
@@ -55,6 +67,16 @@ function PersonEditForm({
   const getReciprocalOptions = (relation = "") =>
     RELATION_RECIPROCAL_SUGGESTIONS[normalizeRelation(relation)] ||
     RELATION_SUGGESTIONS;
+
+  const announcementGroupValue = useMemo(
+    () => normalizeSelectValue(editedPerson?.AnnouncementGroup),
+    [editedPerson?.AnnouncementGroup],
+  );
+
+  const chatGroupValue = useMemo(
+    () => normalizeSelectValue(editedPerson?.ChatGroup),
+    [editedPerson?.ChatGroup],
+  );
 
   const isValidRelationSuggestion = (relation = "") => {
     const trimmed = relation.trim();
@@ -499,7 +521,7 @@ function PersonEditForm({
         <Grid item xs={12} md={8} lg={9}>
           {/* Panel 1: Personal Information */}
           <Card sx={{ mb: 3, p: 2 }}>
-            <MDTypography variant="h6" mb={2}>
+            <MDTypography variant="h6" fontWeight="bold" mb={2}>
               Personal Information
             </MDTypography>
 
@@ -511,6 +533,7 @@ function PersonEditForm({
                 value={editedPerson?.Name ?? ""}
                 onChange={(e) => handleChange("Name", e.target.value)}
                 fullWidth
+                InputLabelProps={{ sx: FIELD_LABEL_SX }}
                 sx={{ "& .MuiOutlinedInput-root": { height: "56px" } }}
               />
 
@@ -520,15 +543,25 @@ function PersonEditForm({
                 value={editedPerson?.NameChi ?? ""}
                 onChange={(e) => handleChange("NameChi", e.target.value)}
                 fullWidth
+                InputLabelProps={{ sx: FIELD_LABEL_SX }}
                 sx={{ "& .MuiOutlinedInput-root": { height: "56px" } }}
               />
 
               <TextField
                 variant="outlined"
                 label="Birth Year"
+                type="number"
                 value={editedPerson?.BirthYear ?? ""}
-                onChange={(e) => handleChange("BirthYear", e.target.value)}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  handleChange("BirthYear", raw === "" ? "" : Number(raw));
+                }}
                 fullWidth
+                InputLabelProps={{ sx: FIELD_LABEL_SX }}
+                inputProps={{
+                  inputMode: "numeric",
+                  pattern: "[0-9]*",
+                }}
                 sx={{ "& .MuiOutlinedInput-root": { height: "56px" } }}
               />
 
@@ -546,6 +579,7 @@ function PersonEditForm({
                   );
                 }}
                 fullWidth
+                InputLabelProps={{ sx: FIELD_LABEL_SX }}
                 sx={{ "& .MuiOutlinedInput-root": { height: "56px" } }}
               />
 
@@ -555,6 +589,7 @@ function PersonEditForm({
                 value={editedPerson?.Email ?? ""}
                 onChange={(e) => handleChange("Email", e.target.value)}
                 fullWidth
+                InputLabelProps={{ sx: FIELD_LABEL_SX }}
                 sx={{ "& .MuiOutlinedInput-root": { height: "56px" } }}
               />
 
@@ -564,6 +599,7 @@ function PersonEditForm({
                 value={editedPerson?.District ?? ""}
                 onChange={(e) => handleChange("District", e.target.value)}
                 fullWidth
+                InputLabelProps={{ sx: FIELD_LABEL_SX }}
                 sx={{
                   "& .MuiOutlinedInput-root": { height: "56px" },
                 }}
@@ -575,28 +611,57 @@ function PersonEditForm({
                 value={editedPerson?.Address ?? ""}
                 onChange={(e) => handleChange("Address", e.target.value)}
                 fullWidth
+                InputLabelProps={{ sx: FIELD_LABEL_SX }}
                 sx={{ "& .MuiOutlinedInput-root": { height: "56px" } }}
               />
 
               <TextField
                 variant="outlined"
+                select
                 label="Announcement Group"
-                value={editedPerson?.AnnouncementGroup ?? ""}
+                value={announcementGroupValue}
                 onChange={(e) =>
                   handleChange("AnnouncementGroup", e.target.value)
                 }
                 fullWidth
+                InputLabelProps={{ sx: FIELD_LABEL_SX }}
                 sx={{ "& .MuiOutlinedInput-root": { height: "56px" } }}
-              />
+              >
+                {!YES_NO_OPTIONS.includes(announcementGroupValue) &&
+                  announcementGroupValue !== "" && (
+                    <MenuItem value={announcementGroupValue}>
+                      Other ({announcementGroupValue})
+                    </MenuItem>
+                  )}
+                {YES_NO_OPTIONS.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
 
               <TextField
                 variant="outlined"
+                select
                 label="Chat Group"
-                value={editedPerson?.ChatGroup ?? ""}
+                value={chatGroupValue}
                 onChange={(e) => handleChange("ChatGroup", e.target.value)}
                 fullWidth
+                InputLabelProps={{ sx: FIELD_LABEL_SX }}
                 sx={{ "& .MuiOutlinedInput-root": { height: "56px" } }}
-              />
+              >
+                {!YES_NO_OPTIONS.includes(chatGroupValue) &&
+                  chatGroupValue !== "" && (
+                    <MenuItem value={chatGroupValue}>
+                      Other ({chatGroupValue})
+                    </MenuItem>
+                  )}
+                {YES_NO_OPTIONS.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
 
               {/* Generic custom fields */}
               {personalInfoCustomFieldsForRender.map((field, index) => {
@@ -693,7 +758,7 @@ function PersonEditForm({
 
           {/* Panel 2: Related Persons */}
           <Card sx={{ p: 2 }}>
-            <MDTypography variant="h6" mb={2}>
+            <MDTypography variant="h6" fontWeight="bold" mb={2}>
               Related Persons
             </MDTypography>
 

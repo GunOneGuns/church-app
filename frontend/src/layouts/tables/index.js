@@ -30,6 +30,7 @@ import peopleTableData, {
 import { setMobileNavbarTitle, useMaterialUIController } from "context";
 import defaultProfilePic from "assets/images/default-profile-picture.png";
 import { ACCENT_CYAN } from "constants.js";
+import Toast from "components/Toast";
 
 const PEOPLE_TABLE_TITLE = "Brothers & Sisters";
 const MOBILE_PAGINATION_HEIGHT = 30;
@@ -136,6 +137,33 @@ function People() {
 
   const overlayActive = location.state?.openPeopleOverlay === true;
   const [, dispatch] = useMaterialUIController();
+  const [toast, setToast] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const handleCloseToast = useCallback(() => {
+    setToast((prev) => ({ ...prev, open: false }));
+  }, []);
+
+  useEffect(() => {
+    const toastFromNav = location.state?.toast;
+    if (!toastFromNav?.message) return;
+
+    setToast({
+      open: true,
+      message: toastFromNav.message,
+      severity: toastFromNav.severity || "success",
+    });
+
+    const nextState = { ...(location.state || {}) };
+    delete nextState.toast;
+    navigate(location.pathname, {
+      replace: true,
+      state: Object.keys(nextState).length ? nextState : null,
+    });
+  }, [location.pathname, location.state, navigate]);
 
   useEffect(() => {
     if (!isMobile) {
@@ -444,6 +472,12 @@ function People() {
         </IconButton>
       )}
 
+      <Toast
+        open={toast.open}
+        message={toast.message}
+        severity={toast.severity}
+        onClose={handleCloseToast}
+      />
       <Footer />
     </DashboardLayout>
   );
