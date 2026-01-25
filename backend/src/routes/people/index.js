@@ -11,6 +11,34 @@ const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
+router.get("/stats", async (_req, res) => {
+  try {
+    const peopleCount = await peopleModel.countDocuments({});
+
+    const groupAggregation = await peopleModel
+      .aggregate([
+        {
+          $project: {
+            normalizedChatGroup: {
+              $trim: { input: { $ifNull: ["$ChatGroup", ""] } },
+            },
+          },
+        },
+        { $match: { normalizedChatGroup: { $ne: "" } } },
+        { $group: { _id: "$normalizedChatGroup" } },
+        { $count: "count" },
+      ])
+      .exec();
+
+    const groupCount = groupAggregation?.[0]?.count ?? 0;
+
+    res.status(200).json({ peopleCount, groupCount });
+  } catch (error) {
+    console.error("Error fetching people stats:", error);
+    res.status(500).json({ error: "Failed to fetch people stats" });
+  }
+});
+
 router.get("/", async (req, res) => {
   try {
     const people = await peopleModel.find({});

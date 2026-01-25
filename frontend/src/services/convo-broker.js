@@ -2,6 +2,16 @@ import axios from "axios";
 
 const baseURL = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
+export const fetchPeopleStats = async () => {
+  const response = await axios.get(`${baseURL}/people/stats`, {
+    params: { _ts: Date.now() },
+    headers: {
+      "Cache-Control": "no-cache",
+    },
+  });
+  return response.data;
+};
+
 export const fetchPeople = async () => {
   try {
     const response = await axios.get(`${baseURL}/people`, {

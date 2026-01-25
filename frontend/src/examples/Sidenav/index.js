@@ -201,75 +201,96 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
   );
 
   return (
-    <SidenavRoot
-      {...rest}
-      variant="permanent"
-      ownerState={{ transparentSidenav, whiteSidenav, miniSidenav, darkMode }}
-    >
-      <MDBox pt={3} pb={1} px={4} textAlign="center">
+    <>
+      {!miniSidenav && (
         <MDBox
-          display={{ xs: "block", xl: "none" }}
-          position="absolute"
-          top={0}
-          right={0}
-          p={1.625}
+          aria-hidden="true"
           onClick={closeSidenav}
-          sx={{ cursor: "pointer" }}
-        >
-          <MDTypography variant="h6" color="secondary">
-            <Icon sx={{ fontWeight: "bold" }}>close</Icon>
-          </MDTypography>
-        </MDBox>
-        <MDBox component={NavLink} to="/home" display="flex" alignItems="center">
-          {brand && (
-            <MDBox component="img" src={brand} alt="Brand" width="2rem" />
-          )}
+          sx={(theme) => ({
+            display: { xs: "block", xl: "none" },
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.35)",
+            zIndex: theme.zIndex.drawer - 1,
+          })}
+        />
+      )}
+
+      <SidenavRoot
+        {...rest}
+        variant="permanent"
+        ownerState={{ transparentSidenav, whiteSidenav, miniSidenav, darkMode }}
+      >
+        <MDBox pt={3} pb={1} px={4} textAlign="center">
           <MDBox
-            width={!brandName && "100%"}
-            sx={(theme) => sidenavLogoLabel(theme, { miniSidenav })}
+            display={{ xs: "block", xl: "none" }}
+            position="absolute"
+            top={0}
+            right={0}
+            p={1.625}
+            onClick={closeSidenav}
+            sx={{ cursor: "pointer" }}
           >
-            <MDTypography
-              component="h6"
-              variant="button"
-              fontWeight="medium"
-              color={textColor}
-            >
-              {brandName}
+            <MDTypography variant="h6" color="secondary">
+              <Icon sx={{ fontWeight: "bold" }}>close</Icon>
             </MDTypography>
           </MDBox>
-        </MDBox>
-      </MDBox>
-      <Divider
-        light={
-          (!darkMode && !whiteSidenav && !transparentSidenav) ||
-          (darkMode && !transparentSidenav && whiteSidenav)
-        }
-      />
-      <List>
-        {hasExamples && (
-          <>
-            <MDBox display="flex flex-col" alignItems="center">
+          <MDBox
+            component={NavLink}
+            to="/home"
+            display="flex"
+            alignItems="center"
+          >
+            {brand && (
+              <MDBox component="img" src={brand} alt="Brand" width="2rem" />
+            )}
+            <MDBox
+              width={!brandName && "100%"}
+              sx={(theme) => sidenavLogoLabel(theme, { miniSidenav })}
+            >
               <MDTypography
-                color={textColor}
-                variant="body2"
+                component="h6"
+                variant="button"
                 fontWeight="medium"
-                pl="1.5rem"
+                color={textColor}
               >
-                Examples
+                {brandName}
               </MDTypography>
-              {renderExampleRoutes}
             </MDBox>
-            <Divider
-              light={
-                (!darkMode && !whiteSidenav && !transparentSidenav) ||
-                (darkMode && !transparentSidenav && whiteSidenav)
-              }
-            />
-          </>
-        )}
-        {renderRoutes}
-      </List>
-    </SidenavRoot>
+          </MDBox>
+        </MDBox>
+        <Divider
+          light={
+            (!darkMode && !whiteSidenav && !transparentSidenav) ||
+            (darkMode && !transparentSidenav && whiteSidenav)
+          }
+        />
+        <List>
+          {hasExamples && (
+            <>
+              <MDBox display="flex flex-col" alignItems="center">
+                <MDTypography
+                  color={textColor}
+                  variant="body2"
+                  fontWeight="medium"
+                  pl="1.5rem"
+                >
+                  Examples
+                </MDTypography>
+                {renderExampleRoutes}
+              </MDBox>
+              <Divider
+                light={
+                  (!darkMode && !whiteSidenav && !transparentSidenav) ||
+                  (darkMode && !transparentSidenav && whiteSidenav)
+                }
+              />
+            </>
+          )}
+          {renderRoutes}
+        </List>
+      </SidenavRoot>
+    </>
   );
 }
 
