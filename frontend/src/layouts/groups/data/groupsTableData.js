@@ -1,10 +1,12 @@
 // layouts/groups/data/groupsTableData.js
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
-import MDBadge from "components/MDBadge";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@mui/material/Icon";
+import { fetchGroups } from "services/convo-broker.js";
+import MDAvatar from "components/MDAvatar";
+import defaultProfilePic from "assets/images/default-profile-picture.png";
 
 export const columns = [
   { Header: "name", accessor: "group", width: "35%", align: "left" },
@@ -13,7 +15,7 @@ export const columns = [
   { Header: "", accessor: "action", align: "center" },
 ];
 
-function Group({ name, category, slug, onClick }) {
+function Group({ image, name, category, onClick }) {
   return (
     <MDBox
       display="flex"
@@ -22,6 +24,7 @@ function Group({ name, category, slug, onClick }) {
       onClick={onClick}
       sx={{ cursor: "pointer" }}
     >
+      <MDAvatar src={image} name={name} size="sm" />
       <MDBox ml={2} lineHeight={1}>
         <MDTypography display="block" variant="button" fontWeight="medium">
           {name}
@@ -47,17 +50,23 @@ function Description({ text }) {
   );
 }
 
+function isMongoObjectId(value) {
+  return typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
+}
+
 // Build rows from a raw groups array
 export function buildRows(rawGroups, navigate) {
   return rawGroups.map((group) => {
     const slug = (group.Name || "").toLowerCase().replace(/\s+/g, "_");
+    const targetId =
+      isMongoObjectId(group._id) ? group._id : slug || group._id || "unknown";
     return {
       group: (
         <Group
+          image={group.GroupPic || defaultProfilePic}
           name={group.Name || "N/A"}
           category={group.Category || ""}
-          slug={slug}
-          onClick={() => navigate(`/group/${slug}`)}
+          onClick={() => navigate(`/group/${targetId}`)}
         />
       ),
       description: <Description text={group.Description || ""} />,
@@ -69,13 +78,15 @@ export function buildRows(rawGroups, navigate) {
           color="text"
           fontWeight="medium"
         >
-          {group.MemberCount || 0}
+          {group.MemberCount ?? group.Members?.length ?? 0}
         </MDTypography>
       ),
       action: (
         <MDTypography
           component="a"
-          onClick={() => navigate(`/group/${slug}`, { state: { edit: true } })}
+          onClick={() =>
+            navigate(`/group/${targetId}`, { state: { edit: true } })
+          }
           variant="caption"
           color="text"
           fontWeight="medium"
@@ -92,48 +103,47 @@ export default function data() {
   const navigate = useNavigate();
   const [groups, setGroups] = useState([]);
 
-  useEffect(() => {
-    // TODO: Replace with actual API call to fetch groups
-    // For now, using mock data with dynamic member counts
-    const stored = localStorage.getItem("people");
-    let mockGroups = [
+  const refreshGroups = async () => {
+    const fetched = await fetchGroups();
+    if (Array.isArray(fetched) && fetched.length) {
+      setGroups(fetched);
+      return fetched;
+    }
+
+    const stored = localStorage.getItem("groups");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      setGroups(parsed);
+      return parsed;
+    }
+
+    const fallback = [
       {
-        _id: "1",
         Name: "Youth Group",
         Category: "Ministry",
         Description: "Young adults ministry",
         filterLetter: "A",
-        MemberCount: 0,
       },
       {
-        _id: "2",
         Name: "Worship Team",
         Category: "Service",
         Description: "Sunday worship service",
         filterLetter: "B",
-        MemberCount: 0,
       },
     ];
+    setGroups(fallback);
+    return fallback;
+  };
 
-    // Calculate actual member counts
-    if (stored) {
-      const allPeople = JSON.parse(stored);
-      mockGroups = mockGroups.map((group) => ({
-        ...group,
-        MemberCount: allPeople.filter((person) =>
-          (person.Name || "")
-            .toLowerCase()
-            .includes(group.filterLetter.toLowerCase()),
-        ).length,
-      }));
-    }
-
-    setGroups(mockGroups);
+  useEffect(() => {
+    refreshGroups();
   }, []);
 
   return {
     columns,
     groups, // expose raw groups
     rows: buildRows(groups, navigate),
+    refreshGroups,
+    setGroups,
   };
 }

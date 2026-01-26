@@ -24,6 +24,9 @@ import {
   createPerson,
   deletePerson,
   uploadProfilePicture,
+  fetchGroup,
+  fetchGroups,
+  updateGroup,
 } from "services/convo-broker.js";
 import {
   RELATION_INVERSE_MAP,
@@ -673,6 +676,8 @@ function PersonDetail() {
   const [editedPerson, setEditedPerson] = useState(
     isAddMode ? { ProfilePic: "" } : null,
   );
+  const isAddActionDisabled =
+    isAddMode && !(editedPerson?.Name || "").trim().length;
   const [customFields, setCustomFields] = useState([]);
   const [showNotFoundModal, setShowNotFoundModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -681,9 +686,15 @@ function PersonDetail() {
     open: false,
     message: "",
     severity: "success",
+    actionLabel: null,
+    onAction: null,
+    autoHideDuration: 2000,
   });
   const [peopleList, setPeopleList] = useState([]); // List of all people for relationship suggestions
   const [relationshipFieldErrors, setRelationshipFieldErrors] = useState({});
+  const [personGroups, setPersonGroups] = useState([]);
+  const [groupsList, setGroupsList] = useState([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState([]);
 
   // Profile Picture Upload States (kept here as they are part of the save/discard flow)
   const [selectedFile, setSelectedFile] = useState(null);
@@ -1084,13 +1095,100 @@ function PersonDetail() {
     }
   }, []);
 
+  useEffect(() => {
+    const loadGroupsForPerson = async () => {
+      try {
+        const groups = await fetchGroups();
+        setGroupsList(groups || []);
+
+        if (isAddMode) {
+          setPersonGroups([]);
+          setSelectedGroupIds([]);
+          return;
+        }
+
+        const personId = String(id);
+        const filtered = (groups || []).filter((g) => {
+          const memberIds = Array.isArray(g?.Members) ? g.Members : [];
+          return memberIds.map(String).includes(personId);
+        });
+        setPersonGroups(filtered);
+        setSelectedGroupIds(filtered.map((g) => g?._id).filter(Boolean));
+      } catch (error) {
+        console.error("Failed to load groups for person:", error);
+        setGroupsList([]);
+        setPersonGroups([]);
+        setSelectedGroupIds([]);
+      }
+    };
+
+    loadGroupsForPerson();
+  }, [id, isAddMode]);
+
+  const syncGroupsForPerson = useCallback(
+    async (personId) => {
+      const isMongoObjectId = (value) =>
+        typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
+      if (!personId || personId === "add") return;
+
+      const selectedSet = new Set((selectedGroupIds || []).map(String));
+
+      const updates = (groupsList || [])
+        .filter((g) => isMongoObjectId(g?._id))
+        .map(async (group) => {
+          const groupId = group._id;
+          const currentMembers = Array.isArray(group?.Members)
+            ? group.Members
+            : [];
+          const memberIds = currentMembers
+            .map((m) => (typeof m === "string" ? m : m?._id || m?.id))
+            .filter(Boolean)
+            .map(String);
+
+          const hasMember = memberIds.includes(String(personId));
+          const shouldHave = selectedSet.has(String(groupId));
+          if (hasMember === shouldHave) return;
+
+          const nextMembers = shouldHave
+            ? Array.from(new Set([...memberIds, String(personId)]))
+            : memberIds.filter((mid) => mid !== String(personId));
+
+          await updateGroup(groupId, {
+            Name: group?.Name || "",
+            Description: group?.Description || "",
+            GroupPic: group?.GroupPic || "",
+            Members: nextMembers,
+          });
+        });
+
+      await Promise.all(updates);
+      localStorage.removeItem("groups");
+      const refreshedGroups = await fetchGroups();
+      setGroupsList(refreshedGroups || []);
+
+      const personIdString = String(personId);
+      const filtered = (refreshedGroups || []).filter((g) => {
+        const memberIds = Array.isArray(g?.Members) ? g.Members : [];
+        return memberIds.map(String).includes(personIdString);
+      });
+      setPersonGroups(filtered);
+      setSelectedGroupIds(filtered.map((g) => g?._id).filter(Boolean));
+    },
+    [fetchGroups, groupsList, selectedGroupIds, updateGroup],
+  );
+
   // Handlers for main actions (Edit, Save, Discard, Delete)
   const handleEdit = useCallback(() => {
     setIsEditing(true);
   }, []);
 
   const handleCloseToast = useCallback(() => {
-    setToast((prev) => ({ ...prev, open: false }));
+    setToast((prev) => ({
+      ...prev,
+      open: false,
+      actionLabel: null,
+      onAction: null,
+    }));
   }, []);
 
   const closeDiscardConfirmModal = useCallback(() => {
@@ -1262,6 +1360,9 @@ function PersonDetail() {
               createdPersonId,
             );
           }
+          if (createdPersonId) {
+            await syncGroupsForPerson(createdPersonId);
+          }
           localStorage.removeItem("people");
           await fetchPeople();
           const storedPeople = localStorage.getItem("people");
@@ -1282,6 +1383,7 @@ function PersonDetail() {
             currentRelationships: currentRelationshipFields,
             previousRelationships: previousRelationshipFields,
           });
+          await syncGroupsForPerson(id);
           localStorage.removeItem("people");
           await fetchPeople();
           const stored = localStorage.getItem("people");
@@ -1312,6 +1414,7 @@ function PersonDetail() {
       buildPersonPayloadWithCustomFields,
       syncReciprocalRelationships,
       handleProfilePicUpload,
+      syncGroupsForPerson,
     ],
   ); // Dependencies for useCallback
 
@@ -1332,6 +1435,7 @@ function PersonDetail() {
     if (selectedFile) return true;
 
     if (isAddMode) {
+      if ((selectedGroupIds || []).length > 0) return true;
       if (hasMeaningfulValue(editedPerson?.ProfilePic)) return true;
       if (hasMeaningfulValue(editedPerson?.Name)) return true;
       if (hasMeaningfulValue(editedPerson?.NameChi)) return true;
@@ -1353,6 +1457,19 @@ function PersonDetail() {
     }
 
     if (!person) return false;
+
+    const baselineGroupIds = (personGroups || [])
+      .map((g) => g?._id)
+      .filter(Boolean)
+      .map(String)
+      .sort()
+      .join(",");
+    const currentGroupIds = (selectedGroupIds || [])
+      .map(String)
+      .sort()
+      .join(",");
+    if (baselineGroupIds !== currentGroupIds) return true;
+
     const baselineFields = initializeCustomFields(person);
     const baselinePayload = buildPersonPayloadWithCustomFields(
       person,
@@ -1371,7 +1488,9 @@ function PersonDetail() {
     initializeCustomFields,
     isAddMode,
     person,
+    personGroups,
     selectedFile,
+    selectedGroupIds,
   ]);
 
   const requestDiscardIfDirty = useCallback(
@@ -1393,24 +1512,133 @@ function PersonDetail() {
   }, [closeDiscardConfirmModal]);
 
   const handleRemoveFromGroup = useCallback(() => {
-    // UI only for now
-    console.log("Remove From Group clicked", {
-      personId: id,
-      from: location.state?.from,
-    });
-  }, [id, location.state]);
-
-  const handleDelete = useCallback(async () => {
-    try {
-      await deletePerson(id);
-      localStorage.removeItem("people");
-      await fetchPeople();
-      navigate("/people");
-    } catch (error) {
-      console.error("Failed to delete:", error);
+    const from = location.state?.from;
+    if (typeof from !== "string" || !from.toLowerCase().startsWith("/group/")) {
+      return;
     }
+
+    const groupId = from.split("/group/")[1]?.split("/")[0];
+    if (!groupId) return;
+
+    const isMongoObjectId = (value) =>
+      typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
+
+    if (!isMongoObjectId(groupId)) {
+      setToast({
+        open: true,
+        message: "Remove from group is only available for saved groups.",
+        severity: "warning",
+      });
+      return;
+    }
+
+    const run = async () => {
+      try {
+        const group = await fetchGroup(groupId);
+        const currentIds = (group?.Members || [])
+          .map((m) => m?._id || m?.id || m)
+          .filter(Boolean)
+          .map(String);
+
+        const nextMembers = currentIds.filter((mid) => mid !== String(id));
+
+        await updateGroup(groupId, {
+          Name: group?.Name || "",
+          Description: group?.Description || "",
+          GroupPic: group?.GroupPic || "",
+          Members: nextMembers,
+        });
+
+        navigate(from, {
+          state: {
+            toast: {
+              message: "Removed from group.",
+              severity: "success",
+              actionLabel: "Undo",
+              autoHideDuration: 6000,
+              undo: { members: currentIds },
+            },
+          },
+        });
+      } catch (error) {
+        setToast({
+          open: true,
+          message: error?.message || "Failed to remove from group.",
+          severity: "error",
+        });
+      }
+    };
+
+    run();
+  }, [id, location.state?.from, navigate]);
+
+  const pendingDeletePersonTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (pendingDeletePersonTimerRef.current) {
+        clearTimeout(pendingDeletePersonTimerRef.current);
+        pendingDeletePersonTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleDelete = useCallback(() => {
     setShowDeleteModal(false);
-  }, [id, navigate]);
+
+    const timeoutMs = 6000;
+    if (pendingDeletePersonTimerRef.current) {
+      clearTimeout(pendingDeletePersonTimerRef.current);
+      pendingDeletePersonTimerRef.current = null;
+    }
+
+    pendingDeletePersonTimerRef.current = setTimeout(async () => {
+      try {
+        await deletePerson(id);
+        localStorage.removeItem("people");
+        await fetchPeople();
+        navigate("/people", {
+          state: {
+            toast: { message: "Person deleted.", severity: "success" },
+          },
+        });
+      } catch (error) {
+        console.error("Failed to delete:", error);
+        setToast({
+          open: true,
+          message: error?.message || "Failed to delete person.",
+          severity: "error",
+          actionLabel: null,
+          onAction: null,
+          autoHideDuration: 2000,
+        });
+      } finally {
+        pendingDeletePersonTimerRef.current = null;
+      }
+    }, timeoutMs);
+
+    setToast({
+      open: true,
+      message: "Person deleted.",
+      severity: "success",
+      autoHideDuration: timeoutMs,
+      actionLabel: "Undo",
+      onAction: async () => {
+        if (pendingDeletePersonTimerRef.current) {
+          clearTimeout(pendingDeletePersonTimerRef.current);
+          pendingDeletePersonTimerRef.current = null;
+          setToast({
+            open: true,
+            message: "Delete cancelled.",
+            severity: "info",
+            actionLabel: null,
+            onAction: null,
+            autoHideDuration: 2000,
+          });
+        }
+      },
+    });
+  }, [deletePerson, fetchPeople, id, navigate]);
 
   // Handlers for editing person details (passed to PersonEditForm)
   const handleChange = useCallback((field, value) => {
@@ -1574,6 +1802,7 @@ function PersonDetail() {
                     <MDButton
                       variant="gradient"
                       color="info"
+                      disabled={isAddActionDisabled}
                       onClick={() => handleSave()}
                     >
                       {isAddMode ? "Add" : "Save"}
@@ -1632,6 +1861,9 @@ function PersonDetail() {
                 }
                 relationshipFieldErrors={relationshipFieldErrors}
                 peopleList={peopleList.filter((p) => p._id !== id)}
+                groupsList={groupsList}
+                selectedGroupIds={selectedGroupIds}
+                setSelectedGroupIds={setSelectedGroupIds}
                 defaultProfilePic={defaultProfilePic}
                 // Pass all relevant handlers and states
                 handleChange={handleChange}
@@ -1653,6 +1885,7 @@ function PersonDetail() {
                 relationshipCustomFieldsForRender={
                   relationshipCustomFieldsForRender
                 }
+                personGroups={personGroups}
                 peopleList={peopleList}
                 defaultProfilePic={defaultProfilePic}
                 onClearRelationships={handleClearAllRelationshipsNow}
@@ -1752,6 +1985,7 @@ function PersonDetail() {
       {/* MOBILE floating save button (add/edit form) */}
       {isMobileView && (isEditing || isAddMode) && (
         <IconButton
+          disabled={isAddActionDisabled}
           onClick={() => handleSave()}
           sx={(muiTheme) => ({
             position: "fixed",
@@ -1760,12 +1994,18 @@ function PersonDetail() {
             width: 77,
             height: 77,
             borderRadius: "50%",
-            background: ACCENT_CYAN,
+            backgroundColor: ACCENT_CYAN,
+            opacity: isAddActionDisabled ? 0.45 : 1,
             color: "#fff",
             zIndex: muiTheme.zIndex.modal - 1,
             "&:hover": {
-              background: ACCENT_CYAN,
-              filter: "brightness(0.9)",
+              backgroundColor: ACCENT_CYAN,
+              filter: isAddActionDisabled ? "none" : "brightness(0.9)",
+            },
+            "&.Mui-disabled": {
+              backgroundColor: ACCENT_CYAN,
+              color: "#fff",
+              opacity: 0.45,
             },
           })}
         >
@@ -1780,6 +2020,9 @@ function PersonDetail() {
         open={toast.open}
         message={toast.message}
         severity={toast.severity}
+        actionLabel={toast.actionLabel}
+        onAction={toast.onAction}
+        autoHideDuration={toast.autoHideDuration}
         onClose={handleCloseToast}
       />
       <Dialog

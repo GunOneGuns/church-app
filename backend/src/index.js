@@ -10,6 +10,7 @@ import * as fs from "fs";
 import cron from "node-cron";
 import ReseedAction from "./mongo/ReseedAction.js";
 import peopleRoutes from "./routes/people/index.js";
+import groupsRoutes from "./routes/groups/index.js";
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use("/people", peopleRoutes);
+app.use("/groups", groupsRoutes);
 
 app.get("/", function (req, res) {
   const __dirname = fs.realpathSync(".");

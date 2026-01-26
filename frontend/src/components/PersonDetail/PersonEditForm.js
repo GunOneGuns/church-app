@@ -42,6 +42,9 @@ function PersonEditForm({
   relationshipCustomFieldsForRender,
   relationshipFieldErrors = {},
   peopleList, // Used for personNameOptions
+  groupsList = [],
+  selectedGroupIds = [],
+  setSelectedGroupIds,
   defaultProfilePic,
   // Handlers passed from parent
   handleChange,
@@ -77,6 +80,11 @@ function PersonEditForm({
     () => normalizeSelectValue(editedPerson?.ChatGroup),
     [editedPerson?.ChatGroup],
   );
+
+  const selectedGroups = useMemo(() => {
+    const idSet = new Set((selectedGroupIds || []).map(String));
+    return (groupsList || []).filter((g) => idSet.has(String(g?._id)));
+  }, [groupsList, selectedGroupIds]);
 
   const isValidRelationSuggestion = (relation = "") => {
     const trimmed = relation.trim();
@@ -1101,6 +1109,127 @@ function PersonEditForm({
               >
                 Add Relationship
               </MDButton>
+            </MDBox>
+          </Card>
+
+          {/* Panel 3: Groups */}
+          <Card sx={{ p: 2, mt: 3 }}>
+            <MDTypography variant="h6" fontWeight="bold" mb={2}>
+              Groups
+            </MDTypography>
+
+            <Autocomplete
+              multiple
+              options={groupsList}
+              value={selectedGroups}
+              onChange={(_e, next) => {
+                if (!setSelectedGroupIds) return;
+                setSelectedGroupIds(next.map((g) => g?._id).filter(Boolean));
+              }}
+              getOptionLabel={(option) => option?.Name || ""}
+              isOptionEqualToValue={(opt, val) => opt?._id === val?._id}
+              disableCloseOnSelect
+              openOnFocus
+              noOptionsText=""
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  variant="outlined"
+                  label="Add to groups"
+                  placeholder="Search groups..."
+                  sx={{ "& .MuiOutlinedInput-root": { minHeight: "56px" } }}
+                />
+              )}
+              renderOption={(props, option) => {
+                const { key, ...rest } = props;
+                const groupName = option?.Name || "NIL";
+                const groupPic = option?.GroupPic || defaultProfilePic;
+                return (
+                  <li
+                    key={option?._id || key}
+                    {...rest}
+                    style={{
+                      ...rest.style,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                    }}
+                  >
+                    <MDBox
+                      component="img"
+                      src={groupPic}
+                      alt={`${groupName}'s picture`}
+                      width="28px"
+                      height="28px"
+                      borderRadius="50%"
+                      sx={{ objectFit: "cover", flexShrink: 0 }}
+                    />
+                    <span>{groupName}</span>
+                  </li>
+                );
+              }}
+              renderTags={() => null}
+            />
+
+            <MDBox mt={2} display="flex" flexWrap="wrap" gap={2}>
+              {selectedGroups.map((group) => {
+                const groupId = group?._id;
+                const groupName = group?.Name || "NIL";
+                const groupPic = group?.GroupPic || defaultProfilePic;
+
+                return (
+                  <MDBox
+                    key={`group-pill-${groupId || groupName}`}
+                    display="flex"
+                    flexDirection="column"
+                    alignItems="center"
+                    textAlign="center"
+                    width="80px"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      if (!setSelectedGroupIds || !groupId) return;
+                      setSelectedGroupIds((prev) =>
+                        (prev || []).filter((gid) => String(gid) !== String(groupId)),
+                      );
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        if (!setSelectedGroupIds || !groupId) return;
+                        setSelectedGroupIds((prev) =>
+                          (prev || []).filter((gid) => String(gid) !== String(groupId)),
+                        );
+                      }
+                    }}
+                    sx={{ cursor: "pointer", outline: "none" }}
+                    title="Click to remove"
+                  >
+                    <MDBox
+                      component="img"
+                      src={groupPic}
+                      alt={`${groupName}'s picture`}
+                      width="60px"
+                      height="60px"
+                      borderRadius="50%"
+                      sx={{ objectFit: "cover", mb: 0.5 }}
+                    />
+                    <MDTypography
+                      variant="caption"
+                      fontWeight="medium"
+                      lineHeight={1.2}
+                    >
+                      {groupName}
+                    </MDTypography>
+                  </MDBox>
+                );
+              })}
+
+              {selectedGroups.length === 0 && (
+                <MDTypography variant="body2" color="text">
+                  No groups selected.
+                </MDTypography>
+              )}
             </MDBox>
           </Card>
         </Grid>

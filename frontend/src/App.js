@@ -59,6 +59,7 @@ import UserProfile from "layouts/user-profile";
 import UserManagement from "layouts/user-management";
 import PersonDetail from "layouts/person-detail";
 import GroupDetail from "layouts/groups/group-detail";
+import GroupAdd from "layouts/groups/group-add";
 import { Helmet } from "react-helmet";
 
 export default function App() {
@@ -334,6 +335,16 @@ export default function App() {
                 </ProtectedRoute>
               }
               key="person-detail"
+            />
+            <Route
+              exact
+              path="group/add"
+              element={
+                <ProtectedRoute isAuthenticated={true}>
+                  <GroupAdd />
+                </ProtectedRoute>
+              }
+              key="group-add"
             />
             <Route
               exact

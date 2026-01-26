@@ -10,6 +10,7 @@ function PersonDisplay({
   person,
   personalInfoCustomFieldsForRender,
   relationshipCustomFieldsForRender,
+  personGroups = [],
   peopleList, // Used for looking up related person's profile pic
   defaultProfilePic,
   onClearRelationships,
@@ -19,6 +20,20 @@ function PersonDisplay({
   const handleRelatedPersonClick = (relatedPerson) => {
     if (!relatedPerson?._id) return;
     navigate(`/person/${relatedPerson._id}`);
+  };
+
+  const isMongoObjectId = (value) =>
+    typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
+
+  const handleGroupClick = (group) => {
+    const groupId = group?._id;
+    if (!groupId) return;
+    if (isMongoObjectId(groupId)) {
+      navigate(`/group/${groupId}`);
+      return;
+    }
+    const slug = (group?.Name || "").toLowerCase().replace(/\s+/g, "_");
+    navigate(`/group/${slug || groupId}`);
   };
 
   const displayOrNil = (v) => {
@@ -284,6 +299,69 @@ function PersonDisplay({
             {relationshipCustomFieldsForRender.length === 0 && (
               <MDTypography variant="body2" color="text">
                 No related persons found.
+              </MDTypography>
+            )}
+          </MDBox>
+        </Card>
+
+        {/* Panel 3: Groups */}
+        <Card sx={{ p: 2, mt: 3 }}>
+          <MDTypography variant="h5" fontWeight="bold" mb={2}>
+            Groups
+          </MDTypography>
+
+          <MDBox display="flex" flexWrap="wrap" gap={2}>
+            {personGroups.map((group, index) => {
+              const groupName = group?.Name || "NIL";
+              const groupPic = group?.GroupPic || defaultProfilePic;
+              const key = group?._id || groupName || index;
+
+              return (
+                <MDBox
+                  key={`group-view-${key}`}
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  textAlign="center"
+                  width="80px"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleGroupClick(group)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleGroupClick(group);
+                    }
+                  }}
+                  sx={{
+                    cursor: group?._id ? "pointer" : "default",
+                    outline: "none",
+                  }}
+                >
+                  <MDBox
+                    component="img"
+                    src={groupPic}
+                    alt={`${groupName}'s picture`}
+                    width="60px"
+                    height="60px"
+                    borderRadius="50%"
+                    sx={{ objectFit: "cover", mb: 0.5 }}
+                  />
+
+                  <MDTypography
+                    variant="caption"
+                    fontWeight="medium"
+                    lineHeight={1.2}
+                  >
+                    {groupName}
+                  </MDTypography>
+                </MDBox>
+              );
+            })}
+
+            {personGroups.length === 0 && (
+              <MDTypography variant="body2" color="text">
+                No groups found.
               </MDTypography>
             )}
           </MDBox>

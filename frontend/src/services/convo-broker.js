@@ -73,3 +73,66 @@ export const uploadProfilePicture = async (personId, file) => {
     throw error;
   }
 };
+
+export const fetchGroups = async () => {
+  try {
+    const response = await axios.get(`${baseURL}/groups`, {
+      params: { _ts: Date.now() },
+      headers: {
+        "Cache-Control": "no-cache",
+      },
+    });
+    const groups = response.data;
+    localStorage.setItem("groups", JSON.stringify(groups));
+    return groups;
+  } catch (error) {
+    console.error("Failed to fetch groups:", error);
+    return [];
+  }
+};
+
+export const fetchGroup = async (groupId) => {
+  const response = await axios.get(`${baseURL}/groups/${groupId}`, {
+    params: { _ts: Date.now() },
+    headers: {
+      "Cache-Control": "no-cache",
+    },
+  });
+  return response.data;
+};
+
+export const createGroup = async (groupData) => {
+  const response = await axios.post(`${baseURL}/groups`, groupData, {
+    headers: { "Content-Type": "application/json" },
+  });
+  return response.data;
+};
+
+export const updateGroup = async (groupId, groupData) => {
+  const response = await axios.put(`${baseURL}/groups/${groupId}`, groupData, {
+    headers: { "Content-Type": "application/json" },
+  });
+  return response.data;
+};
+
+export const deleteGroup = async (groupId) => {
+  const response = await axios.delete(`${baseURL}/groups/${groupId}`);
+  return response.data;
+};
+
+export const uploadGroupPicture = async (groupId, file) => {
+  const formData = new FormData();
+  formData.append("GroupPic", file);
+
+  const response = await axios.post(
+    `${baseURL}/groups/${groupId}/upload-group-pic`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+
+  return response.data;
+};

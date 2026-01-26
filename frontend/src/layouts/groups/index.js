@@ -9,28 +9,35 @@ import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
+import ListItemAvatar from "@mui/material/ListItemAvatar";
 import ListItemText from "@mui/material/ListItemText";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
+import MDAvatar from "components/MDAvatar";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
-import DataTable from "examples/Tables/DataTable";
-import groupsTableData, {
-  columns as groupsColumns,
-  buildRows as buildGroupsRows,
-} from "layouts/groups/data/groupsTableData";
-import { useEffect, useMemo, useState } from "react";
+import groupsTableData from "layouts/groups/data/groupsTableData";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { setMobileNavbarTitle, useMaterialUIController } from "context";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { ACCENT_CYAN } from "constants.js";
+import defaultProfilePic from "assets/images/default-profile-picture.png";
+import Toast from "components/Toast";
+import { deleteGroup } from "services/convo-broker.js";
 
 const GROUPS_TABLE_TITLE = "Groups";
 const MOBILE_PAGINATION_HEIGHT = 30;
+
+function isMongoObjectId(value) {
+  return typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
+}
 
 /**
  * Desktop/Web paginator (same behavior as People + GroupDetail):
@@ -97,11 +104,31 @@ function DesktopPaginationControls({
 }
 
 function Groups() {
-  const { groups } = groupsTableData();
+  const { groups, refreshGroups, setGroups } = groupsTableData();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("xl"));
   const [, dispatch] = useMaterialUIController();
+  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+  const [menuGroupId, setMenuGroupId] = useState(null);
+  const [toast, setToast] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+    actionLabel: null,
+    onAction: null,
+    autoHideDuration: 2000,
+  });
+  const pendingDeleteRef = useRef(new Map());
+
+  useEffect(() => {
+    return () => {
+      pendingDeleteRef.current.forEach((entry) => {
+        clearTimeout(entry.timerId);
+      });
+      pendingDeleteRef.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     if (!isMobile) {
@@ -117,16 +144,88 @@ function Groups() {
   const [inputValue, setInputValue] = useState("1");
   const rowsPerPage = 10;
 
+  const handleOpenMenu = (event, groupId) => {
+    event.stopPropagation();
+    setMenuAnchorEl(event.currentTarget);
+    setMenuGroupId(groupId);
+  };
+
+  const handleCloseMenu = () => {
+    setMenuAnchorEl(null);
+    setMenuGroupId(null);
+  };
+
+  const handleDeleteGroup = async () => {
+    const groupId = menuGroupId;
+    handleCloseMenu();
+    if (!isMongoObjectId(groupId)) {
+      setToast({
+        open: true,
+        message: "Delete is only available for saved groups.",
+        severity: "warning",
+        actionLabel: null,
+        onAction: null,
+        autoHideDuration: 2000,
+      });
+      return;
+    }
+
+    const groupToDelete = groups.find(
+      (g) => String(g?._id) === String(groupId),
+    );
+    if (!groupToDelete) return;
+
+    setGroups((prev) =>
+      (prev || []).filter((g) => String(g?._id) !== String(groupId)),
+    );
+
+    const timeoutMs = 6000;
+    const timerId = setTimeout(async () => {
+      try {
+        await deleteGroup(groupId);
+        localStorage.removeItem("groups");
+        await refreshGroups();
+      } catch (error) {
+        setGroups((prev) => [groupToDelete, ...(prev || [])]);
+        setToast({
+          open: true,
+          message: error?.message || "Failed to delete group.",
+          severity: "error",
+          actionLabel: null,
+          onAction: null,
+          autoHideDuration: 2000,
+        });
+      } finally {
+        pendingDeleteRef.current.delete(String(groupId));
+      }
+    }, timeoutMs);
+
+    pendingDeleteRef.current.set(String(groupId), {
+      timerId,
+      group: groupToDelete,
+    });
+
+    setToast({
+      open: true,
+      message: "Group deleted.",
+      severity: "success",
+      autoHideDuration: timeoutMs,
+      actionLabel: "Undo",
+      onAction: async () => {
+        const pending = pendingDeleteRef.current.get(String(groupId));
+        if (!pending) return;
+        clearTimeout(pending.timerId);
+        pendingDeleteRef.current.delete(String(groupId));
+        setGroups((prev) => [pending.group, ...(prev || [])]);
+      },
+    });
+  };
+
   const filteredGroups = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return groups;
     return groups.filter((g) => (g?.Name || "").toLowerCase().includes(q));
   }, [groups, searchQuery]);
-
-  const rows = useMemo(
-    () => buildGroupsRows(filteredGroups, navigate),
-    [filteredGroups, navigate],
-  );
 
   const totalPages = Math.max(
     1,
@@ -266,7 +365,9 @@ function Groups() {
                   {paginatedGroups.map((group, index) => {
                     const groupName = group?.Name || "N/A";
                     const slug = groupName.toLowerCase().replace(/\s+/g, "_");
-                    const groupId = group?._id || slug;
+                    const groupId = isMongoObjectId(group?._id)
+                      ? group._id
+                      : slug;
                     const key = groupId || groupName || index;
 
                     return (
@@ -280,6 +381,7 @@ function Groups() {
                             size="small"
                             onClick={(e) => {
                               e.stopPropagation();
+                              handleOpenMenu(e, groupId);
                             }}
                             sx={{ color: ACCENT_CYAN }}
                           >
@@ -288,9 +390,16 @@ function Groups() {
                         }
                       >
                         <ListItemButton
-                          onClick={() => navigate(`/group/${slug}`)}
+                          onClick={() => navigate(`/group/${groupId}`)}
                           sx={{ width: "100%" }}
                         >
+                          <ListItemAvatar>
+                            <MDAvatar
+                              src={group?.GroupPic || defaultProfilePic}
+                              name={groupName}
+                              size="sm"
+                            />
+                          </ListItemAvatar>
                           <ListItemText
                             primary={groupName}
                             secondary={`${group.MemberCount || 0} members`}
@@ -379,7 +488,9 @@ function Groups() {
                         const slug = groupName
                           .toLowerCase()
                           .replace(/\s+/g, "_");
-                        const groupId = group?._id || slug;
+                        const groupId = isMongoObjectId(group?._id)
+                          ? group._id
+                          : slug;
                         const key = groupId || groupName || index;
 
                         return (
@@ -388,11 +499,12 @@ function Groups() {
                             disablePadding
                             divider
                             secondaryAction={
-                              <IconButton
+                          <IconButton
                                 edge="end"
                                 size="small"
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  handleOpenMenu(e, groupId);
                                 }}
                                 sx={{ color: ACCENT_CYAN }}
                               >
@@ -401,14 +513,26 @@ function Groups() {
                             }
                           >
                             <ListItemButton
-                              onClick={() => navigate(`/group/${slug}`)}
+                              onClick={() => navigate(`/group/${groupId}`)}
                               sx={{ width: "100%" }}
                             >
+                              <ListItemAvatar>
+                                <MDAvatar
+                                  src={group?.GroupPic || defaultProfilePic}
+                                  name={groupName}
+                                  size="sm"
+                                />
+                              </ListItemAvatar>
                               <ListItemText
                                 primary={groupName}
+                                secondary={`${group.MemberCount || 0} members`}
                                 primaryTypographyProps={{
                                   noWrap: true,
                                   sx: { color: ACCENT_CYAN },
+                                }}
+                                secondaryTypographyProps={{
+                                  noWrap: true,
+                                  color: "text.secondary",
                                 }}
                               />
                             </ListItemButton>
@@ -480,6 +604,35 @@ function Groups() {
           </Icon>
         </IconButton>
       )}
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={handleCloseMenu}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <MenuItem
+          onClick={handleDeleteGroup}
+          sx={{ color: "error.main" }}
+        >
+          Delete
+        </MenuItem>
+      </Menu>
+      <Toast
+        open={toast.open}
+        message={toast.message}
+        severity={toast.severity}
+        actionLabel={toast.actionLabel}
+        onAction={toast.onAction}
+        autoHideDuration={toast.autoHideDuration}
+        onClose={() =>
+          setToast((prev) => ({
+            ...prev,
+            open: false,
+            actionLabel: null,
+            onAction: null,
+          }))
+        }
+      />
       <Footer />
     </DashboardLayout>
   );

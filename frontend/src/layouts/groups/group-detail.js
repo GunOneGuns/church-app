@@ -1,12 +1,17 @@
 // layouts/groups/group-detail.js
-import { useParams, useNavigate } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
+import Autocomplete from "@mui/material/Autocomplete";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
 import Icon from "@mui/material/Icon";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
@@ -30,8 +35,25 @@ import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { setMobileNavbarTitle, useMaterialUIController } from "context";
 import { ACCENT_CYAN } from "constants.js";
+import Toast from "components/Toast";
+import { fetchGroup, fetchPeople, updateGroup } from "services/convo-broker.js";
 
 const MOBILE_PAGINATION_HEIGHT = 30;
+
+function isMongoObjectId(value) {
+  return typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
+}
+
+function getPersonLabel(person) {
+  if (!person) return "";
+  const name = person.Name || "";
+  const nameChi = person.NameChi || "";
+  if (name && nameChi) return `${name} (${nameChi})`;
+  if (name || nameChi) return name || nameChi;
+  const pid = person?._id || person?.id;
+  if (pid) return `Unknown (${String(pid).slice(-6)})`;
+  return "Unknown";
+}
 
 /**
  * FIX (web/desktop paginator):
@@ -96,7 +118,7 @@ function DesktopPaginationControls({
   );
 }
 
-function ActionMenu({ person, navigate, slug }) {
+function ActionMenu({ person, navigate, slug, onRemove }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const handleClick = (event) => {
@@ -116,8 +138,7 @@ function ActionMenu({ person, navigate, slug }) {
   };
   const handleRemove = (event) => {
     event.stopPropagation();
-    // TODO: Implement remove from group functionality
-    console.log("Remove from group:", person._id);
+    if (onRemove) onRemove(person);
     handleClose(event);
   };
   return (
@@ -183,7 +204,7 @@ function Job({ title, description }) {
   );
 }
 
-function buildGroupMemberRows(rawPeople, navigate, slug) {
+function buildGroupMemberRows(rawPeople, navigate, slug, onRemove) {
   return rawPeople.map((person) => ({
     people: (
       <PeopleCell
@@ -219,19 +240,40 @@ function buildGroupMemberRows(rawPeople, navigate, slug) {
         {person.PhoneNumber || "N/A"}
       </MDTypography>
     ),
-    action: <ActionMenu person={person} navigate={navigate} slug={slug} />,
+    action: (
+      <ActionMenu
+        person={person}
+        navigate={navigate}
+        slug={slug}
+        onRemove={onRemove}
+      />
+    ),
   }));
 }
 
 function GroupDetail() {
-  const { id: slug } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   // Keep consistent with your Groups page "mobile" breakpoint
   const isMobile = useMediaQuery(theme.breakpoints.down("xl"));
   const [, dispatch] = useMaterialUIController();
   const [group, setGroup] = useState(null);
   const [members, setMembers] = useState([]);
+  const [toast, setToast] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+    actionLabel: null,
+    onAction: null,
+    autoHideDuration: 2000,
+  });
+  const [peopleOptions, setPeopleOptions] = useState([]);
+  const [addMembersOpen, setAddMembersOpen] = useState(false);
+  const [memberQuery, setMemberQuery] = useState("");
+  const [memberPickerOpen, setMemberPickerOpen] = useState(false);
+  const [selectedToAdd, setSelectedToAdd] = useState([]);
   // Search
   const [searchQuery, setSearchQuery] = useState("");
   // Pagination
@@ -240,42 +282,118 @@ function GroupDetail() {
   const rowsPerPage = 10;
 
   useEffect(() => {
-    // Mock groups data
-    const mockGroups = [
-      {
-        Name: "Youth Group",
-        Category: "Ministry",
-        Description: "Young adults ministry",
-        filterLetter: "A",
-      },
-      {
-        Name: "Worship Team",
-        Category: "Service",
-        Description: "Sunday worship service",
-        filterLetter: "B",
-      },
-    ];
-    const currentGroup = mockGroups.find(
-      (g) => g.Name.toLowerCase().replace(/\s+/g, "_") === slug,
-    );
-    setGroup(currentGroup);
-    if (currentGroup) {
-      const stored = localStorage.getItem("people");
-      if (stored) {
-        const allPeople = JSON.parse(stored);
-        const filteredMembers = allPeople.filter((person) =>
-          (person.Name || "")
-            .toLowerCase()
-            .includes(currentGroup.filterLetter.toLowerCase()),
-        );
-        setMembers(filteredMembers);
-      } else {
-        setMembers([]);
+    const toastFromNav = location.state?.toast;
+    if (!toastFromNav?.message) return;
+
+    const { undo } = toastFromNav || {};
+
+    setToast({
+      open: true,
+      message: toastFromNav.message,
+      severity: toastFromNav.severity || "success",
+      autoHideDuration: toastFromNav.autoHideDuration ?? 2000,
+      actionLabel: toastFromNav.actionLabel || null,
+      onAction:
+        undo?.members && isMongoObjectId(id)
+          ? async () => {
+              const base = await fetchGroup(id);
+              await updateGroup(id, {
+                Name: base?.Name || group?.Name || "",
+                Description: base?.Description || group?.Description || "",
+                GroupPic: base?.GroupPic || group?.GroupPic || "",
+                Members: undo.members,
+              });
+              const refreshed = await fetchGroup(id);
+              setGroup(refreshed);
+              setMembers(
+                Array.isArray(refreshed?.Members) ? refreshed.Members : [],
+              );
+            }
+          : null,
+    });
+
+    const nextState = { ...(location.state || {}) };
+    delete nextState.toast;
+    navigate(location.pathname, {
+      replace: true,
+      state: Object.keys(nextState).length ? nextState : null,
+    });
+  }, [
+    group?.Description,
+    group?.GroupPic,
+    group?.Name,
+    id,
+    location.pathname,
+    location.state,
+    navigate,
+  ]);
+
+  useEffect(() => {
+    const loadGroup = async () => {
+      if (isMongoObjectId(id)) {
+        try {
+          const fetched = await fetchGroup(id);
+          setGroup(fetched);
+          setMembers(Array.isArray(fetched?.Members) ? fetched.Members : []);
+          return;
+        } catch (error) {
+          console.error("Failed to load group:", error);
+        }
       }
-    } else {
-      setMembers([]);
-    }
-  }, [slug]);
+
+      // Fallback: mock groups by slug (used before groups API existed)
+      const mockGroups = [
+        {
+          Name: "Youth Group",
+          Category: "Ministry",
+          Description: "Young adults ministry",
+          filterLetter: "A",
+        },
+        {
+          Name: "Worship Team",
+          Category: "Service",
+          Description: "Sunday worship service",
+          filterLetter: "B",
+        },
+      ];
+
+      const currentGroup = mockGroups.find(
+        (g) => g.Name.toLowerCase().replace(/\s+/g, "_") === id,
+      );
+      setGroup(currentGroup || null);
+
+      if (!currentGroup) {
+        setMembers([]);
+        return;
+      }
+
+      await fetchPeople();
+      const stored = localStorage.getItem("people");
+      if (!stored) {
+        setMembers([]);
+        return;
+      }
+
+      const allPeople = JSON.parse(stored);
+      const filteredMembers = allPeople.filter((person) =>
+        (person.Name || "")
+          .toLowerCase()
+          .includes(currentGroup.filterLetter.toLowerCase()),
+      );
+      setMembers(filteredMembers);
+    };
+
+    loadGroup();
+  }, [id]);
+
+  useEffect(() => {
+    const loadPeople = async () => {
+      await fetchPeople();
+      const stored = localStorage.getItem("people");
+      if (stored) setPeopleOptions(JSON.parse(stored));
+    };
+    loadPeople();
+  }, []);
 
   // Mobile navbar title = group name
   useEffect(() => {
@@ -289,6 +407,73 @@ function GroupDetail() {
     return () => setMobileNavbarTitle(dispatch, null);
   }, [dispatch, group?.Name, isMobile]);
 
+  const handleRemoveMember = useCallback(
+    async (person) => {
+      if (!isMongoObjectId(id)) {
+        setToast({
+          open: true,
+          message: "Remove member is only available for saved groups.",
+          severity: "warning",
+        });
+        return;
+      }
+
+      const personId = person?._id || person?.id;
+      if (!personId) return;
+
+      const currentIds = (members || [])
+        .map((m) => m?._id || m?.id)
+        .filter(Boolean)
+        .map(String);
+
+      const nextMembers = currentIds.filter((mid) => mid !== String(personId));
+
+      try {
+        await updateGroup(id, {
+          Name: group?.Name || "",
+          Description: group?.Description || "",
+          GroupPic: group?.GroupPic || "",
+          Members: nextMembers,
+        });
+
+        const refreshed = await fetchGroup(id);
+        setGroup(refreshed);
+        setMembers(Array.isArray(refreshed?.Members) ? refreshed.Members : []);
+
+        setToast({
+          open: true,
+          message: "Member removed.",
+          severity: "success",
+          autoHideDuration: 6000,
+          actionLabel: "Undo",
+          onAction: async () => {
+            await updateGroup(id, {
+              Name: group?.Name || "",
+              Description: group?.Description || "",
+              GroupPic: group?.GroupPic || "",
+              Members: currentIds,
+            });
+            const restored = await fetchGroup(id);
+            setGroup(restored);
+            setMembers(
+              Array.isArray(restored?.Members) ? restored.Members : [],
+            );
+          },
+        });
+      } catch (error) {
+        setToast({
+          open: true,
+          message: error?.message || "Failed to remove member.",
+          severity: "error",
+          autoHideDuration: 2000,
+          actionLabel: null,
+          onAction: null,
+        });
+      }
+    },
+    [group?.Description, group?.GroupPic, group?.Name, id, members],
+  );
+
   const filteredMembers = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return members;
@@ -301,8 +486,9 @@ function GroupDetail() {
   }, [members, searchQuery]);
 
   const rows = useMemo(
-    () => buildGroupMemberRows(filteredMembers, navigate, slug),
-    [filteredMembers, navigate, slug],
+    () =>
+      buildGroupMemberRows(filteredMembers, navigate, id, handleRemoveMember),
+    [filteredMembers, navigate, id, handleRemoveMember],
   );
 
   const totalPages = Math.max(
@@ -399,6 +585,58 @@ function GroupDetail() {
     );
   }
 
+  const handleOpenAddMembers = () => {
+    if (!isMongoObjectId(id)) {
+      setToast({
+        open: true,
+        message: "Add members is only available for saved groups.",
+        severity: "warning",
+      });
+      return;
+    }
+    setSelectedToAdd([]);
+    setMemberQuery("");
+    setMemberPickerOpen(true);
+    setAddMembersOpen(true);
+  };
+
+  const handleConfirmAddMembers = async () => {
+    if (!isMongoObjectId(id)) return;
+    const currentIds = (members || [])
+      .map((m) => m?._id || m?.id)
+      .filter(Boolean)
+      .map(String);
+    const nextIds = (selectedToAdd || [])
+      .map((p) => p?._id || p?.id)
+      .filter(Boolean)
+      .map(String);
+    const merged = Array.from(new Set([...currentIds, ...nextIds]));
+
+    try {
+      await updateGroup(id, {
+        Name: group?.Name || "",
+        Description: group?.Description || "",
+        GroupPic: group?.GroupPic || "",
+        Members: merged,
+      });
+      const refreshed = await fetchGroup(id);
+      setGroup(refreshed);
+      setMembers(Array.isArray(refreshed?.Members) ? refreshed.Members : []);
+      setAddMembersOpen(false);
+      setToast({
+        open: true,
+        message: "Members added.",
+        severity: "success",
+      });
+    } catch (error) {
+      setToast({
+        open: true,
+        message: error?.message || "Failed to add members.",
+        severity: "error",
+      });
+    }
+  };
+
   return (
     <DashboardLayout>
       <DashboardNavbar customRoute={["groups", group.Name]} />
@@ -454,7 +692,8 @@ function GroupDetail() {
                           <ActionMenu
                             person={person}
                             navigate={navigate}
-                            slug={slug}
+                            slug={id}
+                            onRemove={handleRemoveMember}
                           />
                         }
                       >
@@ -462,7 +701,7 @@ function GroupDetail() {
                           onClick={() => {
                             if (!personId) return;
                             navigate(`/person/${personId}`, {
-                              state: { from: `/group/${slug}` },
+                              state: { from: `/group/${id}` },
                             });
                           }}
                           sx={{ pr: 6 }}
@@ -535,7 +774,10 @@ function GroupDetail() {
                       {group.Name}
                     </MDTypography>
                     <MDTypography variant="caption" color="white">
-                      {group.Category} • {members.length} members
+                      {(group.Category || "").trim()
+                        ? `${group.Category} • `
+                        : ""}
+                      {members.length} members
                     </MDTypography>
                   </MDBox>
                   <MDButton
@@ -544,8 +786,7 @@ function GroupDetail() {
                     iconOnly
                     aria-label="Add member"
                     onClick={() => {
-                      // TODO: Implement add member flow
-                      console.log("Add member to group");
+                      handleOpenAddMembers();
                     }}
                   >
                     <Icon>add</Icon>
@@ -599,8 +840,7 @@ function GroupDetail() {
       {isMobile && (
         <IconButton
           onClick={() => {
-            // TODO: Implement add member flow (route/modal)
-            console.log("Add member to group:", slug);
+            handleOpenAddMembers();
           }}
           sx={(muiTheme) => ({
             position: "fixed",
@@ -624,6 +864,172 @@ function GroupDetail() {
         </IconButton>
       )}
       <Footer />
+      <Dialog
+        open={addMembersOpen}
+        onClose={(_event, reason) => {
+          if (reason === "backdropClick" || reason === "escapeKeyDown") {
+            setMemberPickerOpen(false);
+            return;
+          }
+          setAddMembersOpen(false);
+        }}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            pr: 1,
+          }}
+        >
+          <span>Add Members</span>
+          <IconButton
+            aria-label="Close"
+            onClick={() => setAddMembersOpen(false)}
+            size="small"
+            sx={{ color: "text.secondary" }}
+          >
+            <Icon fontSize="small">close</Icon>
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          {(() => {
+            const existingMemberIds = new Set(
+              (members || [])
+                .map((m) => m?._id || m?.id)
+                .filter(Boolean)
+                .map(String),
+            );
+
+            return (
+          <Autocomplete
+            multiple
+            options={peopleOptions}
+            value={selectedToAdd}
+            inputValue={memberQuery}
+            onInputChange={(_e, next) => {
+              setMemberQuery(next);
+              if (!next.trim()) {
+                setMemberPickerOpen(true);
+                return;
+              }
+              const input = next.trim().toLowerCase();
+              const matchCount = peopleOptions.filter((p) => {
+                const name = (p?.Name || "").toLowerCase();
+                const nameChi = (p?.NameChi || "").toLowerCase();
+                return name.includes(input) || nameChi.includes(input);
+              }).length;
+              setMemberPickerOpen(matchCount > 0);
+            }}
+            onChange={(_e, next) => setSelectedToAdd(next)}
+            open={memberPickerOpen}
+            onOpen={() => setMemberPickerOpen(true)}
+            onClose={() => setMemberPickerOpen(false)}
+            openOnFocus
+            disableCloseOnSelect
+            getOptionLabel={getPersonLabel}
+            isOptionEqualToValue={(opt, val) => opt?._id === val?._id}
+            getOptionDisabled={(option) =>
+              existingMemberIds.has(String(option?._id || option?.id))
+            }
+            filterOptions={(options, state) => {
+              const input = (state.inputValue || "").trim().toLowerCase();
+              const filtered = !input
+                ? options
+                : options.filter((p) => {
+                    const name = (p?.Name || "").toLowerCase();
+                    const nameChi = (p?.NameChi || "").toLowerCase();
+                    return name.includes(input) || nameChi.includes(input);
+                  });
+
+              const available = [];
+              const alreadyAdded = [];
+              filtered.forEach((option) => {
+                const optionId = option?._id || option?.id;
+                if (existingMemberIds.has(String(optionId))) {
+                  alreadyAdded.push(option);
+                } else {
+                  available.push(option);
+                }
+              });
+
+              return [...available, ...alreadyAdded];
+            }}
+            noOptionsText=""
+            renderOption={(props, option) => {
+              const { key, ...rest } = props;
+              const optionId = option?._id || option?.id;
+              const isExisting = existingMemberIds.has(String(optionId));
+              return (
+                <li
+                  key={optionId || key}
+                  {...rest}
+                  style={{
+                    ...rest.style,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 12,
+                  }}
+                >
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {getPersonLabel(option)}
+                  </span>
+                  {isExisting && (
+                    <span style={{ opacity: 0.8, fontSize: 12 }}>Added</span>
+                  )}
+                </li>
+              );
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                label="Members"
+                placeholder="Search people..."
+                autoFocus
+                sx={{ mt: 1 }}
+              />
+            )}
+          />
+            );
+          })()}
+        </DialogContent>
+        <DialogActions>
+          <MDButton
+            variant="text"
+            color="secondary"
+            onClick={() => setAddMembersOpen(false)}
+          >
+            Cancel
+          </MDButton>
+          <MDButton
+            variant="gradient"
+            color="info"
+            onClick={handleConfirmAddMembers}
+          >
+            Add
+          </MDButton>
+        </DialogActions>
+      </Dialog>
+      <Toast
+        open={toast.open}
+        message={toast.message}
+        severity={toast.severity}
+        actionLabel={toast.actionLabel}
+        onAction={toast.onAction}
+        autoHideDuration={toast.autoHideDuration}
+        onClose={() =>
+          setToast((prev) => ({
+            ...prev,
+            open: false,
+            actionLabel: null,
+            onAction: null,
+          }))
+        }
+      />
     </DashboardLayout>
   );
 }
