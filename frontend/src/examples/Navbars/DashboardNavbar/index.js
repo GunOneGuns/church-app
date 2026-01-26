@@ -16,7 +16,7 @@ Coded by www.creative-tim.com
 import { useState, useEffect, useContext } from "react";
 
 // react-router components
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 
 // prop-types is a library for typechecking of props.
 import PropTypes from "prop-types";
@@ -30,6 +30,7 @@ import Icon from "@mui/material/Icon";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import chroma from "chroma-js";
+import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
@@ -105,6 +106,7 @@ function DashboardNavbar({ absolute, light, isMini, customRoute }) {
   } = controller;
   const [openMenu, setOpenMenu] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const locationRoute = location.pathname.split("/").slice(1);
   const route = customRoute && customRoute.length ? customRoute : locationRoute;
   const theme = useTheme();
@@ -116,6 +118,11 @@ function DashboardNavbar({ absolute, light, isMini, customRoute }) {
       setNavbarType("sticky");
     } else {
       setNavbarType("static");
+    }
+
+    if (isMobileView) {
+      setTransparentNavbar(dispatch, false);
+      return undefined;
     }
 
     // A function that sets the transparent state of the navbar.
@@ -137,7 +144,7 @@ function DashboardNavbar({ absolute, light, isMini, customRoute }) {
 
     // Remove event listener on cleanup
     return () => window.removeEventListener("scroll", handleTransparentNavbar);
-  }, [dispatch, fixedNavbar]);
+  }, [dispatch, fixedNavbar, isMobileView]);
 
   const handleMiniSidenav = () => setMiniSidenav(dispatch, !miniSidenav);
   const handleConfiguratorOpen = () =>
@@ -193,18 +200,23 @@ function DashboardNavbar({ absolute, light, isMini, customRoute }) {
   };
 
   if (isMobileView) {
-    const isScrolled = !transparentNavbar && !absolute;
+    const pathname = (location.pathname || "").toLowerCase();
+    const showBackButton =
+      pathname.startsWith("/group/") && !pathname.startsWith("/group/add");
 
-    const mobileScrolledBackground = theme.functions.linearGradient(
+    const mobileBackground = theme.functions.linearGradient(
       ACCENT_CYAN,
       chroma(ACCENT_CYAN).darken(1).hex(),
     );
 
-    const mobileScrolledUsesLightText = true;
-
     const mobileTitle = mobileNavbarTitle || getMobileTitle(route);
-    const mobileLight = light || (isScrolled && mobileScrolledUsesLightText);
+    const mobileLight = true;
     const mobileIconsStyle = getIconsStyle(mobileLight);
+    const mobileTitleText = String(mobileTitle || "");
+    const truncatedMobileTitle =
+      mobileTitleText.length > 26
+        ? `${mobileTitleText.slice(0, 26)}…`
+        : mobileTitleText;
 
     return (
       <AppBar
@@ -212,19 +224,15 @@ function DashboardNavbar({ absolute, light, isMini, customRoute }) {
         color="inherit"
         sx={(muiTheme) => {
           const baseStyles = navbar(muiTheme, {
-            transparentNavbar,
+            transparentNavbar: false,
             absolute,
             light: mobileLight,
             darkMode,
           });
 
-          if (transparentNavbar || absolute) {
-            return baseStyles;
-          }
-
           return {
             ...baseStyles,
-            background: mobileScrolledBackground,
+            background: mobileBackground,
             backdropFilter: "none",
           };
         }}
@@ -237,29 +245,50 @@ function DashboardNavbar({ absolute, light, isMini, customRoute }) {
             width: "100%",
             px: 1.5,
             py: 0.5,
+            overflow: "hidden",
           }}
         >
-          <IconButton
-            size="small"
-            disableRipple
-            color="inherit"
-            onClick={handleMiniSidenav}
-          >
-            <Icon sx={mobileIconsStyle} fontSize="medium">
-              {miniSidenav ? "menu" : "menu_open"}
-            </Icon>
-          </IconButton>
+          {showBackButton ? (
+            <IconButton
+              size="small"
+              disableRipple
+              color="inherit"
+              onClick={() => navigate("/groups")}
+              aria-label="Back to groups"
+              sx={{
+                width: 40,
+                height: 40,
+                flexShrink: 0,
+                "& .MuiSvgIcon-root": { fontSize: 28 },
+              }}
+            >
+              <ArrowBackIosNewIcon sx={mobileIconsStyle} />
+            </IconButton>
+          ) : (
+            <MDBox sx={{ width: 40, flexShrink: 0 }} />
+          )}
 
-          <MDTypography
-            variant="button"
-            fontWeight="bold"
-            textTransform="capitalize"
-            color={mobileLight ? "white" : "dark"}
-            sx={{ flex: 1, textAlign: "center", px: 1, fontSize: "25px" }}
-            noWrap
-          >
-            {mobileTitle}
-          </MDTypography>
+          <MDBox sx={{ flex: 1, minWidth: 0, px: 1 }}>
+            <MDTypography
+              component="div"
+              variant="button"
+              fontWeight="bold"
+              textTransform="capitalize"
+              color={mobileLight ? "white" : "dark"}
+              sx={{
+                display: "block",
+                width: "100%",
+                textAlign: "center",
+                fontSize: "25px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+              noWrap
+            >
+              {truncatedMobileTitle}
+            </MDTypography>
+          </MDBox>
 
           <MDBox sx={{ width: 40, flexShrink: 0 }} />
         </Toolbar>

@@ -284,7 +284,7 @@ function Groups() {
     if (totalPages <= 1) {
       return (
         <MDTypography variant="caption" color="text">
-          Page {page} / {totalPages}
+          {page} / {totalPages}
         </MDTypography>
       );
     }

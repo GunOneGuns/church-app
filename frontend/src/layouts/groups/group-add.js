@@ -168,11 +168,7 @@ export default function GroupAdd() {
                   : undefined
               }
             >
-              {isMobileView ? (
-                <ArrowBackIosNewIcon />
-              ) : (
-                <Icon sx={{ fontSize: 28 }}>arrow_back</Icon>
-              )}
+              <ArrowBackIosNewIcon />
             </IconButton>
 
             <MDTypography

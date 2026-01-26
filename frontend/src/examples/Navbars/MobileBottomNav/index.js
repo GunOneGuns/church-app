@@ -152,9 +152,9 @@ export default function MobileBottomNav() {
             icon={<Icon fontSize="small">event</Icon>}
           />
           <BottomNavigationAction
-            label="Setting"
+            label="More"
             value="settings"
-            icon={<Icon fontSize="small">settings</Icon>}
+            icon={<Icon fontSize="small">menu</Icon>}
           />
         </BottomNavigation>
       </Paper>

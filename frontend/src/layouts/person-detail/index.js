@@ -1771,11 +1771,7 @@ function PersonDetail() {
                   : undefined
               }
             >
-              {isMobileView ? (
-                <ArrowBackIosNewIcon />
-              ) : (
-                <Icon sx={{ fontSize: 28 }}>arrow_back</Icon>
-              )}
+              <ArrowBackIosNewIcon />
             </IconButton>
 
             <MDTypography
