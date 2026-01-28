@@ -1,6 +1,6 @@
 // layouts/groups/group-detail.js
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import IconButton from "@mui/material/IconButton";
@@ -32,9 +32,18 @@ import useMediaQuery from "@mui/material/useMediaQuery";
 import { setMobileNavbarTitle, useMaterialUIController } from "context";
 import { ACCENT_CYAN } from "constants.js";
 import Toast from "components/Toast";
-import { fetchGroup, fetchPeople, updateGroup } from "services/convo-broker.js";
+import GroupEditForm from "components/GroupDetail/GroupEditForm";
+import {
+  fetchGroup,
+  fetchPeople,
+  updateGroup,
+  uploadGroupPicture,
+} from "services/convo-broker.js";
 
 const MOBILE_PAGINATION_HEIGHT = 30;
+const MOBILE_FAB_BOTTOM_OFFSET = "calc(env(safe-area-inset-bottom) + 88px)";
+const MOBILE_VIEW_FAB_BOTTOM_OFFSET = `calc(env(safe-area-inset-bottom) + ${MOBILE_PAGINATION_HEIGHT + 40}px)`;
+const MOBILE_VIEW_FAB_STACK_GAP = 88;
 
 function isMongoObjectId(value) {
   return typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
@@ -265,6 +274,17 @@ function GroupDetail() {
   const [, dispatch] = useMaterialUIController();
   const [group, setGroup] = useState(null);
   const [members, setMembers] = useState([]);
+  const [isEditing, setIsEditing] = useState(location.state?.edit === true);
+  const [editedGroup, setEditedGroup] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadError, setUploadError] = useState(null);
+  const groupPicProcessorRef = useRef(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showDiscardConfirmModal, setShowDiscardConfirmModal] = useState(false);
+  const [fabMenuOpen, setFabMenuOpen] = useState(false);
+  const fabToggleRef = useRef(null);
+  const fabAddRef = useRef(null);
+  const fabEditRef = useRef(null);
   const [toast, setToast] = useState({
     open: false,
     message: "",
@@ -284,6 +304,34 @@ function GroupDetail() {
   const [page, setPage] = useState(1);
   const [inputValue, setInputValue] = useState("1");
   const rowsPerPage = 10;
+
+  const baseGroupForEdit = useMemo(() => {
+    const memberIds = Array.isArray(group?.Members)
+      ? group.Members.map((m) => m?._id || m?.id).filter(Boolean).map(String)
+      : [];
+
+    return {
+      Name: group?.Name || "",
+      Description: group?.Description || "",
+      GroupPic: group?.GroupPic || "",
+      Members: memberIds,
+    };
+  }, [group?.Description, group?.GroupPic, group?.Members, group?.Name]);
+
+  const hasEditChanges = useMemo(() => {
+    if (!isEditing) return false;
+    if (!editedGroup) return false;
+
+    const normalizeIds = (ids) =>
+      Array.from(new Set((ids || []).map(String))).sort().join("|");
+
+    return (
+      editedGroup.Name !== baseGroupForEdit.Name ||
+      editedGroup.Description !== baseGroupForEdit.Description ||
+      normalizeIds(editedGroup.Members) !== normalizeIds(baseGroupForEdit.Members) ||
+      Boolean(selectedFile)
+    );
+  }, [baseGroupForEdit, editedGroup, isEditing, selectedFile]);
 
   useEffect(() => {
     const toastFromNav = location.state?.toast;
@@ -355,6 +403,48 @@ function GroupDetail() {
   }, [id]);
 
   useEffect(() => {
+    if (!group) return;
+    if (!isEditing) return;
+    if (editedGroup) return;
+    setEditedGroup(baseGroupForEdit);
+  }, [baseGroupForEdit, editedGroup, group, isEditing]);
+
+  useEffect(() => {
+    if (location.state?.edit !== true) return;
+    if (isEditing) return;
+    setEditedGroup(baseGroupForEdit);
+    setSelectedFile(null);
+    setUploadError(null);
+    setIsEditing(true);
+  }, [baseGroupForEdit, isEditing, location.state?.edit]);
+
+  useEffect(() => {
+    if (isEditing) setFabMenuOpen(false);
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (!fabMenuOpen) return undefined;
+
+    const handleClickAway = (event) => {
+      const target = event.target;
+      if (!target) return;
+
+      if (
+        fabToggleRef.current?.contains(target) ||
+        fabAddRef.current?.contains(target) ||
+        fabEditRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      setFabMenuOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handleClickAway);
+    return () => document.removeEventListener("pointerdown", handleClickAway);
+  }, [fabMenuOpen]);
+
+  useEffect(() => {
     const loadPeople = async () => {
       await fetchPeople();
       const stored = localStorage.getItem("people");
@@ -369,11 +459,115 @@ function GroupDetail() {
       setMobileNavbarTitle(dispatch, null);
       return undefined;
     }
-    if (group?.Name) {
-      setMobileNavbarTitle(dispatch, group.Name);
+    const title =
+      (isEditing ? editedGroup?.Name : null) || group?.Name || null;
+    if (title) {
+      setMobileNavbarTitle(dispatch, title);
     }
     return () => setMobileNavbarTitle(dispatch, null);
-  }, [dispatch, group?.Name, isMobile]);
+  }, [dispatch, editedGroup?.Name, group?.Name, isEditing, isMobile]);
+
+  const registerGroupPicProcessor = useCallback((processor) => {
+    groupPicProcessorRef.current = processor;
+  }, []);
+
+  const handleFileChange = useCallback((event) => {
+    const file = event?.target?.files?.[0] || null;
+    setUploadError(null);
+    setSelectedFile(file);
+  }, []);
+
+  const startEditing = useCallback(() => {
+    setEditedGroup(baseGroupForEdit);
+    setSelectedFile(null);
+    setUploadError(null);
+    setFabMenuOpen(false);
+    setIsEditing(true);
+  }, [baseGroupForEdit]);
+
+  const discardEditsNow = useCallback(() => {
+    setEditedGroup(baseGroupForEdit);
+    setSelectedFile(null);
+    setUploadError(null);
+    setIsEditing(false);
+  }, [baseGroupForEdit]);
+
+  const requestDiscardIfDirty = useCallback(
+    (onDiscard) => {
+      if (!hasEditChanges) {
+        onDiscard();
+        return;
+      }
+      setShowDiscardConfirmModal(true);
+    },
+    [hasEditChanges],
+  );
+
+  const confirmDiscard = useCallback(() => {
+    setShowDiscardConfirmModal(false);
+    discardEditsNow();
+  }, [discardEditsNow]);
+
+  const closeDiscardConfirmModal = useCallback(() => {
+    setShowDiscardConfirmModal(false);
+  }, []);
+
+  const handleSaveGroup = useCallback(async () => {
+    if (!isMongoObjectId(id)) return;
+    if (isSaving) return;
+
+    const name = (editedGroup?.Name || "").trim();
+    if (!name) {
+      setToast({
+        open: true,
+        message: "Group name is required.",
+        severity: "error",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const memberIds = Array.isArray(editedGroup?.Members)
+        ? editedGroup.Members.map(String).filter(isMongoObjectId)
+        : [];
+
+      await updateGroup(id, {
+        Name: name,
+        Description: editedGroup?.Description || "",
+        GroupPic: group?.GroupPic || "",
+        Members: memberIds,
+      });
+
+      if (selectedFile) {
+        const processor = groupPicProcessorRef.current;
+        const fileToUpload = processor ? await processor() : selectedFile;
+        if (fileToUpload) {
+          await uploadGroupPicture(id, fileToUpload);
+        }
+      }
+
+      const refreshed = await fetchGroup(id);
+      setGroup(refreshed);
+      setMembers(Array.isArray(refreshed?.Members) ? refreshed.Members : []);
+      setEditedGroup(null);
+      setSelectedFile(null);
+      setIsEditing(false);
+      setToast({
+        open: true,
+        message: "Group updated.",
+        severity: "success",
+      });
+    } catch (error) {
+      setToast({
+        open: true,
+        message: error?.message || "Failed to update group.",
+        severity: "error",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [editedGroup, group?.GroupPic, id, isSaving, selectedFile]);
 
   const handleRemoveMember = useCallback(
     async (person) => {
@@ -613,7 +807,79 @@ function GroupDetail() {
     <DashboardLayout>
       <DashboardNavbar customRoute={["groups", group.Name]} />
       <MDBox pt={{ xs: 3, xl: 6 }} pb={{ xs: 2, xl: 3 }}>
-        {isMobile ? (
+        {isEditing ? (
+          <Card>
+            <MDBox
+              display={isMobile ? "grid" : "flex"}
+              gridTemplateColumns={isMobile ? "48px 1fr 48px" : undefined}
+              justifyContent={isMobile ? undefined : "space-between"}
+              alignItems="center"
+              p={3}
+              sx={{ borderBottom: 1, borderColor: "divider" }}
+            >
+              <IconButton
+                onClick={() => requestDiscardIfDirty(discardEditsNow)}
+                size={isMobile ? "medium" : "small"}
+                sx={
+                  isMobile
+                    ? {
+                        "& .MuiSvgIcon-root": { fontSize: 28 },
+                      }
+                    : undefined
+                }
+              >
+                <ArrowBackIosNewIcon />
+              </IconButton>
+
+              <MDTypography
+                variant="h4"
+                sx={isMobile ? { textAlign: "center", m: 0, lineHeight: 1.1 } : undefined}
+              >
+                Edit Group
+              </MDTypography>
+
+              {isMobile ? (
+                <MDBox />
+              ) : (
+                <MDBox display="flex" gap={1}>
+                  <MDButton
+                    variant="gradient"
+                    color="info"
+                    onClick={handleSaveGroup}
+                    disabled={isSaving}
+                  >
+                    Save
+                  </MDButton>
+                  <MDButton
+                    variant="gradient"
+                    color="error"
+                    onClick={() => requestDiscardIfDirty(discardEditsNow)}
+                    disabled={isSaving}
+                  >
+                    Discard
+                  </MDButton>
+                </MDBox>
+              )}
+            </MDBox>
+
+            <MDBox p={3}>
+              <GroupEditForm
+                editedGroup={editedGroup || baseGroupForEdit}
+                peopleOptions={peopleOptions}
+                selectedFile={selectedFile}
+                onChangeField={(key, value) =>
+                  setEditedGroup((prev) => ({ ...(prev || baseGroupForEdit), [key]: value }))
+                }
+                onChangeMembers={(memberIds) =>
+                  setEditedGroup((prev) => ({ ...(prev || baseGroupForEdit), Members: memberIds }))
+                }
+                handleFileChange={handleFileChange}
+                registerGroupPicProcessor={registerGroupPicProcessor}
+                uploadError={uploadError}
+              />
+            </MDBox>
+          </Card>
+        ) : isMobile ? (
           // -------------------------
           // MOBILE VIEW (matches People page layout)
           // -------------------------
@@ -804,30 +1070,125 @@ function GroupDetail() {
         )}
       </MDBox>
 
-      {/* MOBILE floating add button (matches People page FAB/PAB position + size) */}
-      {isMobile && (
+      {/* MOBILE floating action menu (more_horiz -> shows Edit + Add) */}
+      {isMobile && !isEditing && (
+        <>
+          {fabMenuOpen && (
+            <>
+              {/* Add (top) */}
+              <IconButton
+                ref={fabAddRef}
+                onClick={() => {
+                  setFabMenuOpen(false);
+                  handleOpenAddMembers();
+                }}
+                sx={(muiTheme) => ({
+                  position: "fixed",
+                  right: 17,
+                  bottom: `calc(${MOBILE_VIEW_FAB_BOTTOM_OFFSET} + ${MOBILE_VIEW_FAB_STACK_GAP * 2}px)`,
+                  width: 77,
+                  height: 77,
+                  borderRadius: "50%",
+                  background: ACCENT_CYAN,
+                  color: "#fff",
+                  zIndex: muiTheme.zIndex.modal - 1,
+                  "&:hover": {
+                    background: ACCENT_CYAN,
+                    filter: "brightness(0.9)",
+                  },
+                })}
+                aria-label="Add members"
+              >
+                <Icon fontSize="large" sx={{ color: "#fff" }}>
+                  add
+                </Icon>
+              </IconButton>
+
+              {/* Edit (middle) */}
+              <IconButton
+                ref={fabEditRef}
+                onClick={() => startEditing()}
+                sx={(muiTheme) => ({
+                  position: "fixed",
+                  right: 17,
+                  bottom: `calc(${MOBILE_VIEW_FAB_BOTTOM_OFFSET} + ${MOBILE_VIEW_FAB_STACK_GAP}px)`,
+                  width: 77,
+                  height: 77,
+                  borderRadius: "50%",
+                  background: ACCENT_CYAN,
+                  color: "#fff",
+                  zIndex: muiTheme.zIndex.modal - 1,
+                  "&:hover": {
+                    background: ACCENT_CYAN,
+                    filter: "brightness(0.9)",
+                  },
+                })}
+                aria-label="Edit group"
+              >
+                <Icon fontSize="large" sx={{ color: "#fff" }}>
+                  edit
+                </Icon>
+              </IconButton>
+            </>
+          )}
+
+          {/* Toggle (bottom) */}
+          <IconButton
+            ref={fabToggleRef}
+            onClick={() => setFabMenuOpen((prev) => !prev)}
+            sx={(muiTheme) => ({
+              position: "fixed",
+              right: 17,
+              bottom: MOBILE_VIEW_FAB_BOTTOM_OFFSET,
+              width: 77,
+              height: 77,
+              borderRadius: "50%",
+              background: ACCENT_CYAN,
+              color: "#fff",
+              zIndex: muiTheme.zIndex.modal - 1,
+              "&:hover": {
+                background: ACCENT_CYAN,
+                filter: "brightness(0.9)",
+              },
+            })}
+            aria-label={fabMenuOpen ? "Close actions" : "Open actions"}
+          >
+            <Icon fontSize="large" sx={{ color: "#fff" }}>
+              {fabMenuOpen ? "clear" : "more_horiz"}
+            </Icon>
+          </IconButton>
+        </>
+      )}
+
+      {/* MOBILE floating save button (edit form) */}
+      {isMobile && isEditing && (
         <IconButton
-          onClick={() => {
-            handleOpenAddMembers();
-          }}
+          onClick={handleSaveGroup}
+          disabled={isSaving}
           sx={(muiTheme) => ({
             position: "fixed",
             right: 17,
-            bottom: MOBILE_PAGINATION_HEIGHT + 40,
+            bottom: MOBILE_FAB_BOTTOM_OFFSET,
             width: 77,
             height: 77,
             borderRadius: "50%",
-            background: ACCENT_CYAN,
+            backgroundColor: ACCENT_CYAN,
+            opacity: isSaving ? 0.6 : 1,
             color: "#fff",
             zIndex: muiTheme.zIndex.modal - 1,
             "&:hover": {
-              background: ACCENT_CYAN,
-              filter: "brightness(0.9)",
+              backgroundColor: ACCENT_CYAN,
+              filter: isSaving ? "none" : "brightness(0.9)",
+            },
+            "&.Mui-disabled": {
+              backgroundColor: ACCENT_CYAN,
+              color: "#fff",
+              opacity: 0.6,
             },
           })}
         >
           <Icon fontSize="large" sx={{ color: "#fff" }}>
-            add
+            save
           </Icon>
         </IconButton>
       )}
@@ -1002,6 +1363,25 @@ function GroupDetail() {
           }))
         }
       />
+      <Dialog
+        open={showDiscardConfirmModal}
+        onClose={closeDiscardConfirmModal}
+      >
+        <DialogTitle>Discard changes?</DialogTitle>
+        <DialogContent>
+          <MDTypography variant="body2">
+            You have unsaved changes. Discard them?
+          </MDTypography>
+        </DialogContent>
+        <DialogActions>
+          <MDButton onClick={closeDiscardConfirmModal} color="secondary">
+            Keep editing
+          </MDButton>
+          <MDButton onClick={confirmDiscard} color="error">
+            Discard
+          </MDButton>
+        </DialogActions>
+      </Dialog>
     </DashboardLayout>
   );
 }

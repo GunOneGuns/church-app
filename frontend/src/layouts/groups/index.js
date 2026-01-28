@@ -155,6 +155,25 @@ function Groups() {
     setMenuGroupId(null);
   };
 
+  const handleEditGroup = () => {
+    const groupId = menuGroupId;
+    handleCloseMenu();
+
+    if (!isMongoObjectId(groupId)) {
+      setToast({
+        open: true,
+        message: "Edit is only available for saved groups.",
+        severity: "warning",
+        actionLabel: null,
+        onAction: null,
+        autoHideDuration: 2000,
+      });
+      return;
+    }
+
+    navigate(`/group/${groupId}`, { state: { edit: true, from: "/groups" } });
+  };
+
   const handleDeleteGroup = async () => {
     const groupId = menuGroupId;
     handleCloseMenu();
@@ -613,6 +632,7 @@ function Groups() {
         onClose={handleCloseMenu}
         onClick={(e) => e.stopPropagation()}
       >
+        <MenuItem onClick={handleEditGroup}>Edit</MenuItem>
         <MenuItem onClick={handleDeleteGroup} sx={{ color: "error.main" }}>
           Delete
         </MenuItem>

@@ -78,7 +78,8 @@ export default function App() {
   } = controller;
   const [onMouseEnter, setOnMouseEnter] = useState(false);
   const [rtlCache, setRtlCache] = useState(null);
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
 
   const [isDemo, setIsDemo] = useState(false);
 
@@ -118,6 +119,23 @@ export default function App() {
 
   // if the token expired or other errors it logs out and goes to the login page
   const navigate = useNavigate();
+
+  const isGroupDetailWebFab = useMemo(() => {
+    const parts = pathname.split("/").filter(Boolean);
+    return parts[0] === "group" && Boolean(parts[1]) && parts[1] !== "add";
+  }, [pathname]);
+
+  const handleConfigsButtonClick = () => {
+    if (!isGroupDetailWebFab) {
+      handleConfiguratorOpen();
+      return;
+    }
+
+    setOpenConfigurator(dispatch, false);
+    navigate(pathname, {
+      state: { ...(location.state || {}), edit: true },
+    });
+  };
   setupAxiosInterceptors(() => {
     authContext.logout();
     navigate("/auth/login");
@@ -173,10 +191,10 @@ export default function App() {
       zIndex={99}
       color="dark"
       sx={{ cursor: "pointer" }}
-      onClick={handleConfiguratorOpen}
+      onClick={handleConfigsButtonClick}
     >
       <Icon fontSize="small" color="inherit">
-        settings
+        {isGroupDetailWebFab ? "edit" : "settings"}
       </Icon>
     </MDBox>
   );
