@@ -92,7 +92,13 @@ const getMobileTitle = (routeSegments = []) => {
   );
 };
 
-function DashboardNavbar({ absolute, light, isMini, customRoute }) {
+function DashboardNavbar({
+  absolute,
+  light,
+  isMini,
+  customRoute,
+  hideMobileBackButton,
+}) {
   const authContext = useContext(AuthContext);
   const [navbarType, setNavbarType] = useState();
   const [controller, dispatch] = useMaterialUIController();
@@ -202,7 +208,9 @@ function DashboardNavbar({ absolute, light, isMini, customRoute }) {
   if (isMobileView) {
     const pathname = (location.pathname || "").toLowerCase();
     const showBackButton =
-      pathname.startsWith("/group/") && !pathname.startsWith("/group/add");
+      !hideMobileBackButton &&
+      pathname.startsWith("/group/") &&
+      !pathname.startsWith("/group/add");
 
     const mobileBackground = theme.functions.linearGradient(
       ACCENT_CYAN,
@@ -390,6 +398,7 @@ DashboardNavbar.defaultProps = {
   light: false,
   isMini: false,
   customRoute: null,
+  hideMobileBackButton: false,
 };
 
 // Typechecking props for the DashboardNavbar
@@ -398,6 +407,7 @@ DashboardNavbar.propTypes = {
   light: PropTypes.bool,
   isMini: PropTypes.bool,
   customRoute: PropTypes.arrayOf(PropTypes.string),
+  hideMobileBackButton: PropTypes.bool,
 };
 
 export default DashboardNavbar;

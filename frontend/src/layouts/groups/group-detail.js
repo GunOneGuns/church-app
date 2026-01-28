@@ -285,6 +285,7 @@ function GroupDetail() {
   const fabToggleRef = useRef(null);
   const fabAddRef = useRef(null);
   const fabEditRef = useRef(null);
+  const pendingDiscardActionRef = useRef(null);
   const [toast, setToast] = useState({
     open: false,
     message: "",
@@ -411,12 +412,21 @@ function GroupDetail() {
 
   useEffect(() => {
     if (location.state?.edit !== true) return;
-    if (isEditing) return;
-    setEditedGroup(baseGroupForEdit);
-    setSelectedFile(null);
-    setUploadError(null);
-    setIsEditing(true);
-  }, [baseGroupForEdit, isEditing, location.state?.edit]);
+
+    if (!isEditing) {
+      setEditedGroup(baseGroupForEdit);
+      setSelectedFile(null);
+      setUploadError(null);
+      setIsEditing(true);
+    }
+
+    const nextState = { ...(location.state || {}) };
+    delete nextState.edit;
+    navigate(location.pathname, {
+      replace: true,
+      state: Object.keys(nextState).length ? nextState : null,
+    });
+  }, [baseGroupForEdit, isEditing, location.pathname, location.state, navigate]);
 
   useEffect(() => {
     if (isEditing) setFabMenuOpen(false);
@@ -494,23 +504,41 @@ function GroupDetail() {
 
   const requestDiscardIfDirty = useCallback(
     (onDiscard) => {
+      const discardAction =
+        typeof onDiscard === "function" ? onDiscard : discardEditsNow;
+
       if (!hasEditChanges) {
-        onDiscard();
+        discardAction();
         return;
       }
+      pendingDiscardActionRef.current = discardAction;
       setShowDiscardConfirmModal(true);
     },
-    [hasEditChanges],
+    [discardEditsNow, hasEditChanges],
   );
 
   const confirmDiscard = useCallback(() => {
     setShowDiscardConfirmModal(false);
-    discardEditsNow();
+    const discardAction = pendingDiscardActionRef.current || discardEditsNow;
+    pendingDiscardActionRef.current = null;
+    discardAction();
   }, [discardEditsNow]);
 
   const closeDiscardConfirmModal = useCallback(() => {
     setShowDiscardConfirmModal(false);
+    pendingDiscardActionRef.current = null;
   }, []);
+
+  const handleEditBack = useCallback(() => {
+    const from = location.state?.from;
+    requestDiscardIfDirty(() => {
+      if (typeof from === "string" && from.length) {
+        navigate(from);
+        return;
+      }
+      discardEditsNow();
+    });
+  }, [discardEditsNow, location.state?.from, navigate, requestDiscardIfDirty]);
 
   const handleSaveGroup = useCallback(async () => {
     if (!isMongoObjectId(id)) return;
@@ -805,46 +833,48 @@ function GroupDetail() {
 
   return (
     <DashboardLayout>
-      <DashboardNavbar customRoute={["groups", group.Name]} />
+      <DashboardNavbar
+        customRoute={["groups", group.Name]}
+        hideMobileBackButton={isEditing}
+      />
       <MDBox pt={{ xs: 3, xl: 6 }} pb={{ xs: 2, xl: 3 }}>
-        {isEditing ? (
-          <Card>
-            <MDBox
-              display={isMobile ? "grid" : "flex"}
-              gridTemplateColumns={isMobile ? "48px 1fr 48px" : undefined}
-              justifyContent={isMobile ? undefined : "space-between"}
-              alignItems="center"
-              p={3}
-              sx={{ borderBottom: 1, borderColor: "divider" }}
-            >
-              <IconButton
-                onClick={() => requestDiscardIfDirty(discardEditsNow)}
-                size={isMobile ? "medium" : "small"}
-                sx={
-                  isMobile
-                    ? {
-                        "& .MuiSvgIcon-root": { fontSize: 28 },
-                      }
-                    : undefined
-                }
-              >
-                <ArrowBackIosNewIcon />
-              </IconButton>
+	        {isEditing ? (
+	          <Card>
+	            <MDBox
+	              display={isMobile ? "grid" : "flex"}
+	              gridTemplateColumns={isMobile ? "48px 1fr 48px" : undefined}
+	              justifyContent={isMobile ? undefined : "space-between"}
+	              alignItems="center"
+	              p={3}
+	              sx={{ borderBottom: 1, borderColor: "divider" }}
+	            >
+	              <IconButton
+	                onClick={handleEditBack}
+	                size={isMobile ? "medium" : "small"}
+	                sx={
+	                  isMobile
+	                    ? {
+	                        "& .MuiSvgIcon-root": { fontSize: 28 },
+	                      }
+	                    : undefined
+	                }
+	                aria-label="Back"
+	              >
+	                <ArrowBackIosNewIcon />
+	              </IconButton>
 
-              <MDTypography
-                variant="h4"
-                sx={isMobile ? { textAlign: "center", m: 0, lineHeight: 1.1 } : undefined}
-              >
-                Edit Group
-              </MDTypography>
+	              <MDTypography
+	                variant="h4"
+	                sx={isMobile ? { textAlign: "center", m: 0, lineHeight: 1.1 } : undefined}
+	              >
+	                Edit Group
+	              </MDTypography>
 
-              {isMobile ? (
-                <MDBox />
-              ) : (
-                <MDBox display="flex" gap={1}>
-                  <MDButton
-                    variant="gradient"
-                    color="info"
+	              {isMobile ? <MDBox /> : (
+	                <MDBox display="flex" gap={1}>
+	                  <MDButton
+	                    variant="gradient"
+	                    color="info"
                     onClick={handleSaveGroup}
                     disabled={isSaving}
                   >
@@ -856,11 +886,11 @@ function GroupDetail() {
                     onClick={() => requestDiscardIfDirty(discardEditsNow)}
                     disabled={isSaving}
                   >
-                    Discard
-                  </MDButton>
-                </MDBox>
-              )}
-            </MDBox>
+	                    Discard
+	                  </MDButton>
+	                </MDBox>
+	              )}
+	            </MDBox>
 
             <MDBox p={3}>
               <GroupEditForm
