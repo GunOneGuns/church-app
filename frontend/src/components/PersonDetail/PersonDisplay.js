@@ -6,6 +6,15 @@ import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import { useNavigate } from "react-router-dom";
 
+const GROUP_TITLE_CHAR_LIMIT = 7;
+
+function truncateText(value, limit = GROUP_TITLE_CHAR_LIMIT) {
+  const text = String(value ?? "");
+  if (text.length <= limit) return text;
+  if (limit <= 1) return "…";
+  return `${text.slice(0, limit - 1)}…`;
+}
+
 function PersonDisplay({
   person,
   personalInfoCustomFieldsForRender,
@@ -313,6 +322,7 @@ function PersonDisplay({
           <MDBox display="flex" flexWrap="wrap" gap={2}>
             {personGroups.map((group, index) => {
               const groupName = group?.Name || "NIL";
+              const truncatedGroupName = truncateText(groupName);
               const groupPic = group?.GroupPic || defaultProfilePic;
               const key = group?._id || groupName || index;
 
@@ -352,8 +362,10 @@ function PersonDisplay({
                     variant="caption"
                     fontWeight="medium"
                     lineHeight={1.2}
+                    title={groupName}
+                    aria-label={groupName}
                   >
-                    {groupName}
+                    {truncatedGroupName}
                   </MDTypography>
                 </MDBox>
               );

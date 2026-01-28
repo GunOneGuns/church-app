@@ -36,6 +36,15 @@ const normalizeSelectValue = (value) =>
 
 const FIELD_LABEL_SX = { fontSize: "1rem" };
 
+const GROUP_TITLE_CHAR_LIMIT = 7;
+
+function truncateText(value, limit = GROUP_TITLE_CHAR_LIMIT) {
+  const text = String(value ?? "");
+  if (text.length <= limit) return text;
+  if (limit <= 1) return "…";
+  return `${text.slice(0, limit - 1)}…`;
+}
+
 function PersonEditForm({
   editedPerson,
   personalInfoCustomFieldsForRender,
@@ -1175,6 +1184,7 @@ function PersonEditForm({
               {selectedGroups.map((group) => {
                 const groupId = group?._id;
                 const groupName = group?.Name || "NIL";
+                const truncatedGroupName = truncateText(groupName);
                 const groupPic = group?.GroupPic || defaultProfilePic;
 
                 return (
@@ -1203,7 +1213,8 @@ function PersonEditForm({
                       }
                     }}
                     sx={{ cursor: "pointer", outline: "none" }}
-                    title="Click to remove"
+                    title={`${groupName} (click to remove)`}
+                    aria-label={`${groupName} (click to remove)`}
                   >
                     <MDBox
                       component="img"
@@ -1219,7 +1230,7 @@ function PersonEditForm({
                       fontWeight="medium"
                       lineHeight={1.2}
                     >
-                      {groupName}
+                      {truncatedGroupName}
                     </MDTypography>
                   </MDBox>
                 );
