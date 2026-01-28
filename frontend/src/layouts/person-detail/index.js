@@ -677,7 +677,11 @@ function PersonDetail() {
     isAddMode ? { ProfilePic: "" } : null,
   );
   const isAddActionDisabled =
-    isAddMode && !(editedPerson?.Name || "").trim().length;
+    isAddMode &&
+    !(
+      (editedPerson?.Name || "").trim().length ||
+      (editedPerson?.NameChi || "").trim().length
+    );
   const [customFields, setCustomFields] = useState([]);
   const [showNotFoundModal, setShowNotFoundModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -1798,7 +1802,6 @@ function PersonDetail() {
                     <MDButton
                       variant="gradient"
                       color="info"
-                      disabled={isAddActionDisabled}
                       onClick={() => handleSave()}
                     >
                       {isAddMode ? "Add" : "Save"}
@@ -1981,7 +1984,6 @@ function PersonDetail() {
       {/* MOBILE floating save button (add/edit form) */}
       {isMobileView && (isEditing || isAddMode) && (
         <IconButton
-          disabled={isAddActionDisabled}
           onClick={() => handleSave()}
           sx={(muiTheme) => ({
             position: "fixed",
@@ -1997,11 +1999,6 @@ function PersonDetail() {
             "&:hover": {
               backgroundColor: ACCENT_CYAN,
               filter: isAddActionDisabled ? "none" : "brightness(0.9)",
-            },
-            "&.Mui-disabled": {
-              backgroundColor: ACCENT_CYAN,
-              color: "#fff",
-              opacity: 0.45,
             },
           })}
         >

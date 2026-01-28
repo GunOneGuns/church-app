@@ -100,6 +100,7 @@ export default function GroupAdd() {
   }, []);
 
   const handleAdd = useCallback(async () => {
+    if (isSaving) return;
     if (!editedGroup.Name.trim()) {
       setToast({
         open: true,
@@ -185,8 +186,8 @@ export default function GroupAdd() {
                 <MDButton
                   variant="gradient"
                   color="info"
-                  disabled={!canSubmit}
                   onClick={handleAdd}
+                  disabled={isSaving}
                 >
                   Add
                 </MDButton>
@@ -250,8 +251,8 @@ export default function GroupAdd() {
       {/* MOBILE floating save button (add form) */}
       {isMobileView && (
         <IconButton
-          disabled={!canSubmit}
           onClick={handleAdd}
+          disabled={isSaving}
           sx={(muiTheme) => ({
             position: "fixed",
             right: 17,
