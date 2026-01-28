@@ -27,11 +27,32 @@ import Icon from "@mui/material/Icon";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 
+const BREADCRUMB_LABEL_CHAR_LIMIT = 17;
+
+function truncateLabel(label, limit = BREADCRUMB_LABEL_CHAR_LIMIT) {
+  const text = String(label ?? "");
+  if (text.length <= limit) return text;
+  if (limit <= 1) return "…";
+  return `${text.slice(0, limit - 1)}…`;
+}
+
+function formatLabel(label) {
+  return String(label ?? "").replaceAll("-", " ");
+}
+
 function Breadcrumbs({ icon, title, route, light }) {
-  const routes = route.slice(0, -1);
+  const routeArray = Array.isArray(route) ? route : String(route).split("/").filter(Boolean);
+  const routes = routeArray.slice(0, -1);
+  const formattedTitle = formatLabel(title);
 
   return (
-    <MDBox mr={{ xs: 0, xl: 8 }}>
+    <MDBox
+      mr={{ xs: 0, xl: 8 }}
+      sx={{
+        minWidth: 0,
+        maxWidth: { xs: "100%", md: "55vw", xl: "45vw" },
+      }}
+    >
       <MuiBreadcrumbs
         sx={{
           "& .MuiBreadcrumbs-separator": {
@@ -50,29 +71,41 @@ function Breadcrumbs({ icon, title, route, light }) {
             <Icon>{icon}</Icon>
           </MDTypography>
         </Link>
-        {routes.map((el) => (
-          <Link to={`/${el}`} key={el}>
-            <MDTypography
-              component="span"
-              variant="button"
-              fontWeight="regular"
-              textTransform="capitalize"
-              color={light ? "white" : "dark"}
-              opacity={light ? 0.8 : 0.5}
-              sx={{ lineHeight: 0 }}
+        {routes.map((el, index) => {
+          const formattedEl = formatLabel(el);
+          const truncatedEl = truncateLabel(formattedEl);
+
+          return (
+            <Link
+              to={`/${el}`}
+              key={`${el}-${index}`}
+              title={formattedEl}
+              aria-label={formattedEl}
             >
-              {el}
-            </MDTypography>
-          </Link>
-        ))}
+              <MDTypography
+                component="span"
+                variant="button"
+                fontWeight="regular"
+                textTransform="capitalize"
+                color={light ? "white" : "dark"}
+                opacity={light ? 0.8 : 0.5}
+                sx={{ lineHeight: 0 }}
+              >
+                {truncatedEl}
+              </MDTypography>
+            </Link>
+          );
+        })}
         <MDTypography
           variant="button"
           fontWeight="regular"
           textTransform="capitalize"
           color={light ? "white" : "dark"}
           sx={{ lineHeight: 0 }}
+          title={formattedTitle}
+          aria-label={formattedTitle}
         >
-          {title.replace("-", " ")}
+          {truncateLabel(formattedTitle)}
         </MDTypography>
       </MuiBreadcrumbs>
       <MDTypography
@@ -80,9 +113,13 @@ function Breadcrumbs({ icon, title, route, light }) {
         textTransform="capitalize"
         variant="h6"
         color={light ? "white" : "dark"}
-        noWrap
+        sx={{
+          whiteSpace: "normal",
+          overflowWrap: "anywhere",
+          wordBreak: "break-word",
+        }}
       >
-        {title.replace("-", " ")}
+        {formattedTitle}
       </MDTypography>
     </MDBox>
   );

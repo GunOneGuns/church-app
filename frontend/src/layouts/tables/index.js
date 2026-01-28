@@ -8,17 +8,12 @@ import TextField from "@mui/material/TextField";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemAvatar from "@mui/material/ListItemAvatar";
-import ListItemText from "@mui/material/ListItemText";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
-import MDAvatar from "components/MDAvatar";
+import PersonMobileViewList from "components/PersonMobileViewList";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
@@ -35,7 +30,6 @@ import Toast from "components/Toast";
 const PEOPLE_TABLE_TITLE = "Brothers & Sisters";
 const MOBILE_PAGINATION_HEIGHT = 30;
 
-/** Keep this OUTSIDE People() so it doesn't remount on every keystroke */
 function DesktopPaginationControls({
   page,
   totalPages,
@@ -186,10 +180,14 @@ function People() {
   const filteredPeople = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return people;
+    const qDigits = q.replace(/\D/g, "");
     return people.filter((p) => {
       const name = (p?.Name || "").toLowerCase();
-      const nameChi = (p?.NameChi || "").toLowerCase(); // Chinese name field
-      return name.includes(q) || nameChi.includes(q);
+      const nameChi = (p?.NameChi || "").toLowerCase();
+      const phoneRaw = (p?.PhoneNumber || "").toString();
+      const phoneDigits = phoneRaw.replace(/\D/g, "");
+      const phoneMatch = qDigits ? phoneDigits.includes(qDigits) : false;
+      return name.includes(q) || nameChi.includes(q) || phoneMatch;
     });
   }, [people, searchQuery]);
 
@@ -278,7 +276,7 @@ function People() {
               sx={{ flexShrink: 0 }}
             >
               <TextField
-                placeholder="Search by name..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 size="small"
@@ -296,66 +294,40 @@ function People() {
                 scrollbarWidth: "none",
               }}
             >
-              {paginatedPeople.length ? (
-                <List disablePadding>
-                  {paginatedPeople.map((person, index) => {
-                    const personId = person?._id || person?.id;
-                    const key = personId || person?.Name || index;
-                    return (
-                      <ListItem
-                        key={key}
-                        disablePadding
-                        divider
-                        secondaryAction={
-                          <IconButton
-                            edge="end"
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                            }}
-                            sx={{ color: ACCENT_CYAN }}
-                          >
-                            <MoreVertIcon fontSize="small" />
-                          </IconButton>
-                        }
-                      >
-                        <ListItemButton
-                          onClick={() => {
-                            if (!personId) return;
-                            navigate(`/person/${personId}`, {
-                              state: { from: "/people" },
-                            });
-                          }}
-                          sx={{ pr: 6 }}
-                        >
-                          <ListItemAvatar>
-                            <MDAvatar
-                              src={person?.ProfilePic || defaultProfilePic}
-                              name={person?.Name || "N/A"}
-                              size="sm"
-                            />
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={person?.Name || "N/A"}
-                            secondary={person?.District || ""}
-                            primaryTypographyProps={{
-                              noWrap: true,
-                              sx: { color: ACCENT_CYAN },
-                            }}
-                            secondaryTypographyProps={{ noWrap: true }}
-                          />
-                        </ListItemButton>
-                      </ListItem>
-                    );
-                  })}
-                </List>
-              ) : (
-                <MDBox p={2}>
-                  <MDTypography variant="button" color="text">
-                    No people found.
-                  </MDTypography>
-                </MDBox>
-              )}
+              <PersonMobileViewList
+                items={paginatedPeople}
+                emptyText="No people found."
+                getAvatarSrc={(person) =>
+                  person?.ProfilePic || defaultProfilePic
+                }
+                getAvatarName={(person) => person?.Name || "N/A"}
+                getPrimary={(person) => person?.Name || "N/A"}
+                getSecondary={(person) => person?.NameChi?.trim?.() || null}
+                onItemClick={(person) => {
+                  const personId = person?._id || person?.id;
+                  if (!personId) return;
+                  navigate(`/person/${personId}`, {
+                    state: { from: "/people" },
+                  });
+                }}
+                renderAction={() => (
+                  <IconButton
+                    edge="end"
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                    sx={{ color: ACCENT_CYAN }}
+                  >
+                    <MoreVertIcon fontSize="small" />
+                  </IconButton>
+                )}
+                primaryTypographyProps={{
+                  noWrap: true,
+                  sx: { color: ACCENT_CYAN },
+                }}
+                secondaryTypographyProps={{ noWrap: true }}
+              />
             </MDBox>
 
             <MDBox
@@ -404,6 +376,9 @@ function People() {
                     onClick={() =>
                       navigate("/person/add", { state: { add: true } })
                     }
+                    sx={{
+                      "& .MuiIcon-root": { fontSize: "27px !important" },
+                    }}
                   >
                     <Icon>add</Icon>
                   </MDButton>
@@ -432,7 +407,7 @@ function People() {
                   gap={2}
                 >
                   <TextField
-                    placeholder="Search by name..."
+                    placeholder="Search..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     size="small"

@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import defaultProfilePic from "assets/images/default-profile-picture.png";
 import { fetchPeople } from "services/convo-broker.js";
 import { useNavigate } from "react-router-dom";
-import Icon from "@mui/material/Icon";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 
 export const columns = [
   { Header: "name", accessor: "people", width: "35%", align: "left" },
@@ -18,7 +18,18 @@ export const columns = [
   { Header: "", accessor: "action", align: "center" },
 ];
 
-function People({ id, image, name, district, onClick }) {
+function People({ id, image, name, nameChi, district, onClick }) {
+  const englishName =
+    typeof name === "string" && name.trim() && name.trim() !== "-"
+      ? name.trim()
+      : "";
+  const chineseName =
+    typeof nameChi === "string" && nameChi.trim() && nameChi.trim() !== "-"
+      ? nameChi.trim()
+      : "";
+  const displayName = englishName || chineseName || "-";
+  const suffix = englishName && chineseName ? ` (${chineseName})` : "";
+
   return (
     <MDBox
       display="flex"
@@ -31,7 +42,8 @@ function People({ id, image, name, district, onClick }) {
       <MDAvatar src={image} name={name} size="sm" />
       <MDBox ml={2} lineHeight={1}>
         <MDTypography display="block" variant="button" fontWeight="medium">
-          {name}
+          {displayName}
+          {suffix}
         </MDTypography>
         <MDTypography variant="caption">{district}</MDTypography>
       </MDBox>
@@ -39,7 +51,7 @@ function People({ id, image, name, district, onClick }) {
   );
 }
 
-function Job({ title, description }) {
+function AddressTitle({ title, description }) {
   return (
     <MDBox lineHeight={1} textAlign="left">
       <MDTypography
@@ -61,13 +73,14 @@ export function buildRows(rawPeople, navigate, from = "/people") {
     people: (
       <People
         image={person.ProfilePic || defaultProfilePic}
-        name={person.Name || "N/A"}
+        name={person.Name || "-"}
+        nameChi={person.NameChi}
         district={person.District || ""}
         id={person._id}
         onClick={() => navigate(`/person/${person._id}`, { state: { from } })}
       />
     ),
-    address: <Job title={person.Address || ""} description="" />,
+    address: <AddressTitle title={person.Address || "-"} description="" />,
     status: (
       <MDBox ml={-1}>
         <MDBadge
@@ -86,7 +99,7 @@ export function buildRows(rawPeople, navigate, from = "/people") {
         color="text"
         fontWeight="medium"
       >
-        {person.Contact || "N/A"}
+        {person.PhoneNumber || "N/A"}
       </MDTypography>
     ),
     action: (
@@ -100,7 +113,7 @@ export function buildRows(rawPeople, navigate, from = "/people") {
         fontWeight="medium"
         sx={{ cursor: "pointer" }}
       >
-        <Icon fontSize="small">edit</Icon>
+        <MoreVertIcon fontSize="small"></MoreVertIcon>
       </MDTypography>
     ),
   }));
@@ -123,7 +136,7 @@ export default function data() {
 
   return {
     columns,
-    people, // expose raw people
+    people,
     rows: buildRows(people, navigate),
   };
 }

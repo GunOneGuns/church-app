@@ -15,16 +15,12 @@ import DialogActions from "@mui/material/DialogActions";
 import Icon from "@mui/material/Icon";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemAvatar from "@mui/material/ListItemAvatar";
-import ListItemText from "@mui/material/ListItemText";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import MDAvatar from "components/MDAvatar";
 import MDBadge from "components/MDBadge";
+import PersonMobileViewList from "components/PersonMobileViewList";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
@@ -163,7 +159,14 @@ function ActionMenu({ person, navigate, slug, onRemove }) {
   );
 }
 
-function PeopleCell({ image, name, district, onClick }) {
+function PeopleCell({ image, name, nameChi, district, onClick }) {
+  const englishName =
+    typeof name === "string" && name.trim() ? name.trim() : "";
+  const chineseName =
+    typeof nameChi === "string" && nameChi.trim() ? nameChi.trim() : "";
+  const displayName = englishName || chineseName || "N/A";
+  const suffix = englishName && chineseName ? ` (${chineseName})` : "";
+
   return (
     <MDBox
       display="flex"
@@ -172,7 +175,7 @@ function PeopleCell({ image, name, district, onClick }) {
       onClick={onClick}
       sx={{ cursor: "pointer" }}
     >
-      <MDAvatar src={image} name={name} size="sm" />
+      <MDAvatar src={image} name={displayName} size="sm" />
       <MDBox ml={2} lineHeight={1}>
         <MDTypography
           display="block"
@@ -180,7 +183,8 @@ function PeopleCell({ image, name, district, onClick }) {
           fontWeight="medium"
           sx={{ color: ACCENT_CYAN }}
         >
-          {name}
+          {displayName}
+          {suffix}
         </MDTypography>
         <MDTypography variant="caption">{district}</MDTypography>
       </MDBox>
@@ -209,7 +213,8 @@ function buildGroupMemberRows(rawPeople, navigate, slug, onRemove) {
     people: (
       <PeopleCell
         image={person.ProfilePic || defaultProfilePic}
-        name={person.Name || "N/A"}
+        name={person.Name}
+        nameChi={person.NameChi}
         district={person.District || ""}
         onClick={() =>
           navigate(`/person/${person._id}`, {
@@ -218,7 +223,7 @@ function buildGroupMemberRows(rawPeople, navigate, slug, onRemove) {
         }
       />
     ),
-    address: <Job title={person.Address || ""} description="" />,
+    address: <Job title={person.Address || "-"} />,
     status: (
       <MDBox ml={-1}>
         <MDBadge
@@ -256,7 +261,6 @@ function GroupDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
-  // Keep consistent with your Groups page "mobile" breakpoint
   const isMobile = useMediaQuery(theme.breakpoints.down("xl"));
   const [, dispatch] = useMaterialUIController();
   const [group, setGroup] = useState(null);
@@ -330,57 +334,21 @@ function GroupDetail() {
 
   useEffect(() => {
     const loadGroup = async () => {
-      if (isMongoObjectId(id)) {
-        try {
-          const fetched = await fetchGroup(id);
-          setGroup(fetched);
-          setMembers(Array.isArray(fetched?.Members) ? fetched.Members : []);
-          return;
-        } catch (error) {
-          console.error("Failed to load group:", error);
-        }
-      }
-
-      // Fallback: mock groups by slug (used before groups API existed)
-      const mockGroups = [
-        {
-          Name: "Youth Group",
-          Category: "Ministry",
-          Description: "Young adults ministry",
-          filterLetter: "A",
-        },
-        {
-          Name: "Worship Team",
-          Category: "Service",
-          Description: "Sunday worship service",
-          filterLetter: "B",
-        },
-      ];
-
-      const currentGroup = mockGroups.find(
-        (g) => g.Name.toLowerCase().replace(/\s+/g, "_") === id,
-      );
-      setGroup(currentGroup || null);
-
-      if (!currentGroup) {
+      if (!isMongoObjectId(id)) {
+        setGroup(null);
         setMembers([]);
         return;
       }
 
-      await fetchPeople();
-      const stored = localStorage.getItem("people");
-      if (!stored) {
+      try {
+        const fetched = await fetchGroup(id);
+        setGroup(fetched);
+        setMembers(Array.isArray(fetched?.Members) ? fetched.Members : []);
+      } catch (error) {
+        console.error("Failed to load group:", error);
+        setGroup(null);
         setMembers([]);
-        return;
       }
-
-      const allPeople = JSON.parse(stored);
-      const filteredMembers = allPeople.filter((person) =>
-        (person.Name || "")
-          .toLowerCase()
-          .includes(currentGroup.filterLetter.toLowerCase()),
-      );
-      setMembers(filteredMembers);
     };
 
     loadGroup();
@@ -477,11 +445,15 @@ function GroupDetail() {
   const filteredMembers = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return members;
+    const qDigits = q.replace(/\D/g, "");
 
     return members.filter((p) => {
       const name = (p?.Name || "").toLowerCase();
       const nameChi = (p?.NameChi || "").toLowerCase();
-      return name.includes(q) || nameChi.includes(q);
+      const phoneRaw = (p?.PhoneNumber ?? p?.phoneNumber ?? "").toString();
+      const phoneDigits = phoneRaw.replace(/\D/g, "");
+      const phoneMatch = qDigits ? phoneDigits.includes(qDigits) : false;
+      return name.includes(q) || nameChi.includes(q) || phoneMatch;
     });
   }, [members, searchQuery]);
 
@@ -661,7 +633,7 @@ function GroupDetail() {
               sx={{ flexShrink: 0 }}
             >
               <TextField
-                placeholder="Search members..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 size="small"
@@ -673,67 +645,41 @@ function GroupDetail() {
                 flex: 1,
                 overflow: "auto",
                 pb: 2,
-                "&::-webkit-scrollbar": { display: "none" },
+                // "&::-webkit-scrollbar": { display: "none" },
                 msOverflowStyle: "none",
                 scrollbarWidth: "none",
               }}
             >
-              {paginatedMembers.length ? (
-                <List disablePadding>
-                  {paginatedMembers.map((person, index) => {
-                    const personId = person?._id || person?.id;
-                    const key = personId || person?.Name || index;
-                    return (
-                      <ListItem
-                        key={key}
-                        disablePadding
-                        divider
-                        secondaryAction={
-                          <ActionMenu
-                            person={person}
-                            navigate={navigate}
-                            slug={id}
-                            onRemove={handleRemoveMember}
-                          />
-                        }
-                      >
-                        <ListItemButton
-                          onClick={() => {
-                            if (!personId) return;
-                            navigate(`/person/${personId}`, {
-                              state: { from: `/group/${id}` },
-                            });
-                          }}
-                          sx={{ pr: 6 }}
-                        >
-                          <ListItemAvatar>
-                            <MDAvatar
-                              src={person?.ProfilePic || defaultProfilePic}
-                              name={person?.Name || "N/A"}
-                              size="sm"
-                            />
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={person?.Name || "N/A"}
-                            secondary={person?.District || ""}
-                            primaryTypographyProps={{
-                              noWrap: true,
-                              sx: { color: ACCENT_CYAN },
-                            }}
-                            secondaryTypographyProps={{ noWrap: true }}
-                          />
-                        </ListItemButton>
-                      </ListItem>
-                    );
-                  })}
-                </List>
-              ) : (
-                <MDBox p={2}>
-                  <MDTypography variant="button" color="text">
-                    No members found.
-                  </MDTypography>
-                </MDBox>
-              )}
+              <PersonMobileViewList
+                items={paginatedMembers}
+                emptyText="No members found."
+                getAvatarSrc={(person) =>
+                  person?.ProfilePic || defaultProfilePic
+                }
+                getAvatarName={(person) => person?.Name || "N/A"}
+                getPrimary={(person) => person?.Name || "N/A"}
+                getSecondary={(person) => person?.District || ""}
+                onItemClick={(person) => {
+                  const personId = person?._id || person?.id;
+                  if (!personId) return;
+                  navigate(`/person/${personId}`, {
+                    state: { from: `/group/${id}` },
+                  });
+                }}
+                renderAction={(person) => (
+                  <ActionMenu
+                    person={person}
+                    navigate={navigate}
+                    slug={id}
+                    onRemove={handleRemoveMember}
+                  />
+                )}
+                primaryTypographyProps={{
+                  noWrap: true,
+                  sx: { color: ACCENT_CYAN },
+                }}
+                secondaryTypographyProps={{ noWrap: true }}
+              />
             </MDBox>
             <MDBox
               sx={(muiTheme) => ({
@@ -769,11 +715,30 @@ function GroupDetail() {
                   justifyContent="space-between"
                   alignItems="center"
                 >
-                  <MDBox>
-                    <MDTypography variant="h6" color="white">
+                  <MDBox sx={{ minWidth: 0, flex: 1, pr: 2 }}>
+                    <MDTypography
+                      variant="h6"
+                      color="white"
+                      noWrap
+                      sx={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {group.Name}
                     </MDTypography>
-                    <MDTypography variant="caption" color="white">
+                    <MDTypography
+                      variant="caption"
+                      color="white"
+                      noWrap
+                      sx={{
+                        display: "block",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {(group.Category || "").trim()
                         ? `${group.Category} • `
                         : ""}
@@ -788,8 +753,11 @@ function GroupDetail() {
                     onClick={() => {
                       handleOpenAddMembers();
                     }}
+                    sx={{
+                      "& .MuiIcon-root": { fontSize: "27px !important" },
+                    }}
                   >
-                    <Icon>add</Icon>
+                    <Icon sx={{ fontSize: 332 }}>add</Icon>
                   </MDButton>
                 </MDBox>
                 <MDBox
@@ -813,7 +781,7 @@ function GroupDetail() {
                   gap={2}
                 >
                   <TextField
-                    placeholder="Search by name..."
+                    placeholder="Search..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     size="small"
@@ -904,96 +872,100 @@ function GroupDetail() {
             );
 
             return (
-          <Autocomplete
-            multiple
-            options={peopleOptions}
-            value={selectedToAdd}
-            inputValue={memberQuery}
-            onInputChange={(_e, next) => {
-              setMemberQuery(next);
-              if (!next.trim()) {
-                setMemberPickerOpen(true);
-                return;
-              }
-              const input = next.trim().toLowerCase();
-              const matchCount = peopleOptions.filter((p) => {
-                const name = (p?.Name || "").toLowerCase();
-                const nameChi = (p?.NameChi || "").toLowerCase();
-                return name.includes(input) || nameChi.includes(input);
-              }).length;
-              setMemberPickerOpen(matchCount > 0);
-            }}
-            onChange={(_e, next) => setSelectedToAdd(next)}
-            open={memberPickerOpen}
-            onOpen={() => setMemberPickerOpen(true)}
-            onClose={() => setMemberPickerOpen(false)}
-            openOnFocus
-            disableCloseOnSelect
-            getOptionLabel={getPersonLabel}
-            isOptionEqualToValue={(opt, val) => opt?._id === val?._id}
-            getOptionDisabled={(option) =>
-              existingMemberIds.has(String(option?._id || option?.id))
-            }
-            filterOptions={(options, state) => {
-              const input = (state.inputValue || "").trim().toLowerCase();
-              const filtered = !input
-                ? options
-                : options.filter((p) => {
+              <Autocomplete
+                multiple
+                options={peopleOptions}
+                value={selectedToAdd}
+                inputValue={memberQuery}
+                onInputChange={(_e, next) => {
+                  setMemberQuery(next);
+                  if (!next.trim()) {
+                    setMemberPickerOpen(true);
+                    return;
+                  }
+                  const input = next.trim().toLowerCase();
+                  const matchCount = peopleOptions.filter((p) => {
                     const name = (p?.Name || "").toLowerCase();
                     const nameChi = (p?.NameChi || "").toLowerCase();
                     return name.includes(input) || nameChi.includes(input);
+                  }).length;
+                  setMemberPickerOpen(matchCount > 0);
+                }}
+                onChange={(_e, next) => setSelectedToAdd(next)}
+                open={memberPickerOpen}
+                onOpen={() => setMemberPickerOpen(true)}
+                onClose={() => setMemberPickerOpen(false)}
+                openOnFocus
+                disableCloseOnSelect
+                getOptionLabel={getPersonLabel}
+                isOptionEqualToValue={(opt, val) => opt?._id === val?._id}
+                getOptionDisabled={(option) =>
+                  existingMemberIds.has(String(option?._id || option?.id))
+                }
+                filterOptions={(options, state) => {
+                  const input = (state.inputValue || "").trim().toLowerCase();
+                  const filtered = !input
+                    ? options
+                    : options.filter((p) => {
+                        const name = (p?.Name || "").toLowerCase();
+                        const nameChi = (p?.NameChi || "").toLowerCase();
+                        return name.includes(input) || nameChi.includes(input);
+                      });
+
+                  const available = [];
+                  const alreadyAdded = [];
+                  filtered.forEach((option) => {
+                    const optionId = option?._id || option?.id;
+                    if (existingMemberIds.has(String(optionId))) {
+                      alreadyAdded.push(option);
+                    } else {
+                      available.push(option);
+                    }
                   });
 
-              const available = [];
-              const alreadyAdded = [];
-              filtered.forEach((option) => {
-                const optionId = option?._id || option?.id;
-                if (existingMemberIds.has(String(optionId))) {
-                  alreadyAdded.push(option);
-                } else {
-                  available.push(option);
-                }
-              });
-
-              return [...available, ...alreadyAdded];
-            }}
-            noOptionsText=""
-            renderOption={(props, option) => {
-              const { key, ...rest } = props;
-              const optionId = option?._id || option?.id;
-              const isExisting = existingMemberIds.has(String(optionId));
-              return (
-                <li
-                  key={optionId || key}
-                  {...rest}
-                  style={{
-                    ...rest.style,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 12,
-                  }}
-                >
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {getPersonLabel(option)}
-                  </span>
-                  {isExisting && (
-                    <span style={{ opacity: 0.8, fontSize: 12 }}>Added</span>
-                  )}
-                </li>
-              );
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                variant="outlined"
-                label="Members"
-                placeholder="Search people..."
-                autoFocus
-                sx={{ mt: 1 }}
+                  return [...available, ...alreadyAdded];
+                }}
+                noOptionsText=""
+                renderOption={(props, option) => {
+                  const { key, ...rest } = props;
+                  const optionId = option?._id || option?.id;
+                  const isExisting = existingMemberIds.has(String(optionId));
+                  return (
+                    <li
+                      key={optionId || key}
+                      {...rest}
+                      style={{
+                        ...rest.style,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: 12,
+                      }}
+                    >
+                      <span
+                        style={{ overflow: "hidden", textOverflow: "ellipsis" }}
+                      >
+                        {getPersonLabel(option)}
+                      </span>
+                      {isExisting && (
+                        <span style={{ opacity: 0.8, fontSize: 12 }}>
+                          Added
+                        </span>
+                      )}
+                    </li>
+                  );
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    variant="outlined"
+                    label="Members"
+                    placeholder="Search people..."
+                    autoFocus
+                    sx={{ mt: 1 }}
+                  />
+                )}
               />
-            )}
-          />
             );
           })()}
         </DialogContent>

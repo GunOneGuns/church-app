@@ -472,6 +472,9 @@ function Groups() {
                     onClick={() =>
                       navigate("/group/add", { state: { add: true } })
                     }
+                    sx={{
+                      "& .MuiIcon-root": { fontSize: "27px !important" },
+                    }}
                   >
                     <Icon>add</Icon>
                   </MDButton>
@@ -499,7 +502,7 @@ function Groups() {
                             disablePadding
                             divider
                             secondaryAction={
-                          <IconButton
+                              <IconButton
                                 edge="end"
                                 size="small"
                                 onClick={(e) => {
@@ -610,10 +613,7 @@ function Groups() {
         onClose={handleCloseMenu}
         onClick={(e) => e.stopPropagation()}
       >
-        <MenuItem
-          onClick={handleDeleteGroup}
-          sx={{ color: "error.main" }}
-        >
+        <MenuItem onClick={handleDeleteGroup} sx={{ color: "error.main" }}>
           Delete
         </MenuItem>
       </Menu>
