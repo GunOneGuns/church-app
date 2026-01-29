@@ -42,7 +42,9 @@ import {
 
 const MOBILE_PAGINATION_HEIGHT = 30;
 const MOBILE_FAB_BOTTOM_OFFSET = "calc(env(safe-area-inset-bottom) + 88px)";
-const MOBILE_VIEW_FAB_BOTTOM_OFFSET = `calc(env(safe-area-inset-bottom) + ${MOBILE_PAGINATION_HEIGHT + 40}px)`;
+const MOBILE_VIEW_FAB_BOTTOM_OFFSET = `calc(env(safe-area-inset-bottom) + ${
+  MOBILE_PAGINATION_HEIGHT + 40
+}px)`;
 const MOBILE_VIEW_FAB_STACK_GAP = 88;
 
 function isMongoObjectId(value) {
@@ -308,7 +310,9 @@ function GroupDetail() {
 
   const baseGroupForEdit = useMemo(() => {
     const memberIds = Array.isArray(group?.Members)
-      ? group.Members.map((m) => m?._id || m?.id).filter(Boolean).map(String)
+      ? group.Members.map((m) => m?._id || m?.id)
+          .filter(Boolean)
+          .map(String)
       : [];
 
     return {
@@ -324,12 +328,15 @@ function GroupDetail() {
     if (!editedGroup) return false;
 
     const normalizeIds = (ids) =>
-      Array.from(new Set((ids || []).map(String))).sort().join("|");
+      Array.from(new Set((ids || []).map(String)))
+        .sort()
+        .join("|");
 
     return (
       editedGroup.Name !== baseGroupForEdit.Name ||
       editedGroup.Description !== baseGroupForEdit.Description ||
-      normalizeIds(editedGroup.Members) !== normalizeIds(baseGroupForEdit.Members) ||
+      normalizeIds(editedGroup.Members) !==
+        normalizeIds(baseGroupForEdit.Members) ||
       Boolean(selectedFile)
     );
   }, [baseGroupForEdit, editedGroup, isEditing, selectedFile]);
@@ -426,7 +433,13 @@ function GroupDetail() {
       replace: true,
       state: Object.keys(nextState).length ? nextState : null,
     });
-  }, [baseGroupForEdit, isEditing, location.pathname, location.state, navigate]);
+  }, [
+    baseGroupForEdit,
+    isEditing,
+    location.pathname,
+    location.state,
+    navigate,
+  ]);
 
   useEffect(() => {
     if (isEditing) setFabMenuOpen(false);
@@ -469,8 +482,7 @@ function GroupDetail() {
       setMobileNavbarTitle(dispatch, null);
       return undefined;
     }
-    const title =
-      (isEditing ? editedGroup?.Name : null) || group?.Name || null;
+    const title = (isEditing ? editedGroup?.Name : null) || group?.Name || null;
     if (title) {
       setMobileNavbarTitle(dispatch, title);
     }
@@ -838,43 +850,49 @@ function GroupDetail() {
         hideMobileBackButton={isEditing}
       />
       <MDBox pt={{ xs: 3, xl: 6 }} pb={{ xs: 2, xl: 3 }}>
-	        {isEditing ? (
-	          <Card>
-	            <MDBox
-	              display={isMobile ? "grid" : "flex"}
-	              gridTemplateColumns={isMobile ? "48px 1fr 48px" : undefined}
-	              justifyContent={isMobile ? undefined : "space-between"}
-	              alignItems="center"
-	              p={3}
-	              sx={{ borderBottom: 1, borderColor: "divider" }}
-	            >
-	              <IconButton
-	                onClick={handleEditBack}
-	                size={isMobile ? "medium" : "small"}
-	                sx={
-	                  isMobile
-	                    ? {
-	                        "& .MuiSvgIcon-root": { fontSize: 28 },
-	                      }
-	                    : undefined
-	                }
-	                aria-label="Back"
-	              >
-	                <ArrowBackIosNewIcon />
-	              </IconButton>
+        {isEditing ? (
+          <Card>
+            <MDBox
+              display={isMobile ? "grid" : "flex"}
+              gridTemplateColumns={isMobile ? "48px 1fr 48px" : undefined}
+              justifyContent={isMobile ? undefined : "space-between"}
+              alignItems="center"
+              p={3}
+              sx={{ borderBottom: 1, borderColor: "divider" }}
+            >
+              <IconButton
+                onClick={handleEditBack}
+                size={isMobile ? "medium" : "small"}
+                sx={
+                  isMobile
+                    ? {
+                        "& .MuiSvgIcon-root": { fontSize: 28 },
+                      }
+                    : undefined
+                }
+                aria-label="Back"
+              >
+                <ArrowBackIosNewIcon />
+              </IconButton>
 
-	              <MDTypography
-	                variant="h4"
-	                sx={isMobile ? { textAlign: "center", m: 0, lineHeight: 1.1 } : undefined}
-	              >
-	                Edit Group
-	              </MDTypography>
+              <MDTypography
+                variant="h4"
+                sx={
+                  isMobile
+                    ? { textAlign: "center", m: 0, lineHeight: 1.1 }
+                    : undefined
+                }
+              >
+                Edit Group
+              </MDTypography>
 
-	              {isMobile ? <MDBox /> : (
-	                <MDBox display="flex" gap={1}>
-	                  <MDButton
-	                    variant="gradient"
-	                    color="info"
+              {isMobile ? (
+                <MDBox />
+              ) : (
+                <MDBox display="flex" gap={1}>
+                  <MDButton
+                    variant="gradient"
+                    color="info"
                     onClick={handleSaveGroup}
                     disabled={isSaving}
                   >
@@ -886,11 +904,11 @@ function GroupDetail() {
                     onClick={() => requestDiscardIfDirty(discardEditsNow)}
                     disabled={isSaving}
                   >
-	                    Discard
-	                  </MDButton>
-	                </MDBox>
-	              )}
-	            </MDBox>
+                    Discard
+                  </MDButton>
+                </MDBox>
+              )}
+            </MDBox>
 
             <MDBox p={3}>
               <GroupEditForm
@@ -898,10 +916,16 @@ function GroupDetail() {
                 peopleOptions={peopleOptions}
                 selectedFile={selectedFile}
                 onChangeField={(key, value) =>
-                  setEditedGroup((prev) => ({ ...(prev || baseGroupForEdit), [key]: value }))
+                  setEditedGroup((prev) => ({
+                    ...(prev || baseGroupForEdit),
+                    [key]: value,
+                  }))
                 }
                 onChangeMembers={(memberIds) =>
-                  setEditedGroup((prev) => ({ ...(prev || baseGroupForEdit), Members: memberIds }))
+                  setEditedGroup((prev) => ({
+                    ...(prev || baseGroupForEdit),
+                    Members: memberIds,
+                  }))
                 }
                 handleFileChange={handleFileChange}
                 registerGroupPicProcessor={registerGroupPicProcessor}
@@ -1115,7 +1139,9 @@ function GroupDetail() {
                 sx={(muiTheme) => ({
                   position: "fixed",
                   right: 17,
-                  bottom: `calc(${MOBILE_VIEW_FAB_BOTTOM_OFFSET} + ${MOBILE_VIEW_FAB_STACK_GAP * 2}px)`,
+                  bottom: `calc(${MOBILE_VIEW_FAB_BOTTOM_OFFSET} + ${
+                    MOBILE_VIEW_FAB_STACK_GAP * 2
+                  }px)`,
                   width: 77,
                   height: 77,
                   borderRadius: "50%",
@@ -1166,21 +1192,31 @@ function GroupDetail() {
           <IconButton
             ref={fabToggleRef}
             onClick={() => setFabMenuOpen((prev) => !prev)}
-            sx={(muiTheme) => ({
-              position: "fixed",
-              right: 17,
-              bottom: MOBILE_VIEW_FAB_BOTTOM_OFFSET,
-              width: 77,
-              height: 77,
-              borderRadius: "50%",
-              background: ACCENT_CYAN,
-              color: "#fff",
-              zIndex: muiTheme.zIndex.modal - 1,
-              "&:hover": {
-                background: ACCENT_CYAN,
-                filter: "brightness(0.9)",
-              },
-            })}
+            sx={(muiTheme) => {
+              const backgroundColor = fabMenuOpen
+                ? muiTheme.palette.error?.main || "#f44336"
+                : ACCENT_CYAN;
+
+              return {
+                position: "fixed",
+                right: 17,
+                bottom: MOBILE_VIEW_FAB_BOTTOM_OFFSET,
+                width: 77,
+                height: 77,
+                borderRadius: "50%",
+                backgroundColor,
+                color: "#fff",
+                zIndex: muiTheme.zIndex.modal - 1,
+                "&:hover": {
+                  backgroundColor,
+                },
+                "@media (hover: none)": {
+                  "&:hover": {
+                    backgroundColor,
+                  },
+                },
+              };
+            }}
             aria-label={fabMenuOpen ? "Close actions" : "Open actions"}
           >
             <Icon fontSize="large" sx={{ color: "#fff" }}>
@@ -1393,10 +1429,7 @@ function GroupDetail() {
           }))
         }
       />
-      <Dialog
-        open={showDiscardConfirmModal}
-        onClose={closeDiscardConfirmModal}
-      >
+      <Dialog open={showDiscardConfirmModal} onClose={closeDiscardConfirmModal}>
         <DialogTitle>Discard changes?</DialogTitle>
         <DialogContent>
           <MDTypography variant="body2">
