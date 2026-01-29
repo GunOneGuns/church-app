@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import defaultProfilePic from "assets/images/default-profile-picture.png";
 import { fetchPeople } from "services/convo-broker.js";
 import { useNavigate } from "react-router-dom";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
+import PeopleActionMenu from "components/PeopleActionMenu";
 
 export const columns = [
   { Header: "name", accessor: "people", width: "35%", align: "left" },
@@ -68,7 +68,10 @@ function AddressTitle({ title, description }) {
 }
 
 // Build rows from a raw people array
-export function buildRows(rawPeople, navigate, from = "/people") {
+export function buildRows(rawPeople, navigate, options = {}) {
+  const from = options?.from || "/people";
+  const onDelete = options?.onDelete || null;
+
   return rawPeople.map((person) => ({
     people: (
       <People
@@ -99,22 +102,11 @@ export function buildRows(rawPeople, navigate, from = "/people") {
         color="text"
         fontWeight="medium"
       >
-        {person.PhoneNumber || "N/A"}
+        {person.PhoneNumber || "-"}
       </MDTypography>
     ),
     action: (
-      <MDTypography
-        component="a"
-        onClick={() =>
-          navigate(`/person/${person._id}`, { state: { edit: true, from } })
-        }
-        variant="caption"
-        color="text"
-        fontWeight="medium"
-        sx={{ cursor: "pointer" }}
-      >
-        <MoreVertIcon fontSize="small"></MoreVertIcon>
-      </MDTypography>
+      <PeopleActionMenu person={person} from={from} onDelete={onDelete} />
     ),
   }));
 }
@@ -123,20 +115,23 @@ export default function data() {
   const navigate = useNavigate();
   const [people, setPeople] = useState([]);
 
+  const refreshPeople = async () => {
+    await fetchPeople();
+    const stored = localStorage.getItem("people");
+    const next = stored ? JSON.parse(stored) : [];
+    setPeople(next);
+    return next;
+  };
+
   useEffect(() => {
-    const loadPeople = async () => {
-      await fetchPeople();
-      const stored = localStorage.getItem("people");
-      if (stored) {
-        setPeople(JSON.parse(stored));
-      }
-    };
-    loadPeople();
+    refreshPeople();
   }, []);
 
   return {
     columns,
     people,
-    rows: buildRows(people, navigate),
+    setPeople,
+    refreshPeople,
+    rows: buildRows(people, navigate, { from: "/people" }),
   };
 }

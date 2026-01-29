@@ -8,6 +8,8 @@ import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
+import Divider from "@mui/material/Divider";
+import ListItemIcon from "@mui/material/ListItemIcon";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -15,6 +17,8 @@ import DialogActions from "@mui/material/DialogActions";
 import Icon from "@mui/material/Icon";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
@@ -125,7 +129,7 @@ function DesktopPaginationControls({
   );
 }
 
-function ActionMenu({ person, navigate, slug, onRemove }) {
+function ActionMenu({ person, navigate, slug, onRemove, iconColor }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const handleClick = (event) => {
@@ -135,6 +139,13 @@ function ActionMenu({ person, navigate, slug, onRemove }) {
   const handleClose = (event) => {
     event.stopPropagation();
     setAnchorEl(null);
+  };
+  const handleView = (event) => {
+    event.stopPropagation();
+    navigate(`/person/${person._id}`, {
+      state: { from: `/group/${slug}` },
+    });
+    handleClose(event);
   };
   const handleEdit = (event) => {
     event.stopPropagation();
@@ -150,11 +161,7 @@ function ActionMenu({ person, navigate, slug, onRemove }) {
   };
   return (
     <>
-      <IconButton
-        onClick={handleClick}
-        size="small"
-        sx={{ color: ACCENT_CYAN }}
-      >
+      <IconButton onClick={handleClick} size="small">
         <Icon fontSize="small">more_vert</Icon>
       </IconButton>
       <Menu
@@ -163,8 +170,22 @@ function ActionMenu({ person, navigate, slug, onRemove }) {
         onClose={handleClose}
         onClick={(e) => e.stopPropagation()}
       >
-        <MenuItem onClick={handleEdit}>Edit</MenuItem>
-        <MenuItem onClick={handleRemove}>Remove from group</MenuItem>
+        <MenuItem onClick={handleView}>
+          <ListItemIcon>
+            <VisibilityOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          View
+        </MenuItem>
+        <MenuItem onClick={handleEdit}>
+          <ListItemIcon>
+            <EditOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          Edit
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleRemove} sx={{ color: "error.main" }}>
+          Remove from group
+        </MenuItem>
       </Menu>
     </>
   );
@@ -188,12 +209,7 @@ function PeopleCell({ image, name, nameChi, district, onClick }) {
     >
       <MDAvatar src={image} name={displayName} size="sm" />
       <MDBox ml={2} lineHeight={1}>
-        <MDTypography
-          display="block"
-          variant="button"
-          fontWeight="medium"
-          sx={{ color: ACCENT_CYAN }}
-        >
+        <MDTypography display="block" variant="button" fontWeight="medium">
           {displayName}
           {suffix}
         </MDTypography>
@@ -992,6 +1008,7 @@ function GroupDetail() {
                     navigate={navigate}
                     slug={id}
                     onRemove={handleRemoveMember}
+                    iconColor={ACCENT_CYAN}
                   />
                 )}
                 primaryTypographyProps={{

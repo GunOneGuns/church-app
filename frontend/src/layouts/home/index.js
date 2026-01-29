@@ -120,41 +120,41 @@ function Home() {
             const isClickable = typeof onCardClick === "function";
 
             return (
-            <Grid item xs={6} md={3} key={item.title}>
-              <Card
-                sx={{
-                  height: "100%",
-                  aspectRatio: "1 / 1",
-                  borderRadius: 2,
-                }}
-              >
-                <CardActionArea
-                  onClick={isClickable ? onCardClick : undefined}
-                  disabled={!isClickable}
-                  sx={{ height: "100%" }}
+              <Grid item xs={6} md={3} key={item.title}>
+                <Card
+                  sx={{
+                    height: "100%",
+                    aspectRatio: "1 / 1",
+                    borderRadius: 2,
+                  }}
                 >
-                  <MDBox
-                    p={2}
-                    display="flex"
-                    flexDirection="column"
-                    height="100%"
-                    sx={{
-                      cursor: isClickable ? "pointer" : "default",
-                    }}
+                  <CardActionArea
+                    onClick={isClickable ? onCardClick : undefined}
+                    disabled={!isClickable}
+                    sx={{ height: "100%" }}
                   >
-                    <MDTypography variant="button" fontWeight="medium">
-                      {item.title}
-                    </MDTypography>
-                    <MDTypography variant="h4" fontWeight="bold" mt={1}>
-                      {renderCyanNumberValue(item.value)}
-                    </MDTypography>
-                    <MDTypography variant="caption" color="text" mt={0.5}>
-                      {item.detail}
-                    </MDTypography>
-                  </MDBox>
-                </CardActionArea>
-              </Card>
-            </Grid>
+                    <MDBox
+                      p={2}
+                      display="flex"
+                      flexDirection="column"
+                      height="100%"
+                      sx={{
+                        cursor: isClickable ? "pointer" : "default",
+                      }}
+                    >
+                      <MDTypography variant="button" fontWeight="medium">
+                        {item.title}
+                      </MDTypography>
+                      <MDTypography variant="h4" fontWeight="bold" mt={1}>
+                        {renderCyanNumberValue(item.value)}
+                      </MDTypography>
+                      <MDTypography variant="caption" color="text" mt={0.5}>
+                        {item.detail}
+                      </MDTypography>
+                    </MDBox>
+                  </CardActionArea>
+                </Card>
+              </Grid>
             );
           })}
         </Grid>

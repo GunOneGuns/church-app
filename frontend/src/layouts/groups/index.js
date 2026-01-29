@@ -13,6 +13,8 @@ import ListItemAvatar from "@mui/material/ListItemAvatar";
 import ListItemText from "@mui/material/ListItemText";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
+import Divider from "@mui/material/Divider";
+import ListItemIcon from "@mui/material/ListItemIcon";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
@@ -27,10 +29,12 @@ import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { setMobileNavbarTitle, useMaterialUIController } from "context";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { ACCENT_CYAN } from "constants.js";
 import defaultProfilePic from "assets/images/default-profile-picture.png";
 import Toast from "components/Toast";
-import { deleteGroup } from "services/convo-broker.js";
+import { deleteGroup, updateGroup } from "services/convo-broker.js";
 
 const GROUPS_TABLE_TITLE = "Groups";
 const MOBILE_PAGINATION_HEIGHT = 30;
@@ -123,9 +127,6 @@ function Groups() {
 
   useEffect(() => {
     return () => {
-      pendingDeleteRef.current.forEach((entry) => {
-        clearTimeout(entry.timerId);
-      });
       pendingDeleteRef.current.clear();
     };
   }, []);
@@ -153,6 +154,13 @@ function Groups() {
   const handleCloseMenu = () => {
     setMenuAnchorEl(null);
     setMenuGroupId(null);
+  };
+
+  const handleViewGroup = () => {
+    const groupId = menuGroupId;
+    handleCloseMenu();
+    if (!groupId) return;
+    navigate(`/group/${groupId}`, { state: { from: "/groups" } });
   };
 
   const handleEditGroup = () => {
@@ -198,44 +206,54 @@ function Groups() {
       (prev || []).filter((g) => String(g?._id) !== String(groupId)),
     );
 
-    const timeoutMs = 6000;
-    const timerId = setTimeout(async () => {
-      try {
-        await deleteGroup(groupId);
-        localStorage.removeItem("groups");
-        await refreshGroups();
-      } catch (error) {
-        setGroups((prev) => [groupToDelete, ...(prev || [])]);
-        setToast({
-          open: true,
-          message: error?.message || "Failed to delete group.",
-          severity: "error",
-          actionLabel: null,
-          onAction: null,
-          autoHideDuration: 2000,
-        });
-      } finally {
-        pendingDeleteRef.current.delete(String(groupId));
-      }
-    }, timeoutMs);
-
     pendingDeleteRef.current.set(String(groupId), {
-      timerId,
       group: groupToDelete,
     });
+
+    try {
+      await deleteGroup(groupId);
+      localStorage.removeItem("groups");
+      await refreshGroups();
+    } catch (error) {
+      pendingDeleteRef.current.delete(String(groupId));
+      setGroups((prev) => [groupToDelete, ...(prev || [])]);
+      setToast({
+        open: true,
+        message: error?.message || "Failed to delete group.",
+        severity: "error",
+        actionLabel: null,
+        onAction: null,
+        autoHideDuration: 2000,
+      });
+      return;
+    }
 
     setToast({
       open: true,
       message: "Group deleted.",
       severity: "success",
-      autoHideDuration: timeoutMs,
+      autoHideDuration: 6000,
       actionLabel: "Undo",
       onAction: async () => {
         const pending = pendingDeleteRef.current.get(String(groupId));
         if (!pending) return;
-        clearTimeout(pending.timerId);
-        pendingDeleteRef.current.delete(String(groupId));
-        setGroups((prev) => [pending.group, ...(prev || [])]);
+        try {
+          const toRestore = pending.group || {};
+          const {
+            _id,
+            MemberCount,
+            createdAt,
+            updatedAt,
+            deletedAt,
+            ...rest
+          } = toRestore;
+
+          await updateGroup(groupId, { ...rest, deletedAt: null });
+          localStorage.removeItem("groups");
+          await refreshGroups();
+        } finally {
+          pendingDeleteRef.current.delete(String(groupId));
+        }
       },
     });
   };
@@ -402,7 +420,6 @@ function Groups() {
                               e.stopPropagation();
                               handleOpenMenu(e, groupId);
                             }}
-                            sx={{ color: ACCENT_CYAN }}
                           >
                             <MoreVertIcon fontSize="small" />
                           </IconButton>
@@ -520,6 +537,11 @@ function Groups() {
                             key={key}
                             disablePadding
                             divider
+                            sx={{
+                              "& .MuiListItemSecondaryAction-root": {
+                                right: 24,
+                              },
+                            }}
                             secondaryAction={
                               <IconButton
                                 edge="end"
@@ -528,7 +550,6 @@ function Groups() {
                                   e.stopPropagation();
                                   handleOpenMenu(e, groupId);
                                 }}
-                                sx={{ color: ACCENT_CYAN }}
                               >
                                 <MoreVertIcon fontSize="small" />
                               </IconButton>
@@ -550,7 +571,6 @@ function Groups() {
                                 secondary={`${group.MemberCount || 0} members`}
                                 primaryTypographyProps={{
                                   noWrap: true,
-                                  sx: { color: ACCENT_CYAN },
                                 }}
                                 secondaryTypographyProps={{
                                   noWrap: true,
@@ -632,7 +652,19 @@ function Groups() {
         onClose={handleCloseMenu}
         onClick={(e) => e.stopPropagation()}
       >
-        <MenuItem onClick={handleEditGroup}>Edit</MenuItem>
+        <MenuItem onClick={handleViewGroup}>
+          <ListItemIcon>
+            <VisibilityOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          View
+        </MenuItem>
+        <MenuItem onClick={handleEditGroup}>
+          <ListItemIcon>
+            <EditOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          Edit
+        </MenuItem>
+        <Divider />
         <MenuItem onClick={handleDeleteGroup} sx={{ color: "error.main" }}>
           Delete
         </MenuItem>

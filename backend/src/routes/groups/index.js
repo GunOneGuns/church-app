@@ -17,9 +17,15 @@ function normalizeMemberIds(value) {
     .map((id) => new mongoose.Types.ObjectId(id));
 }
 
+function getActiveGroupsFilter() {
+  return {
+    $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+  };
+}
+
 router.get("/", async (_req, res) => {
   try {
-    const groups = await groupsModel.find({}).lean();
+    const groups = await groupsModel.find(getActiveGroupsFilter()).lean();
     const withCounts = groups.map((group) => ({
       ...group,
       MemberCount: Array.isArray(group.Members) ? group.Members.length : 0,
@@ -39,7 +45,7 @@ router.get("/:id", async (req, res) => {
     }
 
     const group = await groupsModel
-      .findById(id)
+      .findOne({ _id: id, ...getActiveGroupsFilter() })
       .populate("Members")
       .lean();
 
@@ -66,6 +72,7 @@ router.post("/", async (req, res) => {
       Name: Name.trim(),
       Description: typeof Description === "string" ? Description : "",
       Members: normalizeMemberIds(Members),
+      deletedAt: null,
     });
 
     await group.save();
@@ -108,8 +115,16 @@ router.delete("/:id", async (req, res) => {
       return res.status(400).json({ error: "Invalid group id" });
     }
 
-    const deleted = await groupsModel.findByIdAndDelete(id);
-    if (!deleted) return res.status(404).json({ error: "Group not found" });
+    const updated = await groupsModel.findOneAndUpdate(
+      { _id: id, ...getActiveGroupsFilter() },
+      { deletedAt: new Date() },
+      { new: true, runValidators: true },
+    );
+
+    if (!updated) {
+      return res.status(404).json({ error: "Group not found" });
+    }
+
     res.status(200).json({ message: "Group deleted successfully" });
   } catch (error) {
     console.error("Error deleting group:", error);
@@ -169,4 +184,3 @@ router.post(
 );
 
 export default router;
-

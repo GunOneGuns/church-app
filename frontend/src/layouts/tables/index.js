@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
@@ -7,13 +7,13 @@ import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import PersonMobileViewList from "components/PersonMobileViewList";
+import PeopleActionMenu from "components/PeopleActionMenu";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
@@ -26,9 +26,15 @@ import { setMobileNavbarTitle, useMaterialUIController } from "context";
 import defaultProfilePic from "assets/images/default-profile-picture.png";
 import { ACCENT_CYAN } from "constants.js";
 import Toast from "components/Toast";
+import { deletePerson } from "services/convo-broker.js";
 
 const PEOPLE_TABLE_TITLE = "Brothers & Sisters";
 const MOBILE_PAGINATION_HEIGHT = 30;
+const DELETE_UNDO_TIMEOUT_MS = 6000;
+
+function isMongoObjectId(value) {
+  return typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
+}
 
 function DesktopPaginationControls({
   page,
@@ -123,7 +129,7 @@ function MobilePaginationControls({ page, totalPages, goToPage }) {
 }
 
 function People() {
-  const { people } = peopleTableData();
+  const { people, setPeople, refreshPeople } = peopleTableData();
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -135,10 +141,28 @@ function People() {
     open: false,
     message: "",
     severity: "success",
+    actionLabel: null,
+    onAction: null,
+    autoHideDuration: 2000,
   });
+  const pendingDeleteRef = useRef(new Map());
 
   const handleCloseToast = useCallback(() => {
-    setToast((prev) => ({ ...prev, open: false }));
+    setToast((prev) => ({
+      ...prev,
+      open: false,
+      actionLabel: null,
+      onAction: null,
+    }));
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      pendingDeleteRef.current.forEach((entry) => {
+        clearTimeout(entry.timerId);
+      });
+      pendingDeleteRef.current.clear();
+    };
   }, []);
 
   useEffect(() => {
@@ -149,6 +173,9 @@ function People() {
       open: true,
       message: toastFromNav.message,
       severity: toastFromNav.severity || "success",
+      actionLabel: toastFromNav.actionLabel || null,
+      onAction: toastFromNav.onAction || null,
+      autoHideDuration: toastFromNav.autoHideDuration ?? 2000,
     });
 
     const nextState = { ...(location.state || {}) };
@@ -191,9 +218,92 @@ function People() {
     });
   }, [people, searchQuery]);
 
+  const handleDeletePerson = useCallback(
+    async (person) => {
+      const personId = person?._id || person?.id;
+      if (!isMongoObjectId(personId)) {
+        setToast({
+          open: true,
+          message: "Delete is only available for saved people.",
+          severity: "warning",
+          actionLabel: null,
+          onAction: null,
+          autoHideDuration: 2000,
+        });
+        return;
+      }
+
+      const personToDelete = (people || []).find(
+        (p) => String(p?._id || p?.id) === String(personId),
+      );
+      if (!personToDelete) return;
+
+      setPeople((prev) => {
+        const next = (prev || []).filter(
+          (p) => String(p?._id || p?.id) !== String(personId),
+        );
+        localStorage.setItem("people", JSON.stringify(next));
+        return next;
+      });
+
+      const timerId = setTimeout(async () => {
+        try {
+          await deletePerson(personId);
+          localStorage.removeItem("people");
+          await refreshPeople();
+        } catch (error) {
+          setPeople((prev) => {
+            const restored = [personToDelete, ...(prev || [])];
+            localStorage.setItem("people", JSON.stringify(restored));
+            return restored;
+          });
+          setToast({
+            open: true,
+            message: error?.message || "Failed to delete person.",
+            severity: "error",
+            actionLabel: null,
+            onAction: null,
+            autoHideDuration: 2000,
+          });
+        } finally {
+          pendingDeleteRef.current.delete(String(personId));
+        }
+      }, DELETE_UNDO_TIMEOUT_MS);
+
+      pendingDeleteRef.current.set(String(personId), {
+        timerId,
+        person: personToDelete,
+      });
+
+      setToast({
+        open: true,
+        message: "Person deleted.",
+        severity: "success",
+        autoHideDuration: DELETE_UNDO_TIMEOUT_MS,
+        actionLabel: "Undo",
+        onAction: async () => {
+          const pending = pendingDeleteRef.current.get(String(personId));
+          if (!pending) return;
+          clearTimeout(pending.timerId);
+          pendingDeleteRef.current.delete(String(personId));
+          setPeople((prev) => {
+            const restored = [pending.person, ...(prev || [])];
+            localStorage.setItem("people", JSON.stringify(restored));
+            return restored;
+          });
+        },
+      });
+    },
+    [people, refreshPeople, setPeople],
+  );
+
   const rows = useMemo(
-    () => buildPeopleRows(filteredPeople, navigate),
-    [filteredPeople, navigate],
+    () =>
+      buildPeopleRows(filteredPeople, navigate, {
+        from: "/people",
+        onDelete: handleDeletePerson,
+      }),
+    [filteredPeople, handleDeletePerson, navigate],
   );
 
   const totalPages = Math.max(
@@ -310,17 +420,13 @@ function People() {
                     state: { from: "/people" },
                   });
                 }}
-                renderAction={() => (
-                  <IconButton
-                    edge="end"
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                    sx={{ color: ACCENT_CYAN }}
-                  >
-                    <MoreVertIcon fontSize="small" />
-                  </IconButton>
+                renderAction={(person) => (
+                  <PeopleActionMenu
+                    person={person}
+                    from="/people"
+                    onDelete={handleDeletePerson}
+                    iconColor={ACCENT_CYAN}
+                  />
                 )}
                 primaryTypographyProps={{
                   noWrap: true,
@@ -455,6 +561,9 @@ function People() {
         open={toast.open}
         message={toast.message}
         severity={toast.severity}
+        actionLabel={toast.actionLabel}
+        onAction={toast.onAction}
+        autoHideDuration={toast.autoHideDuration}
         onClose={handleCloseToast}
       />
       <Footer />
