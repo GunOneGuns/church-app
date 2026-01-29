@@ -22,6 +22,7 @@ import useMediaQuery from "@mui/material/useMediaQuery";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   FIELD_NAME_SUGGESTIONS,
   RELATION_SUGGESTIONS,
@@ -37,6 +38,11 @@ const normalizeSelectValue = (value) =>
 const FIELD_LABEL_SX = { fontSize: "1rem" };
 
 const GROUP_TITLE_CHAR_LIMIT = 7;
+const CREATE_GROUP_OPTION_ID = "__create_group__";
+const CREATE_GROUP_OPTION = {
+  _id: CREATE_GROUP_OPTION_ID,
+  Name: "No groups — create one now",
+};
 
 function truncateText(value, limit = GROUP_TITLE_CHAR_LIMIT) {
   const text = String(value ?? "");
@@ -69,6 +75,8 @@ function PersonEditForm({
 }) {
   const theme = useTheme();
   const isMobileView = useMediaQuery(theme.breakpoints.down("xl"));
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const findPersonById = (id) =>
     peopleList.find((person) => person._id === id) || null;
@@ -94,6 +102,11 @@ function PersonEditForm({
     const idSet = new Set((selectedGroupIds || []).map(String));
     return (groupsList || []).filter((g) => idSet.has(String(g?._id)));
   }, [groupsList, selectedGroupIds]);
+
+  const groupOptions = useMemo(() => {
+    if (Array.isArray(groupsList) && groupsList.length) return groupsList;
+    return [CREATE_GROUP_OPTION];
+  }, [groupsList]);
 
   const isValidRelationSuggestion = (relation = "") => {
     const trimmed = relation.trim();
@@ -1129,14 +1142,25 @@ function PersonEditForm({
 
             <Autocomplete
               multiple
-              options={groupsList}
+              options={groupOptions}
               value={selectedGroups}
               onChange={(_e, next) => {
                 if (!setSelectedGroupIds) return;
+                const wantsCreate = (next || []).some(
+                  (g) => String(g?._id) === CREATE_GROUP_OPTION_ID,
+                );
+                if (wantsCreate) {
+                  navigate("/group/add", {
+                    state: { add: true, from: location.pathname },
+                  });
+                  return;
+                }
                 setSelectedGroupIds(next.map((g) => g?._id).filter(Boolean));
               }}
               getOptionLabel={(option) => option?.Name || ""}
-              isOptionEqualToValue={(opt, val) => opt?._id === val?._id}
+              isOptionEqualToValue={(opt, val) =>
+                String(opt?._id) === String(val?._id)
+              }
               disableCloseOnSelect
               openOnFocus
               noOptionsText=""
@@ -1153,6 +1177,29 @@ function PersonEditForm({
                 const { key, ...rest } = props;
                 const groupName = option?.Name || "NIL";
                 const groupPic = option?.GroupPic || defaultProfilePic;
+                const isCreateOption =
+                  String(option?._id) === CREATE_GROUP_OPTION_ID;
+
+                if (isCreateOption) {
+                  return (
+                    <li
+                      key={option?._id || key}
+                      {...rest}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        navigate("/group/add", {
+                          state: { add: true, from: location.pathname },
+                        });
+                      }}
+                      style={{
+                        ...rest.style,
+                        fontStyle: "italic",
+                      }}
+                    >
+                      {groupName}
+                    </li>
+                  );
+                }
                 return (
                   <li
                     key={option?._id || key}

@@ -988,7 +988,7 @@ function GroupDetail() {
             >
               <PersonMobileViewList
                 items={paginatedMembers}
-                emptyText="No members found."
+                emptyText="No members."
                 getAvatarSrc={(person) =>
                   person?.ProfilePic || defaultProfilePic
                 }
@@ -1101,14 +1101,22 @@ function GroupDetail() {
                   pt={3}
                   sx={{ maxHeight: "calc(100vh - 400px)", overflow: "auto" }}
                 >
-                  <DataTable
-                    table={{ columns: peopleColumns, rows: paginatedRows }}
-                    isSorted={false}
-                    entriesPerPage={false}
-                    showTotalEntries={false}
-                    noEndBorder
-                    pagination={false}
-                  />
+                  {paginatedRows.length ? (
+                    <DataTable
+                      table={{ columns: peopleColumns, rows: paginatedRows }}
+                      isSorted={false}
+                      entriesPerPage={false}
+                      showTotalEntries={false}
+                      noEndBorder
+                      pagination={false}
+                    />
+                  ) : (
+                    <MDBox p={2}>
+                      <MDTypography variant="button" color="text">
+                        No members.
+                      </MDTypography>
+                    </MDBox>
+                  )}
                 </MDBox>
                 <MDBox
                   display="flex"
