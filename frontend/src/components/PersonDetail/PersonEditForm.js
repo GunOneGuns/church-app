@@ -16,6 +16,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import IconButton from "@mui/material/IconButton";
 import AddIcon from "@mui/icons-material/Add";
+import ClearIcon from "@mui/icons-material/Clear";
 import CloseIcon from "@mui/icons-material/Close";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import Card from "@mui/material/Card";
@@ -1380,32 +1381,34 @@ function PersonEditForm({
                     flexDirection="column"
                     alignItems="center"
                     textAlign="center"
-                    width="80px"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
-                      if (!setSelectedGroupIds || !groupId) return;
-                      setSelectedGroupIds((prev) =>
-                        (prev || []).filter(
-                          (gid) => String(gid) !== String(groupId),
-                        ),
-                      );
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
+                    width="77px"
+                    sx={{ position: "relative" }}
+                  >
+                    <IconButton
+                      size="small"
+                      aria-label={`Remove ${groupName}`}
+                      onClick={() => {
                         if (!setSelectedGroupIds || !groupId) return;
                         setSelectedGroupIds((prev) =>
                           (prev || []).filter(
                             (gid) => String(gid) !== String(groupId),
                           ),
                         );
-                      }
-                    }}
-                    sx={{ cursor: "pointer", outline: "none" }}
-                    title={`${groupName} (click to remove)`}
-                    aria-label={`${groupName} (click to remove)`}
-                  >
+                      }}
+                      sx={{
+                        position: "absolute",
+                        top: -6,
+                        right: -6,
+                        p: 0.25,
+                        color: theme.palette.error.main,
+                        bgcolor: "background.paper",
+                        border: "1px solid",
+                        borderColor: "divider",
+                        "&:hover": { bgcolor: "background.paper" },
+                      }}
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
                     <MDBox
                       component="img"
                       src={groupPic}
