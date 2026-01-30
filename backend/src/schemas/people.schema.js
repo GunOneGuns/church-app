@@ -12,6 +12,7 @@ const peopleSchema = new mongoose.Schema(
     District: { type: String },
     Address: { type: String },
     ProfilePic: { type: String, default: "" },
+    deletedAt: { type: Date, default: null },
 
     // email_verified_at: { type: Date },
     // password: { required: true, type: String },

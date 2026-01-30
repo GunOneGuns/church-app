@@ -26,7 +26,7 @@ import { setMobileNavbarTitle, useMaterialUIController } from "context";
 import defaultProfilePic from "assets/images/default-profile-picture.png";
 import { ACCENT_CYAN } from "constants.js";
 import Toast from "components/Toast";
-import { deletePerson } from "services/convo-broker.js";
+import { deletePerson, updatePerson } from "services/convo-broker.js";
 
 const PEOPLE_TABLE_TITLE = "Brothers & Sisters";
 const MOBILE_PAGINATION_HEIGHT = 30;
@@ -158,9 +158,6 @@ function People() {
 
   useEffect(() => {
     return () => {
-      pendingDeleteRef.current.forEach((entry) => {
-        clearTimeout(entry.timerId);
-      });
       pendingDeleteRef.current.clear();
     };
   }, []);
@@ -169,12 +166,47 @@ function People() {
     const toastFromNav = location.state?.toast;
     if (!toastFromNav?.message) return;
 
+    let onAction = toastFromNav.onAction || null;
+    let actionLabel = toastFromNav.actionLabel || null;
+
+    const undoPerson = toastFromNav.undo?.person;
+    const undoPersonId = undoPerson?._id || undoPerson?.id;
+    if (!onAction && undoPerson && isMongoObjectId(undoPersonId)) {
+      actionLabel = actionLabel || "Undo";
+      onAction = async () => {
+        try {
+          const { _id, id, createdAt, updatedAt, deletedAt, ...rest } =
+            undoPerson || {};
+          await updatePerson(undoPersonId, { ...rest, deletedAt: null });
+          localStorage.removeItem("people");
+          await refreshPeople();
+          setToast({
+            open: true,
+            message: "Undo successful.",
+            severity: "success",
+            actionLabel: null,
+            onAction: null,
+            autoHideDuration: 2000,
+          });
+        } catch (error) {
+          setToast({
+            open: true,
+            message: error?.message || "Failed to undo delete.",
+            severity: "error",
+            actionLabel: null,
+            onAction: null,
+            autoHideDuration: 2000,
+          });
+        }
+      };
+    }
+
     setToast({
       open: true,
       message: toastFromNav.message,
       severity: toastFromNav.severity || "success",
-      actionLabel: toastFromNav.actionLabel || null,
-      onAction: toastFromNav.onAction || null,
+      actionLabel,
+      onAction,
       autoHideDuration: toastFromNav.autoHideDuration ?? 2000,
     });
 
@@ -184,7 +216,7 @@ function People() {
       replace: true,
       state: Object.keys(nextState).length ? nextState : null,
     });
-  }, [location.pathname, location.state, navigate]);
+  }, [location.pathname, location.state, navigate, refreshPeople]);
 
   useEffect(() => {
     if (!isMobile) {
@@ -246,32 +278,28 @@ function People() {
         return next;
       });
 
-      const timerId = setTimeout(async () => {
-        try {
-          await deletePerson(personId);
-          localStorage.removeItem("people");
-          await refreshPeople();
-        } catch (error) {
-          setPeople((prev) => {
-            const restored = [personToDelete, ...(prev || [])];
-            localStorage.setItem("people", JSON.stringify(restored));
-            return restored;
-          });
-          setToast({
-            open: true,
-            message: error?.message || "Failed to delete person.",
-            severity: "error",
-            actionLabel: null,
-            onAction: null,
-            autoHideDuration: 2000,
-          });
-        } finally {
-          pendingDeleteRef.current.delete(String(personId));
-        }
-      }, DELETE_UNDO_TIMEOUT_MS);
+      try {
+        await deletePerson(personId);
+        localStorage.removeItem("people");
+        await refreshPeople();
+      } catch (error) {
+        setPeople((prev) => {
+          const restored = [personToDelete, ...(prev || [])];
+          localStorage.setItem("people", JSON.stringify(restored));
+          return restored;
+        });
+        setToast({
+          open: true,
+          message: error?.message || "Failed to delete person.",
+          severity: "error",
+          actionLabel: null,
+          onAction: null,
+          autoHideDuration: 2000,
+        });
+        return;
+      }
 
       pendingDeleteRef.current.set(String(personId), {
-        timerId,
         person: personToDelete,
       });
 
@@ -284,13 +312,31 @@ function People() {
         onAction: async () => {
           const pending = pendingDeleteRef.current.get(String(personId));
           if (!pending) return;
-          clearTimeout(pending.timerId);
           pendingDeleteRef.current.delete(String(personId));
-          setPeople((prev) => {
-            const restored = [pending.person, ...(prev || [])];
-            localStorage.setItem("people", JSON.stringify(restored));
-            return restored;
-          });
+          try {
+            const { _id, id, createdAt, updatedAt, deletedAt, ...rest } =
+              pending.person || {};
+            await updatePerson(personId, { ...rest, deletedAt: null });
+            localStorage.removeItem("people");
+            await refreshPeople();
+            setToast({
+              open: true,
+              message: "Undo successful.",
+              severity: "success",
+              actionLabel: null,
+              onAction: null,
+              autoHideDuration: 2000,
+            });
+          } catch (error) {
+            setToast({
+              open: true,
+              message: error?.message || "Failed to undo delete.",
+              severity: "error",
+              actionLabel: null,
+              onAction: null,
+              autoHideDuration: 2000,
+            });
+          }
         },
       });
     },

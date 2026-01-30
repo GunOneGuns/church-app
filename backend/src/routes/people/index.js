@@ -11,12 +11,19 @@ const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
+function getActivePeopleFilter() {
+  return {
+    $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
+  };
+}
+
 router.get("/stats", async (_req, res) => {
   try {
-    const peopleCount = await peopleModel.countDocuments({});
+    const peopleCount = await peopleModel.countDocuments(getActivePeopleFilter());
 
     const groupAggregation = await peopleModel
       .aggregate([
+        { $match: getActivePeopleFilter() },
         {
           $project: {
             normalizedChatGroup: {
@@ -41,7 +48,7 @@ router.get("/stats", async (_req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const people = await peopleModel.find({});
+    const people = await peopleModel.find(getActivePeopleFilter());
     res.status(200).json(people);
   } catch (error) {
     console.error("Error:", error);
@@ -51,7 +58,7 @@ router.get("/", async (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
-    const person = new peopleModel(req.body);
+    const person = new peopleModel({ ...(req.body || {}), deletedAt: null });
     await person.save();
     res.json(person);
   } catch (error) {
@@ -84,8 +91,17 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedPerson = await peopleModel.findByIdAndDelete(id);
-    if (!deletedPerson) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid person id" });
+    }
+
+    const updatedPerson = await peopleModel.findOneAndUpdate(
+      { _id: id, ...getActivePeopleFilter() },
+      { deletedAt: new Date() },
+      { new: true, runValidators: true },
+    );
+
+    if (!updatedPerson) {
       return res.status(404).json({ error: "Person not found" });
     }
     res.status(200).json({ message: "Person deleted successfully" });

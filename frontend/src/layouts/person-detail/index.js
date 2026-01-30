@@ -1696,34 +1696,25 @@ function PersonDetail() {
     run();
   }, [id, location.state?.from, navigate]);
 
-  const pendingDeletePersonTimerRef = useRef(null);
-
-  useEffect(() => {
-    return () => {
-      if (pendingDeletePersonTimerRef.current) {
-        clearTimeout(pendingDeletePersonTimerRef.current);
-        pendingDeletePersonTimerRef.current = null;
-      }
-    };
-  }, []);
-
   const handleDelete = useCallback(() => {
     setShowDeleteModal(false);
+    const personId = id;
+    const snapshot = person || editedPerson;
 
-    const timeoutMs = 6000;
-    if (pendingDeletePersonTimerRef.current) {
-      clearTimeout(pendingDeletePersonTimerRef.current);
-      pendingDeletePersonTimerRef.current = null;
-    }
-
-    pendingDeletePersonTimerRef.current = setTimeout(async () => {
+    const run = async () => {
       try {
-        await deletePerson(id);
+        await deletePerson(personId);
         localStorage.removeItem("people");
         await fetchPeople();
         navigate("/people", {
           state: {
-            toast: { message: "Person deleted.", severity: "success" },
+            toast: {
+              message: "Person deleted.",
+              severity: "success",
+              autoHideDuration: 6000,
+              actionLabel: "Undo",
+              undo: { person: snapshot },
+            },
           },
         });
       } catch (error) {
@@ -1736,33 +1727,11 @@ function PersonDetail() {
           onAction: null,
           autoHideDuration: 2000,
         });
-      } finally {
-        pendingDeletePersonTimerRef.current = null;
       }
-    }, timeoutMs);
+    };
 
-    setToast({
-      open: true,
-      message: "Person deleted.",
-      severity: "success",
-      autoHideDuration: timeoutMs,
-      actionLabel: "Undo",
-      onAction: async () => {
-        if (pendingDeletePersonTimerRef.current) {
-          clearTimeout(pendingDeletePersonTimerRef.current);
-          pendingDeletePersonTimerRef.current = null;
-          setToast({
-            open: true,
-            message: "Delete cancelled.",
-            severity: "info",
-            actionLabel: null,
-            onAction: null,
-            autoHideDuration: 2000,
-          });
-        }
-      },
-    });
-  }, [deletePerson, fetchPeople, id, navigate]);
+    run();
+  }, [deletePerson, editedPerson, fetchPeople, id, navigate, person]);
 
   // Handlers for editing person details (passed to PersonEditForm)
   const handleChange = useCallback((field, value) => {
