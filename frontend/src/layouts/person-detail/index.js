@@ -119,7 +119,12 @@ const getInverseRelationLabel = (label = "") => {
   if (!normalized) {
     return label || "";
   }
-  return RELATION_INVERSE_MAP[normalized] || label;
+  if (
+    Object.prototype.hasOwnProperty.call(RELATION_INVERSE_MAP, normalized)
+  ) {
+    return RELATION_INVERSE_MAP[normalized] || "";
+  }
+  return label;
 };
 
 const getAutoReciprocalForRelation = (relation = "") => {
@@ -632,13 +637,13 @@ const getSiblingLabelForGender = (gender = "") => {
 const getGrandparentLabelForGender = (gender = "") => {
   if (gender === "male") return "Grandfather";
   if (gender === "female") return "Grandmother";
-  return "Grandparent";
+  return "";
 };
 
 const getGrandchildLabelForGender = (gender = "") => {
   if (gender === "male") return "Grandson";
   if (gender === "female") return "Granddaughter";
-  return "Grandchild";
+  return "";
 };
 
 const getParentInLawLabelForGender = (gender = "") => {

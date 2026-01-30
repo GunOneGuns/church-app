@@ -897,300 +897,367 @@ function PersonEditForm({
                 );
 
                 return (
-                  <MDBox
+                  <Card
                     key={`rcf-${fieldIndex}`}
-                    display="flex"
-                    gap={2}
-                    alignItems="center"
+                    variant="outlined"
+                    sx={{
+                      position: "relative",
+                      p: 2,
+                      pt: 3,
+                      borderRadius: 2,
+                      borderColor: "divider",
+                      overflow: "visible",
+                    }}
                   >
                     <MDBox
-                      display="flex"
-                      flexDirection="column"
-                      flex={1.5}
-                      gap={0.5}
+                      sx={{
+                        position: "absolute",
+                        top: -10,
+                        left: 14,
+                        px: 1,
+                        bgcolor: "background.paper",
+                      }}
                     >
-                      {personErrorMessage && (
-                        <MDTypography variant="caption" color="error">
-                          {personErrorMessage}
-                        </MDTypography>
-                      )}
-
-                      <Autocomplete
-                        freeSolo
-                        options={availablePeople}
-                        getOptionLabel={(option) =>
-                          option?.Name || option?.value || ""
-                        }
-                        value={selectedPerson}
-                        inputValue={field.value || ""}
-                        isOptionEqualToValue={(option, value) =>
-                          option?._id && value?._id
-                            ? option._id === value._id
-                            : option?.Name === value?.Name
-                        }
-                        filterOptions={(options, { inputValue }) => {
-                          if (!inputValue) return options;
-                          const input = inputValue.toLowerCase();
-                          return options.filter((option) => {
-                            const name = (option?.Name || "").toLowerCase();
-                            if (name.includes(input)) return true;
-                            // Fuzzy match: check if all input chars appear in order
-                            let nameIdx = 0;
-                            for (let i = 0; i < input.length; i++) {
-                              nameIdx = name.indexOf(input[i], nameIdx);
-                              if (nameIdx === -1) return false;
-                              nameIdx++;
-                            }
-                            return true;
-                          });
-                        }}
-                        onChange={(_, newValue) => {
-                          if (typeof newValue === "string") {
-                            updateRelationshipField(
-                              fieldIndex,
-                              "value",
-                              newValue,
-                            );
-                            updateRelationshipField(fieldIndex, "personId", "");
-                          } else if (newValue && typeof newValue === "object") {
-                            updateRelationshipField(
-                              fieldIndex,
-                              "value",
-                              newValue.Name || "",
-                            );
-                            updateRelationshipField(
-                              fieldIndex,
-                              "personId",
-                              newValue._id || "",
-                            );
-                          } else {
-                            updateRelationshipField(fieldIndex, "value", "");
-                            updateRelationshipField(fieldIndex, "personId", "");
-                          }
-                        }}
-                        onInputChange={(_, newInputValue, reason) => {
-                          if (reason === "input") {
-                            updateRelationshipField(
-                              fieldIndex,
-                              "value",
-                              newInputValue,
-                            );
-                            updateRelationshipField(fieldIndex, "personId", "");
-                          }
-                        }}
-                        renderOption={(
-                          props,
-                          option,
-                          { index: optionIndex },
-                        ) => (
-                          <li
-                            {...props}
-                            key={`${
-                              option?._id || option?.Name || "option"
-                            }-${optionIndex}`}
-                          >
-                            {option?.Name || ""}
-                          </li>
-                        )}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            variant="outlined"
-                            label="Person's Name"
-                            error={Boolean(personErrorMessage)}
-                            sx={{
-                              "& .MuiOutlinedInput-root": { height: "56px" },
-                            }}
-                          />
-                        )}
-                      />
+                      <MDTypography variant="caption" fontWeight="medium">
+                        Relationship
+                      </MDTypography>
                     </MDBox>
+
+                    <IconButton
+                      size="small"
+                      aria-label="Remove relationship"
+                      onClick={() => removeRelationshipField(fieldIndex)}
+                      sx={{
+                        position: "absolute",
+                        top: -14,
+                        right: -14,
+                        color: "text.secondary",
+                        bgcolor: "background.paper",
+                        border: "1px solid",
+                        borderColor: "divider",
+                        "&:hover": {
+                          bgcolor: "background.paper",
+                        },
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
 
                     <MDBox
                       display="flex"
-                      flexDirection="column"
-                      flex={1}
-                      gap={0.5}
+                      flexDirection={isMobileView ? "column" : "row"}
+                      gap={2}
+                      sx={{ pt: 0.5 }}
                     >
-                      {relationErrorMessage && (
-                        <MDTypography variant="caption" color="error">
-                          {relationErrorMessage}
-                        </MDTypography>
-                      )}
+                      <MDBox
+                        display="flex"
+                        flexDirection="column"
+                        gap={0.5}
+                        sx={{
+                          flex: isMobileView ? "unset" : "1 1 0",
+                          width: "100%",
+                          minWidth: 0,
+                        }}
+                      >
+                        {personErrorMessage && (
+                          <MDTypography variant="caption" color="error">
+                            {personErrorMessage}
+                          </MDTypography>
+                        )}
 
-                      <Autocomplete
-                        freeSolo
-                        options={RELATION_SUGGESTIONS}
-                        value={field.value2 || ""}
-                        filterOptions={(options, { inputValue }) => {
-                          if (!inputValue) return options;
-                          const input = inputValue.toLowerCase();
-                          return options.filter((option) => {
-                            const rel = option.toLowerCase();
-                            if (rel.includes(input)) return true;
-                            let relIdx = 0;
-                            for (let i = 0; i < input.length; i++) {
-                              relIdx = rel.indexOf(input[i], relIdx);
-                              if (relIdx === -1) return false;
-                              relIdx++;
+                        <Autocomplete
+                          freeSolo
+                          options={availablePeople}
+                          getOptionLabel={(option) =>
+                            option?.Name || option?.value || ""
+                          }
+                          value={selectedPerson}
+                          inputValue={field.value || ""}
+                          isOptionEqualToValue={(option, value) =>
+                            option?._id && value?._id
+                              ? option._id === value._id
+                              : option?.Name === value?.Name
+                          }
+                          filterOptions={(options, { inputValue }) => {
+                            if (!inputValue) return options;
+                            const input = inputValue.toLowerCase();
+                            return options.filter((option) => {
+                              const name = (option?.Name || "").toLowerCase();
+                              if (name.includes(input)) return true;
+                              // Fuzzy match: check if all input chars appear in order
+                              let nameIdx = 0;
+                              for (let i = 0; i < input.length; i++) {
+                                nameIdx = name.indexOf(input[i], nameIdx);
+                                if (nameIdx === -1) return false;
+                                nameIdx++;
+                              }
+                              return true;
+                            });
+                          }}
+                          onChange={(_, newValue) => {
+                            if (typeof newValue === "string") {
+                              updateRelationshipField(
+                                fieldIndex,
+                                "value",
+                                newValue,
+                              );
+                              updateRelationshipField(
+                                fieldIndex,
+                                "personId",
+                                "",
+                              );
+                            } else if (
+                              newValue &&
+                              typeof newValue === "object"
+                            ) {
+                              updateRelationshipField(
+                                fieldIndex,
+                                "value",
+                                newValue.Name || "",
+                              );
+                              updateRelationshipField(
+                                fieldIndex,
+                                "personId",
+                                newValue._id || "",
+                              );
+                            } else {
+                              updateRelationshipField(fieldIndex, "value", "");
+                              updateRelationshipField(
+                                fieldIndex,
+                                "personId",
+                                "",
+                              );
                             }
-                            return true;
-                          });
-                        }}
-                        onChange={(event, newValue) => {
-                          const updatedValue = newValue || "";
-                          updateRelationshipField(
-                            fieldIndex,
-                            "value2",
-                            updatedValue,
-                          );
-
-                          if (isValidRelationSuggestion(updatedValue)) {
-                            const autoValue =
-                              getAutoReciprocalValue(updatedValue) ||
-                              getExistingReciprocalForRelation(
-                                updatedValue,
-                                index,
-                              );
-                            updateRelationshipField(
-                              fieldIndex,
-                              "value3",
-                              autoValue || "",
-                            );
-                          } else {
-                            updateRelationshipField(fieldIndex, "value3", "");
-                          }
-                        }}
-                        onInputChange={(event, newInputValue) => {
-                          updateRelationshipField(
-                            fieldIndex,
-                            "value2",
-                            newInputValue,
-                          );
-
-                          if (isValidRelationSuggestion(newInputValue)) {
-                            const autoValue =
-                              getAutoReciprocalValue(newInputValue) ||
-                              getExistingReciprocalForRelation(
+                          }}
+                          onInputChange={(_, newInputValue, reason) => {
+                            if (reason === "input") {
+                              updateRelationshipField(
+                                fieldIndex,
+                                "value",
                                 newInputValue,
-                                index,
                               );
+                              updateRelationshipField(
+                                fieldIndex,
+                                "personId",
+                                "",
+                              );
+                            }
+                          }}
+                          renderOption={(
+                            props,
+                            option,
+                            { index: optionIndex },
+                          ) => (
+                            <li
+                              {...props}
+                              key={`${
+                                option?._id || option?.Name || "option"
+                              }-${optionIndex}`}
+                            >
+                              {option?.Name || ""}
+                            </li>
+                          )}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              variant="outlined"
+                              label="Person's Name"
+                              error={Boolean(personErrorMessage)}
+                              sx={{
+                                "& .MuiOutlinedInput-root": { height: "56px" },
+                              }}
+                            />
+                          )}
+                        />
+                      </MDBox>
+
+                      <MDBox
+                        display="flex"
+                        flexDirection="column"
+                        gap={0.5}
+                        sx={{
+                          flex: isMobileView ? "unset" : "1 1 0",
+                          width: "100%",
+                          minWidth: 0,
+                        }}
+                      >
+                        {relationErrorMessage && (
+                          <MDTypography variant="caption" color="error">
+                            {relationErrorMessage}
+                          </MDTypography>
+                        )}
+
+                        <Autocomplete
+                          freeSolo
+                          options={RELATION_SUGGESTIONS}
+                          value={field.value2 || ""}
+                          filterOptions={(options, { inputValue }) => {
+                            if (!inputValue) return options;
+                            const input = inputValue.toLowerCase();
+                            return options.filter((option) => {
+                              const rel = option.toLowerCase();
+                              if (rel.includes(input)) return true;
+                              let relIdx = 0;
+                              for (let i = 0; i < input.length; i++) {
+                                relIdx = rel.indexOf(input[i], relIdx);
+                                if (relIdx === -1) return false;
+                                relIdx++;
+                              }
+                              return true;
+                            });
+                          }}
+                          onChange={(event, newValue) => {
+                            const updatedValue = newValue || "";
                             updateRelationshipField(
                               fieldIndex,
-                              "value3",
-                              autoValue || "",
+                              "value2",
+                              updatedValue,
                             );
-                          } else {
-                            updateRelationshipField(fieldIndex, "value3", "");
-                          }
-                        }}
-                        renderInput={(params) => (
+
+                            if (isValidRelationSuggestion(updatedValue)) {
+                              const autoValue =
+                                getAutoReciprocalValue(updatedValue) ||
+                                getExistingReciprocalForRelation(
+                                  updatedValue,
+                                  index,
+                                );
+                              updateRelationshipField(
+                                fieldIndex,
+                                "value3",
+                                autoValue || "",
+                              );
+                            } else {
+                              updateRelationshipField(fieldIndex, "value3", "");
+                            }
+                          }}
+                          onInputChange={(event, newInputValue) => {
+                            updateRelationshipField(
+                              fieldIndex,
+                              "value2",
+                              newInputValue,
+                            );
+
+                            if (isValidRelationSuggestion(newInputValue)) {
+                              const autoValue =
+                                getAutoReciprocalValue(newInputValue) ||
+                                getExistingReciprocalForRelation(
+                                  newInputValue,
+                                  index,
+                                );
+                              updateRelationshipField(
+                                fieldIndex,
+                                "value3",
+                                autoValue || "",
+                              );
+                            } else {
+                              updateRelationshipField(fieldIndex, "value3", "");
+                            }
+                          }}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              variant="outlined"
+                              label="Their Relation to Me"
+                              error={Boolean(relationErrorMessage)}
+                              sx={{
+                                "& .MuiOutlinedInput-root": { height: "56px" },
+                              }}
+                            />
+                          )}
+                        />
+                      </MDBox>
+
+                      {showReciprocalField &&
+                        (autoReciprocalValue ? (
                           <TextField
-                            {...params}
                             variant="outlined"
-                            label="Their Relation to Me"
-                            error={Boolean(relationErrorMessage)}
+                            label="My Relation to Them"
+                            value={autoReciprocalValue}
+                            disabled
                             sx={{
+                              flex: isMobileView ? "unset" : "1 1 0",
+                              width: "100%",
+                              minWidth: 0,
                               "& .MuiOutlinedInput-root": { height: "56px" },
                             }}
                           />
-                        )}
-                      />
-                    </MDBox>
-
-                    {showReciprocalField &&
-                      (autoReciprocalValue ? (
-                        <TextField
-                          variant="outlined"
-                          label="My Relation to Them"
-                          value={autoReciprocalValue}
-                          disabled
-                          sx={{
-                            flex: 1,
-                            "& .MuiOutlinedInput-root": { height: "56px" },
-                          }}
-                        />
-                      ) : (
-                        <MDBox
-                          display="flex"
-                          flexDirection="column"
-                          flex={1}
-                          gap={0.5}
-                        >
-                          {reciprocalErrorMessage && (
-                            <MDTypography variant="caption" color="error">
-                              {reciprocalErrorMessage}
-                            </MDTypography>
-                          )}
-
-                          <Autocomplete
-                            freeSolo
-                            options={reciprocalOptions}
-                            value={field.value3 || ""}
-                            filterOptions={(options, { inputValue }) => {
-                              if (!inputValue) return options;
-                              const input = inputValue.toLowerCase();
-                              return options.filter((option) => {
-                                const rel = option.toLowerCase();
-                                if (rel.includes(input)) return true;
-                                let relIdx = 0;
-                                for (let i = 0; i < input.length; i++) {
-                                  relIdx = rel.indexOf(input[i], relIdx);
-                                  if (relIdx === -1) return false;
-                                  relIdx++;
-                                }
-                                return true;
-                              });
+                        ) : (
+                          <MDBox
+                            display="flex"
+                            flexDirection="column"
+                            gap={0.5}
+                            sx={{
+                              flex: isMobileView ? "unset" : "1 1 0",
+                              width: "100%",
+                              minWidth: 0,
                             }}
-                            onChange={(event, newValue) => {
-                              const newReciprocal = newValue || "";
-                              updateRelationshipField(
-                                fieldIndex,
-                                "value3",
-                                newReciprocal,
-                              );
-                              syncReciprocalAcrossCategory(
-                                index,
-                                newReciprocal,
-                              );
-                            }}
-                            onInputChange={(event, newInputValue) => {
-                              updateRelationshipField(
-                                fieldIndex,
-                                "value3",
-                                newInputValue,
-                              );
-                              syncReciprocalAcrossCategory(
-                                index,
-                                newInputValue,
-                              );
-                            }}
-                            renderInput={(params) => (
-                              <TextField
-                                {...params}
-                                variant="outlined"
-                                label="My Relation to Them"
-                                error={Boolean(reciprocalErrorMessage)}
-                                sx={{
-                                  "& .MuiOutlinedInput-root": {
-                                    height: "56px",
-                                  },
-                                }}
-                              />
+                          >
+                            {reciprocalErrorMessage && (
+                              <MDTypography variant="caption" color="error">
+                                {reciprocalErrorMessage}
+                              </MDTypography>
                             )}
-                          />
-                        </MDBox>
-                      ))}
 
-                    <MDButton
-                      variant="outlined"
-                      color="error"
-                      onClick={() => removeRelationshipField(fieldIndex)}
-                      sx={{ height: "56px" }}
-                    >
-                      Remove
-                    </MDButton>
-                  </MDBox>
+                            <Autocomplete
+                              freeSolo
+                              options={reciprocalOptions}
+                              value={field.value3 || ""}
+                              filterOptions={(options, { inputValue }) => {
+                                if (!inputValue) return options;
+                                const input = inputValue.toLowerCase();
+                                return options.filter((option) => {
+                                  const rel = option.toLowerCase();
+                                  if (rel.includes(input)) return true;
+                                  let relIdx = 0;
+                                  for (let i = 0; i < input.length; i++) {
+                                    relIdx = rel.indexOf(input[i], relIdx);
+                                    if (relIdx === -1) return false;
+                                    relIdx++;
+                                  }
+                                  return true;
+                                });
+                              }}
+                              onChange={(event, newValue) => {
+                                const newReciprocal = newValue || "";
+                                updateRelationshipField(
+                                  fieldIndex,
+                                  "value3",
+                                  newReciprocal,
+                                );
+                                syncReciprocalAcrossCategory(
+                                  index,
+                                  newReciprocal,
+                                );
+                              }}
+                              onInputChange={(event, newInputValue) => {
+                                updateRelationshipField(
+                                  fieldIndex,
+                                  "value3",
+                                  newInputValue,
+                                );
+                                syncReciprocalAcrossCategory(
+                                  index,
+                                  newInputValue,
+                                );
+                              }}
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  variant="outlined"
+                                  label="My Relation to Them"
+                                  error={Boolean(reciprocalErrorMessage)}
+                                  sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                      height: "56px",
+                                    },
+                                  }}
+                                />
+                              )}
+                            />
+                          </MDBox>
+                        ))}
+                    </MDBox>
+                  </Card>
                 );
               })}
 
