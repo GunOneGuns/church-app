@@ -119,9 +119,7 @@ const getInverseRelationLabel = (label = "") => {
   if (!normalized) {
     return label || "";
   }
-  if (
-    Object.prototype.hasOwnProperty.call(RELATION_INVERSE_MAP, normalized)
-  ) {
+  if (Object.prototype.hasOwnProperty.call(RELATION_INVERSE_MAP, normalized)) {
     return RELATION_INVERSE_MAP[normalized] || "";
   }
   return label;
@@ -772,8 +770,7 @@ function PersonDetail() {
                 reciprocalValue ||
                 getAutoReciprocalForRelation(relationValue) ||
                 "",
-              personId:
-                personIdValue,
+              personId: personIdValue,
             });
           } else {
             initialCustomFields.push({
@@ -1325,7 +1322,9 @@ function PersonDetail() {
               : field?.value;
 
           if (Object.prototype.hasOwnProperty.call(field, "value2")) {
-            const relation = sanitizeTextInput(field?.value2, { maxLength: 60 });
+            const relation = sanitizeTextInput(field?.value2, {
+              maxLength: 60,
+            });
             const reciprocal = sanitizeTextInput(field?.value3, {
               maxLength: 60,
             });
@@ -1350,7 +1349,9 @@ function PersonDetail() {
 
         relationshipFieldsToValidate.forEach((field, index) => {
           const personId = String(field?.personId || "").trim();
-          const personName = sanitizeTextInput(field?.value, { maxLength: 240 });
+          const personName = sanitizeTextInput(field?.value, {
+            maxLength: 240,
+          });
           const relationValue = sanitizeTextInput(field?.value2, {
             maxLength: 60,
           });
@@ -1359,7 +1360,10 @@ function PersonDetail() {
           });
 
           const isBlankRelationship = !(
-            personId || personName || relationValue || reciprocalValue
+            personId ||
+            personName ||
+            relationValue ||
+            reciprocalValue
           );
           if (isBlankRelationship) {
             return;
@@ -1940,31 +1944,50 @@ function PersonDetail() {
                   </>
                 ) : (
                   <>
-                    <MDButton
-                      variant="gradient"
-                      color="info"
-                      onClick={handleEdit}
-                    >
-                      Edit
-                    </MDButton>
-                    <MDBox display="flex" flexDirection="column" gap={1}>
-                      <MDButton
-                        variant="gradient"
-                        color="error"
-                        onClick={() => setShowDeleteModal(true)}
-                      >
-                        Delete Person
-                      </MDButton>
-                      {openedFromGroup && (
+                    {openedFromGroup ? (
+                      <MDBox display="flex" gap={1} flexWrap="wrap">
                         <MDButton
-                          variant="outlined"
+                          variant="gradient"
+                          color="info"
+                          onClick={handleEdit}
+                        >
+                          Edit
+                        </MDButton>
+                        <MDButton
+                          variant="gradient"
+                          color="error"
+                          onClick={() => setShowDeleteModal(true)}
+                        >
+                          Delete
+                        </MDButton>
+                        <MDButton
+                          variant="gradient"
                           color="error"
                           onClick={handleRemoveFromGroup}
                         >
                           Remove From Group
                         </MDButton>
-                      )}
-                    </MDBox>
+                      </MDBox>
+                    ) : (
+                      <>
+                        <MDButton
+                          variant="gradient"
+                          color="info"
+                          onClick={handleEdit}
+                        >
+                          Edit
+                        </MDButton>
+                        <MDBox display="flex" flexDirection="column" gap={1}>
+                          <MDButton
+                            variant="gradient"
+                            color="error"
+                            onClick={() => setShowDeleteModal(true)}
+                          >
+                            Delete
+                          </MDButton>
+                        </MDBox>
+                      </>
+                    )}
                   </>
                 )}
               </MDBox>
@@ -2050,7 +2073,7 @@ function PersonDetail() {
                   ? isAddMode
                     ? "Cancel"
                     : "Discard Changes"
-                  : "Delete Person"}
+                  : "Delete"}
               </MDTypography>
             </Card>
 
@@ -2174,7 +2197,7 @@ function PersonDetail() {
         </DialogActions>
       </Dialog>
       <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-        <DialogTitle>Delete Person</DialogTitle>
+        <DialogTitle>Delete</DialogTitle>
         <DialogContent>
           <MDTypography variant="body2">Delete this person?</MDTypography>
         </DialogContent>
@@ -2183,7 +2206,7 @@ function PersonDetail() {
             Cancel
           </MDButton>
           <MDButton onClick={handleDelete} color="error">
-            Delete Person
+            Delete
           </MDButton>
         </DialogActions>
       </Dialog>
