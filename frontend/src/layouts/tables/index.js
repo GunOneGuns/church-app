@@ -5,8 +5,14 @@ import Card from "@mui/material/Card";
 import Icon from "@mui/material/Icon";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
+import InputAdornment from "@mui/material/InputAdornment";
+import Tooltip from "@mui/material/Tooltip";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import Divider from "@mui/material/Divider";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
+import TuneIcon from "@mui/icons-material/Tune";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import MDBox from "components/MDBox";
@@ -128,6 +134,70 @@ function MobilePaginationControls({ page, totalPages, goToPage }) {
   );
 }
 
+function SearchFilterAdornment({ filter, onSelectFilter }) {
+  const menuIdRef = useRef(
+    `people-filter-menu-${Math.random().toString(36).slice(2)}`,
+  );
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
+  const isActive = filter && filter !== "default";
+
+  const handleOpen = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = (event) => {
+    event?.stopPropagation?.();
+    setAnchorEl(null);
+  };
+
+  return (
+    <InputAdornment position="end">
+      <Tooltip title="Filters">
+        <IconButton
+          size="small"
+          aria-label="Filters"
+          aria-controls={open ? menuIdRef.current : undefined}
+          aria-haspopup="menu"
+          aria-expanded={open ? "true" : undefined}
+          edge="end"
+          onClick={handleOpen}
+          sx={isActive ? { color: ACCENT_CYAN } : undefined}
+        >
+          <TuneIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+
+      <Menu
+        id={menuIdRef.current}
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <MDBox px={2} pt={1.25} pb={0.75}>
+          <MDTypography variant="caption" fontWeight="bold">
+            Filter By
+          </MDTypography>
+        </MDBox>
+        <Divider />
+        <MenuItem
+          selected={filter === "district"}
+          onClick={(event) => {
+            onSelectFilter?.(filter === "district" ? "default" : "district");
+            handleClose(event);
+          }}
+        >
+          District
+        </MenuItem>
+      </Menu>
+    </InputAdornment>
+  );
+}
+
 function People() {
   const { people, setPeople, refreshPeople } = peopleTableData();
   const navigate = useNavigate();
@@ -230,6 +300,9 @@ function People() {
 
   // Search
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchFilter, setSearchFilter] = useState("default");
+  const searchPlaceholder =
+    searchFilter === "district" ? "Search by District" : "Search...";
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -239,6 +312,12 @@ function People() {
   const filteredPeople = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return people;
+    if (searchFilter === "district") {
+      return people.filter((p) =>
+        (p?.District || "").toLowerCase().includes(q),
+      );
+    }
+
     const qDigits = q.replace(/\D/g, "");
     return people.filter((p) => {
       const name = (p?.Name || "").toLowerCase();
@@ -248,7 +327,7 @@ function People() {
       const phoneMatch = qDigits ? phoneDigits.includes(qDigits) : false;
       return name.includes(q) || nameChi.includes(q) || phoneMatch;
     });
-  }, [people, searchQuery]);
+  }, [people, searchQuery, searchFilter]);
 
   const handleDeletePerson = useCallback(
     async (person) => {
@@ -370,7 +449,7 @@ function People() {
   useEffect(() => {
     setPage(1);
     setInputValue("1");
-  }, [searchQuery]);
+  }, [searchQuery, searchFilter]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -431,13 +510,21 @@ function People() {
               gap={1}
               sx={{ flexShrink: 0 }}
             >
-              <TextField
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                size="small"
-                sx={{ flex: 1 }}
-              />
+	              <TextField
+	                placeholder={searchPlaceholder}
+	                value={searchQuery}
+	                onChange={(e) => setSearchQuery(e.target.value)}
+	                InputProps={{
+	                  endAdornment: (
+	                    <SearchFilterAdornment
+	                      filter={searchFilter}
+	                      onSelectFilter={setSearchFilter}
+	                    />
+	                  ),
+	                }}
+	                size="small"
+	                sx={{ flex: 1 }}
+	              />
             </MDBox>
 
             <MDBox
@@ -558,13 +645,21 @@ function People() {
                   p={2}
                   gap={2}
                 >
-                  <TextField
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    size="small"
-                    sx={{ width: { xs: "100%", sm: 280 }, maxWidth: "100%" }}
-                  />
+	                  <TextField
+	                    placeholder={searchPlaceholder}
+	                    value={searchQuery}
+	                    onChange={(e) => setSearchQuery(e.target.value)}
+	                    InputProps={{
+	                      endAdornment: (
+	                        <SearchFilterAdornment
+	                          filter={searchFilter}
+	                          onSelectFilter={setSearchFilter}
+	                        />
+	                      ),
+	                    }}
+	                    size="small"
+	                    sx={{ width: { xs: "100%", sm: 280 }, maxWidth: "100%" }}
+	                  />
 
                   <DesktopPaginationControls
                     page={page}

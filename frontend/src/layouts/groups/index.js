@@ -4,8 +4,11 @@ import Card from "@mui/material/Card";
 import Icon from "@mui/material/Icon";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
+import InputAdornment from "@mui/material/InputAdornment";
+import Tooltip from "@mui/material/Tooltip";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
+import TuneIcon from "@mui/icons-material/Tune";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
@@ -107,6 +110,70 @@ function DesktopPaginationControls({
   );
 }
 
+function SearchFilterAdornment({ filter, onSelectFilter }) {
+  const menuIdRef = useRef(
+    `groups-filter-menu-${Math.random().toString(36).slice(2)}`,
+  );
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
+  const isActive = filter && filter !== "default";
+
+  const handleOpen = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = (event) => {
+    event?.stopPropagation?.();
+    setAnchorEl(null);
+  };
+
+  return (
+    <InputAdornment position="end">
+      <Tooltip title="Filters">
+        <IconButton
+          size="small"
+          aria-label="Filters"
+          aria-controls={open ? menuIdRef.current : undefined}
+          aria-haspopup="menu"
+          aria-expanded={open ? "true" : undefined}
+          edge="end"
+          onClick={handleOpen}
+          sx={isActive ? { color: ACCENT_CYAN } : undefined}
+        >
+          <TuneIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+
+      <Menu
+        id={menuIdRef.current}
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <MDBox px={2} pt={1.25} pb={0.75}>
+          <MDTypography variant="caption" fontWeight="bold">
+            Filter By
+          </MDTypography>
+        </MDBox>
+        <Divider />
+        <MenuItem
+          selected={filter === "test"}
+          onClick={(event) => {
+            onSelectFilter?.(filter === "test" ? "default" : "test");
+            handleClose(event);
+          }}
+        >
+          test
+        </MenuItem>
+      </Menu>
+    </InputAdornment>
+  );
+}
+
 function Groups() {
   const { groups, refreshGroups, setGroups } = groupsTableData();
   const navigate = useNavigate();
@@ -141,6 +208,7 @@ function Groups() {
   }, [dispatch, isMobile]);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchFilter, setSearchFilter] = useState("default");
   const [page, setPage] = useState(1);
   const [inputValue, setInputValue] = useState("1");
   const rowsPerPage = 10;
@@ -376,16 +444,24 @@ function Groups() {
               alignItems="center"
               gap={1}
               sx={{ flexShrink: 0 }}
-            >
-              <TextField
-                placeholder="Search by group name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                size="small"
-                sx={{ flex: 1 }}
-              />
-              {/* <MDButton ... /> */}
-            </MDBox>
+	            >
+	              <TextField
+	                placeholder="Search by group name..."
+	                value={searchQuery}
+	                onChange={(e) => setSearchQuery(e.target.value)}
+	                InputProps={{
+	                  endAdornment: (
+	                    <SearchFilterAdornment
+	                      filter={searchFilter}
+	                      onSelectFilter={setSearchFilter}
+	                    />
+	                  ),
+	                }}
+	                size="small"
+	                sx={{ flex: 1 }}
+	              />
+	              {/* <MDButton ... /> */}
+	            </MDBox>
 
             <MDBox
               sx={{
@@ -597,13 +673,21 @@ function Groups() {
                   alignItems="center"
                   p={2}
                 >
-                  <TextField
-                    placeholder="Search by group name..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    size="small"
-                    sx={{ width: { xs: "100%", sm: 280 }, maxWidth: "100%" }}
-                  />
+	                  <TextField
+	                    placeholder="Search by group name..."
+	                    value={searchQuery}
+	                    onChange={(e) => setSearchQuery(e.target.value)}
+	                    InputProps={{
+	                      endAdornment: (
+	                        <SearchFilterAdornment
+	                          filter={searchFilter}
+	                          onSelectFilter={setSearchFilter}
+	                        />
+	                      ),
+	                    }}
+	                    size="small"
+	                    sx={{ width: { xs: "100%", sm: 280 }, maxWidth: "100%" }}
+	                  />
 
                   {/* Desktop/Web paginator now matches People + GroupDetail */}
                   <DesktopPaginationControls
