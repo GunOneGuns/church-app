@@ -54,6 +54,13 @@ function PersonDisplay({
     ? person.ProfilePic
     : defaultProfilePic;
 
+  const truncateText = (value, limit = 7) => {
+    const text = String(value ?? "");
+    if (text.length <= limit) return text;
+    if (limit <= 1) return "…";
+    return `${text.slice(0, limit - 1)}…`;
+  };
+
   return (
     <Grid container spacing={3}>
       {/* Left Column: Profile Picture and Name Only */}
@@ -83,7 +90,7 @@ function PersonDisplay({
 
           {/* Display Name */}
           <MDTypography variant="h5" mt={2}>
-            {person?.Name || ""}
+            {truncateText(person?.Name || "", 17)}
           </MDTypography>
         </MDBox>
       </Grid>

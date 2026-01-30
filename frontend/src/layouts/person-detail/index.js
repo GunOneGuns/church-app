@@ -110,6 +110,7 @@ const knownFields = [
   "District",
   "Address",
   "ProfilePic",
+  "deletedAt",
 ];
 
 const normalizeTextValue = (value = "") => value.trim().toLowerCase();
