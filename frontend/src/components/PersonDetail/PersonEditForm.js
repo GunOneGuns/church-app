@@ -14,7 +14,9 @@ import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
+import IconButton from "@mui/material/IconButton";
 import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import Card from "@mui/material/Card";
 import { useTheme } from "@mui/material/styles";
@@ -63,10 +65,12 @@ function PersonEditForm({
   defaultProfilePic,
   // Handlers passed from parent
   handleChange,
-  addCustomField,
+  addPersonalCustomField,
   addRelationshipField,
-  updateCustomField,
-  removeCustomField,
+  updatePersonalCustomField,
+  removePersonalCustomField,
+  updateRelationshipField,
+  removeRelationshipField,
   handleFileChange,
   registerProfilePicProcessor,
   // Upload states passed from parent
@@ -160,7 +164,7 @@ function PersonEditForm({
         idx !== changedIndex &&
         getRelationCategory(field.value2) === category
       ) {
-        updateCustomField(field.originalIndex, "value3", newReciprocal);
+        updateRelationshipField(field.originalIndex, "value3", newReciprocal);
       }
     });
   };
@@ -699,89 +703,149 @@ function PersonEditForm({
                   typeof field.originalIndex === "number"
                     ? field.originalIndex
                     : index;
+                const fieldName = String(field.key || "").trim();
+                const cardTitle = fieldName || "Custom";
+                const hasFieldName = Boolean(fieldName);
 
                 return (
-                  <MDBox
+                  <Card
                     key={`pcf-${fieldIndex}`}
-                    display="flex"
-                    gap={2}
-                    alignItems="center"
+                    variant="outlined"
+                    sx={{
+                      position: "relative",
+                      p: 2,
+                      pt: 3,
+                      borderRadius: 2,
+                      borderColor: "divider",
+                      overflow: "visible",
+                    }}
                   >
-                    <Autocomplete
-                      freeSolo
-                      options={FIELD_NAME_SUGGESTIONS}
-                      value={field.key || ""}
-                      onChange={(event, newValue) =>
-                        updateCustomField(fieldIndex, "key", newValue || "")
-                      }
-                      onInputChange={(event, newInputValue) =>
-                        updateCustomField(fieldIndex, "key", newInputValue)
-                      }
-                      sx={{ flex: 1 }}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          variant="outlined"
-                          label="Field Name"
-                          sx={{
-                            "& .MuiOutlinedInput-root": { height: "56px" },
-                          }}
-                        />
-                      )}
-                      renderOption={(props, option) => {
-                        const [start, match, end] = splitMatch(
-                          option,
-                          field.key || "",
-                        );
-                        return (
-                          <li {...props}>
-                            {match ? (
-                              <>
-                                {start}
-                                <Highlight>{match}</Highlight>
-                                {end}
-                              </>
-                            ) : (
-                              option
-                            )}
-                          </li>
-                        );
-                      }}
-                    />
-
-                    <TextField
-                      variant="outlined"
-                      label="Value"
-                      value={field.value}
-                      onChange={(e) =>
-                        updateCustomField(fieldIndex, "value", e.target.value)
-                      }
+                    <MDBox
                       sx={{
-                        flex: 1,
-                        "& .MuiOutlinedInput-root": { height: "56px" },
+                        position: "absolute",
+                        top: -10,
+                        left: 14,
+                        px: 1,
+                        bgcolor: "background.paper",
                       }}
-                    />
-
-                    <MDButton
-                      variant="outlined"
-                      color="error"
-                      onClick={() => removeCustomField(fieldIndex)}
-                      sx={{ height: "56px" }}
                     >
-                      Remove
-                    </MDButton>
-                  </MDBox>
+                      <MDTypography variant="caption" fontWeight="medium">
+                        {cardTitle}
+                      </MDTypography>
+                    </MDBox>
+
+                    <IconButton
+                      size="small"
+                      aria-label="Remove custom field"
+                      onClick={() => removePersonalCustomField(fieldIndex)}
+                      sx={{
+                        position: "absolute",
+                        top: -14,
+                        right: -14,
+                        color: "text.secondary",
+                        bgcolor: "background.paper",
+                        border: "1px solid",
+                        borderColor: "divider",
+                        "&:hover": {
+                          bgcolor: "background.paper",
+                        },
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+
+                    <MDBox
+                      display="flex"
+                      flexDirection={isMobileView ? "column" : "row"}
+                      gap={2}
+                      sx={{ pt: 0.5 }}
+                    >
+                      <Autocomplete
+                        freeSolo
+                        options={FIELD_NAME_SUGGESTIONS}
+                        value={field.key || ""}
+                        onChange={(event, newValue) =>
+                          updatePersonalCustomField(
+                            fieldIndex,
+                            "key",
+                            newValue || "",
+                          )
+                        }
+                        onInputChange={(event, newInputValue) =>
+                          updatePersonalCustomField(
+                            fieldIndex,
+                            "key",
+                            newInputValue,
+                          )
+                        }
+                        sx={{
+                          flex: isMobileView ? "unset" : "1 1 0",
+                          minWidth: 0,
+                          width: "100%",
+                        }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            variant="outlined"
+                            label="Field Name"
+                            sx={{
+                              "& .MuiOutlinedInput-root": { height: "56px" },
+                            }}
+                          />
+                        )}
+                        renderOption={(props, option) => {
+                          const [start, match, end] = splitMatch(
+                            option,
+                            field.key || "",
+                          );
+                          return (
+                            <li {...props}>
+                              {match ? (
+                                <>
+                                  {start}
+                                  <Highlight>{match}</Highlight>
+                                  {end}
+                                </>
+                              ) : (
+                                option
+                              )}
+                            </li>
+                          );
+                        }}
+                      />
+
+                      <TextField
+                        variant="outlined"
+                        label="Value"
+                        value={field.value}
+                        disabled={!hasFieldName}
+                        onChange={(e) =>
+                          updatePersonalCustomField(
+                            fieldIndex,
+                            "value",
+                            e.target.value,
+                          )
+                        }
+                        sx={{
+                          flex: isMobileView ? "unset" : "1 1 0",
+                          minWidth: 0,
+                          width: "100%",
+                          "& .MuiOutlinedInput-root": { height: "56px" },
+                        }}
+                      />
+                    </MDBox>
+                  </Card>
                 );
               })}
 
               <MDButton
                 variant="outlined"
                 color="info"
-                onClick={addCustomField}
+                onClick={addPersonalCustomField}
                 sx={{ mt: 1, height: "56px" }}
                 startIcon={<AddIcon />}
               >
-                Add Other Custom Field
+                Add Custom Field
               </MDButton>
             </MDBox>
           </Card>
@@ -882,32 +946,36 @@ function PersonEditForm({
                         }}
                         onChange={(_, newValue) => {
                           if (typeof newValue === "string") {
-                            updateCustomField(fieldIndex, "value", newValue);
-                            updateCustomField(fieldIndex, "personId", "");
+                            updateRelationshipField(
+                              fieldIndex,
+                              "value",
+                              newValue,
+                            );
+                            updateRelationshipField(fieldIndex, "personId", "");
                           } else if (newValue && typeof newValue === "object") {
-                            updateCustomField(
+                            updateRelationshipField(
                               fieldIndex,
                               "value",
                               newValue.Name || "",
                             );
-                            updateCustomField(
+                            updateRelationshipField(
                               fieldIndex,
                               "personId",
                               newValue._id || "",
                             );
                           } else {
-                            updateCustomField(fieldIndex, "value", "");
-                            updateCustomField(fieldIndex, "personId", "");
+                            updateRelationshipField(fieldIndex, "value", "");
+                            updateRelationshipField(fieldIndex, "personId", "");
                           }
                         }}
                         onInputChange={(_, newInputValue, reason) => {
                           if (reason === "input") {
-                            updateCustomField(
+                            updateRelationshipField(
                               fieldIndex,
                               "value",
                               newInputValue,
                             );
-                            updateCustomField(fieldIndex, "personId", "");
+                            updateRelationshipField(fieldIndex, "personId", "");
                           }
                         }}
                         renderOption={(
@@ -971,7 +1039,11 @@ function PersonEditForm({
                         }}
                         onChange={(event, newValue) => {
                           const updatedValue = newValue || "";
-                          updateCustomField(fieldIndex, "value2", updatedValue);
+                          updateRelationshipField(
+                            fieldIndex,
+                            "value2",
+                            updatedValue,
+                          );
 
                           if (isValidRelationSuggestion(updatedValue)) {
                             const autoValue =
@@ -980,17 +1052,17 @@ function PersonEditForm({
                                 updatedValue,
                                 index,
                               );
-                            updateCustomField(
+                            updateRelationshipField(
                               fieldIndex,
                               "value3",
                               autoValue || "",
                             );
                           } else {
-                            updateCustomField(fieldIndex, "value3", "");
+                            updateRelationshipField(fieldIndex, "value3", "");
                           }
                         }}
                         onInputChange={(event, newInputValue) => {
-                          updateCustomField(
+                          updateRelationshipField(
                             fieldIndex,
                             "value2",
                             newInputValue,
@@ -1003,13 +1075,13 @@ function PersonEditForm({
                                 newInputValue,
                                 index,
                               );
-                            updateCustomField(
+                            updateRelationshipField(
                               fieldIndex,
                               "value3",
                               autoValue || "",
                             );
                           } else {
-                            updateCustomField(fieldIndex, "value3", "");
+                            updateRelationshipField(fieldIndex, "value3", "");
                           }
                         }}
                         renderInput={(params) => (
@@ -1072,7 +1144,7 @@ function PersonEditForm({
                             }}
                             onChange={(event, newValue) => {
                               const newReciprocal = newValue || "";
-                              updateCustomField(
+                              updateRelationshipField(
                                 fieldIndex,
                                 "value3",
                                 newReciprocal,
@@ -1083,7 +1155,7 @@ function PersonEditForm({
                               );
                             }}
                             onInputChange={(event, newInputValue) => {
-                              updateCustomField(
+                              updateRelationshipField(
                                 fieldIndex,
                                 "value3",
                                 newInputValue,
@@ -1113,7 +1185,7 @@ function PersonEditForm({
                     <MDButton
                       variant="outlined"
                       color="error"
-                      onClick={() => removeCustomField(fieldIndex)}
+                      onClick={() => removeRelationshipField(fieldIndex)}
                       sx={{ height: "56px" }}
                     >
                       Remove
@@ -1247,7 +1319,9 @@ function PersonEditForm({
                     onClick={() => {
                       if (!setSelectedGroupIds || !groupId) return;
                       setSelectedGroupIds((prev) =>
-                        (prev || []).filter((gid) => String(gid) !== String(groupId)),
+                        (prev || []).filter(
+                          (gid) => String(gid) !== String(groupId),
+                        ),
                       );
                     }}
                     onKeyDown={(event) => {
@@ -1255,7 +1329,9 @@ function PersonEditForm({
                         event.preventDefault();
                         if (!setSelectedGroupIds || !groupId) return;
                         setSelectedGroupIds((prev) =>
-                          (prev || []).filter((gid) => String(gid) !== String(groupId)),
+                          (prev || []).filter(
+                            (gid) => String(gid) !== String(groupId),
+                          ),
                         );
                       }
                     }}

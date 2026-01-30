@@ -1462,7 +1462,7 @@ function GroupDetail() {
           </MDTypography>
         </DialogContent>
         <DialogActions>
-          <MDButton onClick={closeDiscardConfirmModal} color="secondary">
+          <MDButton onClick={closeDiscardConfirmModal} color="info">
             Keep editing
           </MDButton>
           <MDButton onClick={confirmDiscard} color="error">

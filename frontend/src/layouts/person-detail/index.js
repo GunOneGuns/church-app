@@ -78,7 +78,9 @@ const looksLikeSqlInjection = (value) => {
   if (/[;`]/.test(text)) return true;
   if (text.includes("--")) return true;
   if (text.includes("/*") || text.includes("*/")) return true;
-  if (/\b(union\s+select|drop\s+table|insert\s+into|delete\s+from)\b/.test(text))
+  if (
+    /\b(union\s+select|drop\s+table|insert\s+into|delete\s+from)\b/.test(text)
+  )
     return true;
   if (/\b(or|and)\b\s+\d+\s*=\s*\d+/.test(text)) return true;
   return false;
@@ -682,7 +684,8 @@ function PersonDetail() {
       (editedPerson?.Name || "").trim().length ||
       (editedPerson?.NameChi || "").trim().length
     );
-  const [customFields, setCustomFields] = useState([]);
+  const [personalCustomFields, setPersonalCustomFields] = useState([]);
+  const [relationshipFields, setRelationshipFields] = useState([]);
   const [showNotFoundModal, setShowNotFoundModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDiscardConfirmModal, setShowDiscardConfirmModal] = useState(false);
@@ -737,16 +740,35 @@ function PersonDetail() {
         if (!knownFields.includes(key)) {
           if (isRelationshipFieldData(personData[key])) {
             const relationValue = personData[key].relation || "";
+            const personValue = personData[key].person || "";
+            const reciprocalValue = personData[key].reciprocal || "";
+            const personIdValue =
+              personData[key].personId || personData[key].personID || "";
+
+            // Migration/guard: if something looks like a relationship object but has no relation/personId,
+            // treat it as a plain custom field (older bug saved personal custom fields as {person,relation,...}).
+            if (
+              !String(relationValue || "").trim() &&
+              !String(personIdValue || "").trim() &&
+              !String(reciprocalValue || "").trim()
+            ) {
+              initialCustomFields.push({
+                key: key,
+                value: personValue,
+              });
+              return;
+            }
+
             initialCustomFields.push({
               key: key,
-              value: personData[key].person || "",
+              value: personValue,
               value2: relationValue,
               value3:
-                personData[key].reciprocal ||
+                reciprocalValue ||
                 getAutoReciprocalForRelation(relationValue) ||
                 "",
               personId:
-                personData[key].personId || personData[key].personID || "",
+                personIdValue,
             });
           } else {
             initialCustomFields.push({
@@ -760,6 +782,19 @@ function PersonDetail() {
     },
     [knownFields, isRelationshipFieldData],
   ); // Dependencies for useCallback
+
+  const splitDynamicFields = useCallback((fields = []) => {
+    const personal = [];
+    const relationships = [];
+    fields.forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(field, "value2")) {
+        relationships.push(field);
+      } else if (field?.key !== "ProfilePic") {
+        personal.push(field);
+      }
+    });
+    return { personal, relationships };
+  }, []);
 
   const buildPersonPayloadWithCustomFields = useCallback(
     (basePersonData = {}, fields = []) => {
@@ -780,7 +815,7 @@ function PersonDetail() {
         if (!actualKey) {
           actualKey = `CustomField_${index}`;
         }
-        if ("value2" in field) {
+        if (Object.prototype.hasOwnProperty.call(field, "value2")) {
           const autoReciprocal = getAutoReciprocalForRelation(field.value2);
           data[actualKey] = {
             personId: field.personId || "",
@@ -859,7 +894,7 @@ function PersonDetail() {
         Name: currentPersonName || "",
       };
       const currentPersonFieldsSnapshot = JSON.parse(
-        JSON.stringify(customFields || []),
+        JSON.stringify([...personalCustomFields, ...relationshipFields]),
       );
       const personById = new Map(people.map((person) => [person._id, person]));
       const personFieldsCache = new Map();
@@ -1058,7 +1093,8 @@ function PersonDetail() {
       findPersonForField,
       updatePerson,
       fetchPeople,
-      customFields,
+      personalCustomFields,
+      relationshipFields,
     ],
   );
 
@@ -1072,7 +1108,11 @@ function PersonDetail() {
         if (found) {
           setPerson(found);
           setEditedPerson(found);
-          setCustomFields(initializeCustomFields(found));
+          const { personal, relationships } = splitDynamicFields(
+            initializeCustomFields(found),
+          );
+          setPersonalCustomFields(personal);
+          setRelationshipFields(relationships);
         } else {
           setShowNotFoundModal(true);
         }
@@ -1086,9 +1126,10 @@ function PersonDetail() {
         Address: "",
         Contact: "",
       });
-      setCustomFields([]);
+      setPersonalCustomFields([]);
+      setRelationshipFields([]);
     }
-  }, [id, isAddMode, initializeCustomFields]);
+  }, [id, isAddMode, initializeCustomFields, splitDynamicFields]);
 
   // Effect to load people list for relationship suggestions
   useEffect(() => {
@@ -1239,11 +1280,14 @@ function PersonDetail() {
 
   const handleSave = useCallback(
     async (fieldsOverride = null) => {
-      const fieldsToUse = fieldsOverride || customFields;
+      const combinedFields = [...personalCustomFields, ...relationshipFields];
+      const fieldsToUse = fieldsOverride || combinedFields;
       try {
         // Add-person guard: require Name OR Chinese Name
         if (isAddMode) {
-          const name = sanitizeTextInput(editedPerson?.Name, { maxLength: 120 });
+          const name = sanitizeTextInput(editedPerson?.Name, {
+            maxLength: 120,
+          });
           const nameChi = sanitizeTextInput(editedPerson?.NameChi, {
             maxLength: 120,
           });
@@ -1268,15 +1312,54 @@ function PersonDetail() {
           }
         }
 
+        const cleanedFieldsToUse = fieldsToUse.filter((field) => {
+          const key = sanitizeTextInput(field?.key, { maxLength: 60 });
+          const value =
+            typeof field?.value === "string"
+              ? sanitizeTextInput(field.value, { maxLength: 240 })
+              : field?.value;
+
+          if (Object.prototype.hasOwnProperty.call(field, "value2")) {
+            const relation = sanitizeTextInput(field?.value2, { maxLength: 60 });
+            const reciprocal = sanitizeTextInput(field?.value3, {
+              maxLength: 60,
+            });
+            const personId = String(field?.personId || "").trim();
+            const person = typeof value === "string" ? value : "";
+            return Boolean(personId || person || relation || reciprocal);
+          }
+
+          // Personal custom field: skip if user added row but left it blank.
+          return Boolean(key || (typeof value === "string" ? value : ""));
+        });
+
         const errors = {};
         let isValid = true;
 
-        fieldsToUse.forEach((field, index) => {
-          if (!("value2" in field)) {
+        const relationshipFieldsToValidate =
+          fieldsOverride === null
+            ? relationshipFields
+            : cleanedFieldsToUse.filter((field) =>
+                Object.prototype.hasOwnProperty.call(field, "value2"),
+              );
+
+        relationshipFieldsToValidate.forEach((field, index) => {
+          const personId = String(field?.personId || "").trim();
+          const personName = sanitizeTextInput(field?.value, { maxLength: 240 });
+          const relationValue = sanitizeTextInput(field?.value2, {
+            maxLength: 60,
+          });
+          const reciprocalValue = sanitizeTextInput(field?.value3, {
+            maxLength: 60,
+          });
+
+          const isBlankRelationship = !(
+            personId || personName || relationValue || reciprocalValue
+          );
+          if (isBlankRelationship) {
             return;
           }
 
-          const relationValue = field.value2 || "";
           const normalizedRelation = normalizeTextValue(relationValue);
           const relationValid = RELATION_SUGGESTIONS.some(
             (option) => normalizeTextValue(option) === normalizedRelation,
@@ -1313,35 +1396,50 @@ function PersonDetail() {
           Name: sanitizeTextInput(editedPerson?.Name, { maxLength: 120 }),
           NameChi: sanitizeTextInput(editedPerson?.NameChi, { maxLength: 120 }),
           Email: sanitizeTextInput(editedPerson?.Email, { maxLength: 200 }),
-          District: sanitizeTextInput(editedPerson?.District, { maxLength: 120 }),
+          District: sanitizeTextInput(editedPerson?.District, {
+            maxLength: 120,
+          }),
           Address: sanitizeTextInput(editedPerson?.Address, { maxLength: 240 }),
           AnnouncementGroup: sanitizeTextInput(
             editedPerson?.AnnouncementGroup,
             { maxLength: 10 },
           ),
-          ChatGroup: sanitizeTextInput(editedPerson?.ChatGroup, { maxLength: 10 }),
+          ChatGroup: sanitizeTextInput(editedPerson?.ChatGroup, {
+            maxLength: 10,
+          }),
         };
 
         const dataToSave = buildPersonPayloadWithCustomFields(
           sanitizedEditedPerson,
-          fieldsToUse.map((field) => ({
-            ...field,
-            key: sanitizeTextInput(field?.key, { maxLength: 60 }),
-            value:
+          cleanedFieldsToUse.map((field) => {
+            const key = sanitizeTextInput(field?.key, { maxLength: 60 });
+            const value =
               typeof field?.value === "string"
                 ? sanitizeTextInput(field.value, { maxLength: 240 })
-                : field?.value,
-            value2:
-              typeof field?.value2 === "string"
-                ? sanitizeTextInput(field.value2, { maxLength: 60 })
-                : field?.value2,
-            value3:
-              typeof field?.value3 === "string"
-                ? sanitizeTextInput(field.value3, { maxLength: 60 })
-                : field?.value3,
-          })),
+                : field?.value;
+
+            if (Object.prototype.hasOwnProperty.call(field, "value2")) {
+              return {
+                key,
+                value,
+                value2:
+                  typeof field?.value2 === "string"
+                    ? sanitizeTextInput(field.value2, { maxLength: 60 })
+                    : field?.value2,
+                value3:
+                  typeof field?.value3 === "string"
+                    ? sanitizeTextInput(field.value3, { maxLength: 60 })
+                    : field?.value3,
+                personId: field?.personId || "",
+              };
+            }
+
+            // Personal custom field: ensure we don't accidentally create relationship-only keys
+            // (e.g. `value2: undefined`) which would cause the backend payload to become an object.
+            return { key, value };
+          }),
         );
-        const currentRelationshipFields = fieldsToUse.filter((field) =>
+        const currentRelationshipFields = cleanedFieldsToUse.filter((field) =>
           Object.prototype.hasOwnProperty.call(field, "value2"),
         );
         const previousRelationshipFields = isAddMode
@@ -1396,7 +1494,11 @@ function PersonDetail() {
             const found = people.find((p) => p._id === id);
             setPerson(found);
             setEditedPerson(found);
-            setCustomFields(initializeCustomFields(found));
+            const { personal, relationships } = splitDynamicFields(
+              initializeCustomFields(found || {}),
+            );
+            setPersonalCustomFields(personal);
+            setRelationshipFields(relationships);
             setPeopleList(people);
           }
           setIsEditing(false);
@@ -1409,12 +1511,14 @@ function PersonDetail() {
     },
     [
       editedPerson,
-      customFields,
+      personalCustomFields,
+      relationshipFields,
       isAddMode,
       id,
       person,
       navigate,
       initializeCustomFields,
+      splitDynamicFields,
       buildPersonPayloadWithCustomFields,
       syncReciprocalRelationships,
       handleProfilePicUpload,
@@ -1427,13 +1531,17 @@ function PersonDetail() {
       navigate("/people");
     } else {
       setEditedPerson(person); // Revert to original person data
-      setCustomFields(initializeCustomFields(person)); // Revert custom fields
+      const { personal, relationships } = splitDynamicFields(
+        initializeCustomFields(person || {}),
+      );
+      setPersonalCustomFields(personal);
+      setRelationshipFields(relationships);
       setIsEditing(false);
       setSelectedFile(null); // Clear selected file
       setUploadError(null); // Clear upload error
       setRelationshipFieldErrors({});
     }
-  }, [isAddMode, navigate, person, initializeCustomFields]);
+  }, [isAddMode, navigate, person, initializeCustomFields, splitDynamicFields]);
 
   const isDirty = useMemo(() => {
     if (selectedFile) return true;
@@ -1450,7 +1558,8 @@ function PersonDetail() {
       if (hasMeaningfulValue(editedPerson?.Address)) return true;
       if (hasMeaningfulValue(editedPerson?.AnnouncementGroup)) return true;
       if (hasMeaningfulValue(editedPerson?.ChatGroup)) return true;
-      return customFields.some(
+      const combinedFields = [...personalCustomFields, ...relationshipFields];
+      return combinedFields.some(
         (field) =>
           hasMeaningfulValue(field?.key) ||
           hasMeaningfulValue(field?.value) ||
@@ -1479,18 +1588,20 @@ function PersonDetail() {
       person,
       baselineFields,
     );
+    const combinedFields = [...personalCustomFields, ...relationshipFields];
     const currentPayload = buildPersonPayloadWithCustomFields(
       editedPerson,
-      customFields,
+      combinedFields,
     );
 
     return stableStringify(baselinePayload) !== stableStringify(currentPayload);
   }, [
     buildPersonPayloadWithCustomFields,
-    customFields,
     editedPerson,
     initializeCustomFields,
     isAddMode,
+    personalCustomFields,
+    relationshipFields,
     person,
     personGroups,
     selectedFile,
@@ -1649,54 +1760,62 @@ function PersonDetail() {
     setEditedPerson((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-  const addCustomField = useCallback(() => {
-    setCustomFields((prev) => [...prev, { key: "", value: "" }]);
+  const addPersonalCustomField = useCallback(() => {
+    setPersonalCustomFields((prev) => [...prev, { key: "", value: "" }]);
     setRelationshipFieldErrors({});
   }, []);
 
-  const stripRelationshipFields = useCallback((fields) => {
-    return fields.filter(
-      (field) => !Object.prototype.hasOwnProperty.call(field, "value2"),
-    );
-  }, []);
-
-  const addRelationshipField = useCallback(() => {
-    const newRelationshipKey = `Relationship_${Date.now()}_${
-      customFields.length
-    }`;
-    setCustomFields((prev) => [
-      ...prev,
-      { key: newRelationshipKey, value: "", value2: "", value3: "" },
-    ]);
-    setRelationshipFieldErrors({});
-  }, [customFields.length]); // Dependency on customFields.length to ensure unique key
-
-  const updateCustomField = useCallback((index, field, value) => {
-    setCustomFields((prev) => {
+  const updatePersonalCustomField = useCallback((index, field, value) => {
+    setPersonalCustomFields((prev) => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value }; // Ensure immutability
+      updated[index] = { ...updated[index], [field]: value };
       return updated;
     });
   }, []);
 
-  const removeCustomField = useCallback((index) => {
-    setCustomFields((prev) => prev.filter((_, i) => i !== index));
+  const removePersonalCustomField = useCallback((index) => {
+    setPersonalCustomFields((prev) => prev.filter((_, i) => i !== index));
+    setRelationshipFieldErrors({});
+  }, []);
+
+  const addRelationshipField = useCallback(() => {
+    const newRelationshipKey = `Relationship_${Date.now()}_${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+    setRelationshipFields((prev) => [
+      ...prev,
+      {
+        key: newRelationshipKey,
+        value: "",
+        value2: "",
+        value3: "",
+        personId: "",
+      },
+    ]);
+    setRelationshipFieldErrors({});
+  }, []);
+
+  const updateRelationshipField = useCallback((index, field, value) => {
+    setRelationshipFields((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  }, []);
+
+  const removeRelationshipField = useCallback((index) => {
+    setRelationshipFields((prev) => prev.filter((_, i) => i !== index));
     setRelationshipFieldErrors({});
   }, []);
 
   const handleClearAllRelationshipsNow = useCallback(async () => {
-    const relationshipFields = customFields.filter((field) =>
-      Object.prototype.hasOwnProperty.call(field, "value2"),
-    );
     if (relationshipFields.length === 0) {
       return;
     }
-
-    const strippedFields = stripRelationshipFields(customFields);
-    setCustomFields(strippedFields);
+    setRelationshipFields([]);
     setRelationshipFieldErrors({});
-    await handleSave(strippedFields);
-  }, [customFields, stripRelationshipFields, handleSave]);
+    await handleSave([...personalCustomFields]);
+  }, [handleSave, personalCustomFields, relationshipFields.length]);
 
   // Handlers for profile picture upload (passed to PersonEditForm)
   const handleFileChange = useCallback((event) => {
@@ -1725,18 +1844,18 @@ function PersonDetail() {
 
   if (!isAddMode && !person && !showNotFoundModal) return <div>Loading...</div>;
 
-  // Attach original indices so remove/update actions work correctly after filtering
-  const annotatedCustomFields = customFields.map((field, index) => ({
-    ...field,
-    originalIndex: index,
-  }));
-  // Filter customFields based on the presence of 'value2' (relationship)
-  // and ensure 'ProfilePic' is not rendered as a generic custom field
-  const personalInfoCustomFieldsForRender = annotatedCustomFields.filter(
-    (field) => !("value2" in field) && field.key !== "ProfilePic",
-  );
-  const relationshipCustomFieldsForRender = annotatedCustomFields.filter(
-    (field) => "value2" in field,
+  const personalInfoCustomFieldsForRender = personalCustomFields
+    .map((field, index) => ({
+      ...field,
+      originalIndex: index,
+    }))
+    .filter((field) => field.key !== "ProfilePic");
+
+  const relationshipCustomFieldsForRender = relationshipFields.map(
+    (field, index) => ({
+      ...field,
+      originalIndex: index,
+    }),
   );
 
   return (
@@ -1866,10 +1985,12 @@ function PersonDetail() {
                 defaultProfilePic={defaultProfilePic}
                 // Pass all relevant handlers and states
                 handleChange={handleChange}
-                addCustomField={addCustomField}
+                addPersonalCustomField={addPersonalCustomField}
                 addRelationshipField={addRelationshipField}
-                updateCustomField={updateCustomField}
-                removeCustomField={removeCustomField}
+                updatePersonalCustomField={updatePersonalCustomField}
+                removePersonalCustomField={removePersonalCustomField}
+                updateRelationshipField={updateRelationshipField}
+                removeRelationshipField={removeRelationshipField}
                 handleFileChange={handleFileChange}
                 registerProfilePicProcessor={registerProfilePicProcessor}
                 selectedFile={selectedFile}
@@ -1893,46 +2014,19 @@ function PersonDetail() {
           </MDBox>
         </Card>
 
-      {/* MOBILE action card (button as its own card) */}
-      {isMobileView && (
-        <MDBox>
-          <Card
-            onClick={() => {
-              if (isEditing || isAddMode) {
-                requestDiscardIfDirty(handleDiscard);
-              } else {
-                setShowDeleteModal(true);
-              }
-            }}
-            sx={{
-              mt: 2,
-              p: 2,
-              cursor: "pointer",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              backgroundColor: "error.main",
-              boxShadow: "none",
-            }}
-          >
-            <MDTypography
-              variant="button"
-              fontWeight="medium"
-              sx={{ color: "white.main", fontSize: "17px" }}
-            >
-              {isEditing || isAddMode
-                ? isAddMode
-                  ? "Cancel"
-                  : "Discard Changes"
-                : "Delete Person"}
-            </MDTypography>
-          </Card>
-
-          {openedFromGroup && !isEditing && !isAddMode && (
+        {/* MOBILE action card (button as its own card) */}
+        {isMobileView && (
+          <MDBox>
             <Card
-              onClick={handleRemoveFromGroup}
+              onClick={() => {
+                if (isEditing || isAddMode) {
+                  requestDiscardIfDirty(handleDiscard);
+                } else {
+                  setShowDeleteModal(true);
+                }
+              }}
               sx={{
-                mt: 1,
+                mt: 2,
                 p: 2,
                 cursor: "pointer",
                 display: "flex",
@@ -1947,12 +2041,39 @@ function PersonDetail() {
                 fontWeight="medium"
                 sx={{ color: "white.main", fontSize: "17px" }}
               >
-                Remove From Group
+                {isEditing || isAddMode
+                  ? isAddMode
+                    ? "Cancel"
+                    : "Discard Changes"
+                  : "Delete Person"}
               </MDTypography>
             </Card>
-          )}
-        </MDBox>
-      )}
+
+            {openedFromGroup && !isEditing && !isAddMode && (
+              <Card
+                onClick={handleRemoveFromGroup}
+                sx={{
+                  mt: 1,
+                  p: 2,
+                  cursor: "pointer",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  backgroundColor: "error.main",
+                  boxShadow: "none",
+                }}
+              >
+                <MDTypography
+                  variant="button"
+                  fontWeight="medium"
+                  sx={{ color: "white.main", fontSize: "17px" }}
+                >
+                  Remove From Group
+                </MDTypography>
+              </Card>
+            )}
+          </MDBox>
+        )}
       </MDBox>
 
       {/* MOBILE floating edit button (matches list FAB styling) */}
@@ -2018,10 +2139,7 @@ function PersonDetail() {
         autoHideDuration={toast.autoHideDuration}
         onClose={handleCloseToast}
       />
-      <Dialog
-        open={showDiscardConfirmModal}
-        onClose={closeDiscardConfirmModal}
-      >
+      <Dialog open={showDiscardConfirmModal} onClose={closeDiscardConfirmModal}>
         <DialogTitle>Discard changes?</DialogTitle>
         <DialogContent>
           <MDTypography variant="body2">
@@ -2029,7 +2147,7 @@ function PersonDetail() {
           </MDTypography>
         </DialogContent>
         <DialogActions>
-          <MDButton onClick={closeDiscardConfirmModal} color="secondary">
+          <MDButton onClick={closeDiscardConfirmModal} color="info">
             Keep editing
           </MDButton>
           <MDButton onClick={confirmDiscard} color="error">
