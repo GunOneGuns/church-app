@@ -18,6 +18,36 @@ export const columns = [
   { Header: "", accessor: "action", align: "center" },
 ];
 
+export function getPeopleColumns(t) {
+  const translate =
+    typeof t === "function" ? t : (_key, fallback) => fallback || _key;
+
+  return [
+    {
+      Header: translate("peoplePage.columns.name", "Name"),
+      accessor: "people",
+      width: "35%",
+      align: "left",
+    },
+    {
+      Header: translate("peoplePage.columns.address", "Address"),
+      accessor: "address",
+      align: "left",
+    },
+    {
+      Header: translate("peoplePage.columns.status", "Status"),
+      accessor: "status",
+      align: "center",
+    },
+    {
+      Header: translate("peoplePage.columns.mobile", "Mobile"),
+      accessor: "mobile",
+      align: "center",
+    },
+    { Header: "", accessor: "action", align: "center" },
+  ];
+}
+
 function People({ id, image, name, nameChi, district, onClick }) {
   const englishName =
     typeof name === "string" && name.trim() && name.trim() !== "-"

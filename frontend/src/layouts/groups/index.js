@@ -38,8 +38,8 @@ import { ACCENT_CYAN } from "constants.js";
 import defaultProfilePic from "assets/images/default-profile-picture.png";
 import Toast from "components/Toast";
 import { deleteGroup, updateGroup } from "services/convo-broker.js";
+import { useTranslation } from "i18n";
 
-const GROUPS_TABLE_TITLE = "Groups";
 const MOBILE_PAGINATION_HEIGHT = 30;
 
 function isMongoObjectId(value) {
@@ -111,6 +111,7 @@ function DesktopPaginationControls({
 }
 
 function SearchFilterAdornment({ filter, onSelectFilter }) {
+  const { t } = useTranslation();
   const menuIdRef = useRef(
     `groups-filter-menu-${Math.random().toString(36).slice(2)}`,
   );
@@ -131,10 +132,10 @@ function SearchFilterAdornment({ filter, onSelectFilter }) {
 
   return (
     <InputAdornment position="end">
-      <Tooltip title="Filters">
+      <Tooltip title={t("filters.label", "Filters")}>
         <IconButton
           size="small"
-          aria-label="Filters"
+          aria-label={t("filters.label", "Filters")}
           aria-controls={open ? menuIdRef.current : undefined}
           aria-haspopup="menu"
           aria-expanded={open ? "true" : undefined}
@@ -156,7 +157,7 @@ function SearchFilterAdornment({ filter, onSelectFilter }) {
       >
         <MDBox px={2} pt={1.25} pb={0.75}>
           <MDTypography variant="caption" fontWeight="bold">
-            Filter By
+            {t("filters.filterBy", "Filter By")}
           </MDTypography>
         </MDBox>
         <Divider />
@@ -167,7 +168,7 @@ function SearchFilterAdornment({ filter, onSelectFilter }) {
             handleClose(event);
           }}
         >
-          test
+          {t("filters.test", "test")}
         </MenuItem>
       </Menu>
     </InputAdornment>
@@ -179,6 +180,8 @@ function Groups() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("xl"));
+  const { t } = useTranslation();
+  const pageTitle = t("nav.groups", "Group");
   const [, dispatch] = useMaterialUIController();
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const [menuGroupId, setMenuGroupId] = useState(null);
@@ -203,12 +206,16 @@ function Groups() {
       setMobileNavbarTitle(dispatch, null);
       return undefined;
     }
-    setMobileNavbarTitle(dispatch, GROUPS_TABLE_TITLE);
+    setMobileNavbarTitle(dispatch, pageTitle);
     return () => setMobileNavbarTitle(dispatch, null);
-  }, [dispatch, isMobile]);
+  }, [dispatch, isMobile, pageTitle]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilter, setSearchFilter] = useState("default");
+  const searchPlaceholder = t(
+    "groupsPage.searchPlaceholder",
+    "Search by group name...",
+  );
   const [page, setPage] = useState(1);
   const [inputValue, setInputValue] = useState("1");
   const rowsPerPage = 10;
@@ -446,7 +453,7 @@ function Groups() {
               sx={{ flexShrink: 0 }}
 	            >
 	              <TextField
-	                placeholder="Search by group name..."
+	                placeholder={searchPlaceholder}
 	                value={searchQuery}
 	                onChange={(e) => setSearchQuery(e.target.value)}
 	                InputProps={{
@@ -476,7 +483,7 @@ function Groups() {
               {paginatedGroups.length ? (
                 <List disablePadding>
                   {paginatedGroups.map((group, index) => {
-                    const groupName = group?.Name || "N/A";
+                    const groupName = group?.Name || t("common.na", "N/A");
                     const slug = groupName.toLowerCase().replace(/\s+/g, "_");
                     const groupId = isMongoObjectId(group?._id)
                       ? group._id
@@ -514,7 +521,10 @@ function Groups() {
                           </ListItemAvatar>
                           <ListItemText
                             primary={groupName}
-                            secondary={`${group.MemberCount || 0} members`}
+                            secondary={`${group.MemberCount || 0} ${t(
+                              "groupDetailPage.members.countLabel",
+                              "members",
+                            )}`}
                             primaryTypographyProps={{
                               noWrap: true,
                               sx: { color: ACCENT_CYAN },
@@ -532,7 +542,7 @@ function Groups() {
               ) : (
                 <MDBox p={2}>
                   <MDTypography variant="button" color="text">
-                    No groups found.
+                    {t("groupsPage.noGroupsFound", "No groups found.")}
                   </MDTypography>
                 </MDBox>
               )}
@@ -599,7 +609,7 @@ function Groups() {
                   <List disablePadding>
                     {paginatedGroups.length ? (
                       paginatedGroups.map((group, index) => {
-                        const groupName = group?.Name || "N/A";
+                        const groupName = group?.Name || t("common.na", "N/A");
                         const slug = groupName
                           .toLowerCase()
                           .replace(/\s+/g, "_");
@@ -644,7 +654,10 @@ function Groups() {
                               </ListItemAvatar>
                               <ListItemText
                                 primary={groupName}
-                                secondary={`${group.MemberCount || 0} members`}
+                                secondary={`${group.MemberCount || 0} ${t(
+                                  "groupDetailPage.members.countLabel",
+                                  "members",
+                                )}`}
                                 primaryTypographyProps={{
                                   noWrap: true,
                                 }}
@@ -660,7 +673,7 @@ function Groups() {
                     ) : (
                       <MDBox p={2}>
                         <MDTypography variant="button" color="text">
-                          No groups found.
+                          {t("groupsPage.noGroupsFound", "No groups found.")}
                         </MDTypography>
                       </MDBox>
                     )}
@@ -674,7 +687,7 @@ function Groups() {
                   p={2}
                 >
 	                  <TextField
-	                    placeholder="Search by group name..."
+	                    placeholder={searchPlaceholder}
 	                    value={searchQuery}
 	                    onChange={(e) => setSearchQuery(e.target.value)}
 	                    InputProps={{
@@ -740,17 +753,17 @@ function Groups() {
           <ListItemIcon>
             <VisibilityOutlinedIcon fontSize="small" />
           </ListItemIcon>
-          View
+          {t("actions.view", "View")}
         </MenuItem>
         <MenuItem onClick={handleEditGroup}>
           <ListItemIcon>
             <EditOutlinedIcon fontSize="small" />
           </ListItemIcon>
-          Edit
+          {t("actions.edit", "Edit")}
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleDeleteGroup} sx={{ color: "error.main" }}>
-          Delete
+          {t("actions.delete", "Delete")}
         </MenuItem>
       </Menu>
       <Toast

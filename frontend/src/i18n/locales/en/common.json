@@ -1,0 +1,266 @@
+{
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "zhCN": "中文"
+  },
+  "nav": {
+    "title": "Asiawide Christian Assembly",
+    "home": "Home",
+    "people": "People",
+    "groups": "Group",
+    "events": "Event",
+    "more": "More"
+  },
+  "home": {
+    "visitors": "Visitors",
+    "donations": "Donations",
+    "baptisms": "Baptisms",
+    "prayerRequests": "Prayer Requests"
+  },
+  "actions": {
+    "label": "Actions",
+    "view": "View",
+    "edit": "Edit",
+    "delete": "Delete",
+    "undo": "Undo"
+  },
+  "buttons": {
+    "add": "Add",
+    "save": "Save",
+    "cancel": "Cancel",
+    "discard": "Discard",
+    "keepEditing": "Keep editing",
+    "ok": "OK",
+    "close": "Close",
+    "done": "Done"
+  },
+  "common": {
+    "loading": "Loading...",
+    "nil": "NIL",
+    "na": "N/A",
+    "user": "User",
+    "custom": "Custom",
+    "other": "Other",
+    "unknown": "Unknown"
+  },
+  "relations": {
+    "father": "Father",
+    "mother": "Mother",
+    "son": "Son",
+    "daughter": "Daughter",
+    "brother": "Brother",
+    "sister": "Sister",
+    "husband": "Husband",
+    "wife": "Wife",
+    "spouse": "Spouse",
+    "parent": "Parent",
+    "child": "Child",
+    "sibling": "Sibling",
+    "grandfather": "Grandfather",
+    "grandmother": "Grandmother",
+    "grandson": "Grandson",
+    "granddaughter": "Granddaughter",
+    "grandparent": "Grandparent",
+    "grandchild": "Grandchild",
+    "father-in-law": "Father-in-law",
+    "mother-in-law": "Mother-in-law",
+    "parent-in-law": "Parent-in-law",
+    "son-in-law": "Son-in-law",
+    "daughter-in-law": "Daughter-in-law",
+    "child-in-law": "Child-in-law",
+    "brother-in-law": "Brother-in-law",
+    "sister-in-law": "Sister-in-law",
+    "sibling-in-law": "Sibling-in-law",
+    "uncle": "Uncle",
+    "aunt": "Aunt",
+    "cousin": "Cousin",
+    "niece": "Niece",
+    "nephew": "Nephew",
+    "niece/nephew": "Niece/Nephew",
+    "friend": "Friend",
+    "colleague": "Colleague"
+  },
+  "search": {
+    "placeholder": "Search...",
+    "byDistrict": "Search by District"
+  },
+  "filters": {
+    "label": "Filters",
+    "filterBy": "Filter By",
+    "district": "District",
+    "test": "test"
+  },
+  "peoplePage": {
+    "title": "Brothers & Sisters",
+    "noPeopleFound": "No people found.",
+    "columns": {
+      "name": "Name",
+      "address": "Address",
+      "status": "Status",
+      "mobile": "Mobile"
+    }
+  },
+  "groupsPage": {
+    "searchPlaceholder": "Search by group name...",
+    "noGroupsFound": "No groups found."
+  },
+  "peopleOverlay": {
+    "step1": {
+      "contacts": "Contacts",
+      "sharing": "Info Sharing",
+      "meetingInfo": "Meeting Info",
+      "comingSoon": "Coming Soon"
+    },
+    "step2": {
+      "local": "Local",
+      "overseas": "Overseas",
+      "gospel": "Gospel",
+      "visits": "Visits"
+    }
+  },
+  "groupForm": {
+    "header": {
+      "addTitle": "Add Group",
+      "editTitle": "Edit Group"
+    },
+    "sections": {
+      "groupInformation": "Group Information"
+    },
+    "fields": {
+      "groupNameRequired": "Group Name *",
+      "description": "Description",
+      "members": "Members",
+      "searchPeople": "Search people..."
+    },
+    "photo": {
+      "chooseGroupPicture": "Choose Group Picture",
+      "adjustPhoto": "Adjust Photo",
+      "adjustGroupPicture": "Adjust Group Picture",
+      "cropperHelp": "Drag to reposition and use the slider or trackpad scroll to zoom; only the highlighted circle becomes the group picture.",
+      "doneAdjusting": "Done Adjusting"
+    },
+    "errors": {
+      "nameRequired": "Group name is required.",
+      "addFailed": "Failed to add group."
+    },
+    "toasts": {
+      "added": "Group added successfully."
+    }
+  },
+  "groupDetailPage": {
+    "actions": {
+      "removeFromGroup": "Remove from group",
+      "addMember": "Add member",
+      "addMembers": "Add members",
+      "back": "Back"
+    },
+    "members": {
+      "empty": "No members.",
+      "countLabel": "members"
+    },
+    "addMembersDialog": {
+      "added": "Added"
+    },
+    "toasts": {
+      "updated": "Group updated.",
+      "membersAdded": "Members added.",
+      "memberRemoved": "Member removed."
+    },
+    "errors": {
+      "notFound": "Group not found",
+      "updateFailed": "Failed to update group.",
+      "addMembersSavedOnly": "Add members is only available for saved groups.",
+      "addMembersFailed": "Failed to add members.",
+      "removeMemberSavedOnly": "Remove member is only available for saved groups.",
+      "removeMemberFailed": "Failed to remove member."
+    }
+  },
+  "personDetailPage": {
+    "header": {
+      "addTitle": "Add Person",
+      "editTitle": "Edit Person",
+      "viewTitle": "Person Details"
+    },
+    "sections": {
+      "personalInformation": "Personal Information",
+      "relatedPersons": "Related Persons",
+      "groups": "Groups"
+    },
+    "fields": {
+      "nameRequired": "Name *",
+      "chineseNameRequired": "Chinese Name *",
+      "nameLabel": "Name:",
+      "chineseNameLabel": "Chinese Name:",
+      "birthYear": "Birth Year",
+      "birthYearLabel": "Birth Year:",
+      "phoneNumber": "Phone Number",
+      "phoneNumberLabel": "Phone Number:",
+      "announcementGroup": "Announcement Group",
+      "announcementGroupLabel": "Announcement Group:",
+      "chatGroup": "Chat Group",
+      "chatGroupLabel": "Chat Group:",
+      "email": "Email",
+      "emailLabel": "Email:",
+      "district": "District",
+      "districtLabel": "District:",
+      "address": "Address",
+      "addressLabel": "Address:"
+    },
+    "customFields": {
+      "fieldName": "Field Name",
+      "value": "Value",
+      "addCustomField": "Add Custom Field",
+      "removeCustomFieldAria": "Remove custom field"
+    },
+    "relationships": {
+      "relationship": "Relationship",
+      "addRelationship": "Add Relationship",
+      "removeRelationshipAria": "Remove relationship",
+      "personName": "Person's Name",
+      "theirRelationToMe": "Their Relation to Me",
+      "myRelationToThem": "My Relation to Them",
+      "invalidRelation": "Please select a relation from the list.",
+      "noneFound": "No related persons found.",
+      "clearAllTest": "Clear All (Test)"
+    },
+    "groupsPanel": {
+      "createOneNow": "No groups — create one now",
+      "addToGroups": "Add to groups",
+      "searchGroups": "Search groups...",
+      "noGroupsSelected": "No groups selected.",
+      "noGroupsFound": "No groups found.",
+      "removeFromGroup": "Remove From Group"
+    },
+    "photo": {
+      "chooseProfilePicture": "Choose Profile Picture",
+      "adjustPhoto": "Adjust Photo",
+      "adjustProfilePicture": "Adjust Profile Picture",
+      "cropperHelp": "Drag to reposition and use the slider or trackpad scroll to zoom; only the highlighted circle becomes the profile photo.",
+      "doneAdjusting": "Done Adjusting"
+    },
+    "dialogs": {
+      "discardTitle": "Discard changes?",
+      "discardBody": "You have unsaved changes. Discard them?",
+      "notFoundTitle": "Person Not Found",
+      "notFoundBody": "The person you are looking for does not exist.",
+      "deleteTitle": "Delete",
+      "deleteBody": "Delete this person?"
+    },
+    "errors": {
+      "createFirstBeforeUpload": "Please create the person first before uploading an image.",
+      "uploadFailed": "Failed to upload image. Please try again.",
+      "nameRequired": "Please fill in Name or Chinese Name.",
+      "invalidNameChars": "Invalid characters detected in Name/Chinese Name. Please remove special symbols.",
+      "removeFromGroupSavedOnly": "Remove from group is only available for saved groups.",
+      "removeFromGroupFailed": "Failed to remove from group.",
+      "deleteFailed": "Failed to delete person."
+    },
+    "toasts": {
+      "created": "Created",
+      "saved": "Saved",
+      "removedFromGroup": "Removed from group.",
+      "personDeleted": "Person deleted."
+    }
+  }
+}

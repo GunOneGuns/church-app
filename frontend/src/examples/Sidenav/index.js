@@ -26,10 +26,13 @@ import List from "@mui/material/List";
 import Divider from "@mui/material/Divider";
 import Link from "@mui/material/Link";
 import Icon from "@mui/material/Icon";
+import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
 
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import { useTranslation } from "i18n";
 
 // Material Dashboard 2 React example components
 import SidenavCollapse from "examples/Sidenav/SidenavCollapse";
@@ -46,14 +49,11 @@ import {
   setWhiteSidenav,
 } from "context";
 
-function Sidenav({ color, brand, brandName, routes, ...rest }) {
+function Sidenav({ color, brandName, routes, ...rest }) {
+  const { t, language, setLanguage } = useTranslation();
   const [controller, dispatch] = useMaterialUIController();
-  const {
-    miniSidenav,
-    transparentSidenav,
-    whiteSidenav,
-    darkMode,
-  } = controller;
+  const { miniSidenav, transparentSidenav, whiteSidenav, darkMode } =
+    controller;
   const location = useLocation();
   const collapseName = location.pathname.replace("/", "");
   const hasExamples = routes.some((route) => route.type === "examples");
@@ -74,11 +74,11 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
       setMiniSidenav(dispatch, window.innerWidth < 1200);
       setTransparentSidenav(
         dispatch,
-        window.innerWidth < 1200 ? false : transparentSidenav
+        window.innerWidth < 1200 ? false : transparentSidenav,
       );
       setWhiteSidenav(
         dispatch,
-        window.innerWidth < 1200 ? false : whiteSidenav
+        window.innerWidth < 1200 ? false : whiteSidenav,
       );
     }
 
@@ -108,7 +108,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
             sx={{ textDecoration: "none" }}
           >
             <SidenavCollapse
-              name={name}
+              name={t(`nav.${key}`, name)}
               icon={icon}
               active={key === collapseName}
               noCollapse={noCollapse}
@@ -122,7 +122,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
             style={{ pointerEvents: disabled ? "none" : "auto" }}
           >
             <SidenavCollapse
-              name={name}
+              name={t(`nav.${key}`, name)}
               icon={icon}
               active={key === collapseName}
               disabled={disabled}
@@ -143,7 +143,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
             mb={1}
             ml={1}
           >
-            {title}
+            {t(`nav.${key}`, title)}
           </MDTypography>
         );
       } else if (type === "divider") {
@@ -158,7 +158,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
         );
       }
       return returnValue;
-    }
+    },
   );
 
   const renderExampleRoutes = routes.map(
@@ -174,7 +174,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
             sx={{ textDecoration: "none" }}
           >
             <SidenavCollapse
-              name={name}
+              name={t(`nav.${key}`, name)}
               icon={icon}
               active={key === collapseName}
               noCollapse={noCollapse}
@@ -188,7 +188,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
             style={{ pointerEvents: disabled ? "none" : "auto" }}
           >
             <SidenavCollapse
-              name={name}
+              name={t(`nav.${key}`, name)}
               icon={icon}
               active={key === collapseName}
               disabled={disabled}
@@ -197,7 +197,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
         );
       }
       return returnValue;
-    }
+    },
   );
 
   return (
@@ -220,6 +220,12 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
         {...rest}
         variant="permanent"
         ownerState={{ transparentSidenav, whiteSidenav, miniSidenav, darkMode }}
+        sx={{
+          "& .MuiDrawer-paper": {
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
       >
         <MDBox pt={3} pb={1} px={4} textAlign="center">
           <MDBox
@@ -238,15 +244,16 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
           <MDBox
             component={NavLink}
             to="/home"
-            display="flex"
-            alignItems="center"
+            display="block"
+            sx={{ width: "100%", textAlign: "center" }}
           >
-            {brand && (
-              <MDBox component="img" src={brand} alt="Brand" width="2rem" />
-            )}
             <MDBox
-              width={!brandName && "100%"}
-              sx={(theme) => sidenavLogoLabel(theme, { miniSidenav })}
+              sx={(theme) => ({
+                ...sidenavLogoLabel(theme, { miniSidenav }),
+                ml: 0,
+                width: "100%",
+                textAlign: "center",
+              })}
             >
               <MDTypography
                 component="h6"
@@ -265,7 +272,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
             (darkMode && !transparentSidenav && whiteSidenav)
           }
         />
-        <List>
+        <List sx={{ flex: 1 }}>
           {hasExamples && (
             <>
               <MDBox display="flex flex-col" alignItems="center">
@@ -275,7 +282,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
                   fontWeight="medium"
                   pl="1.5rem"
                 >
-                  Examples
+                  {t("nav.examples", "Examples")}
                 </MDTypography>
                 {renderExampleRoutes}
               </MDBox>
@@ -289,6 +296,55 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
           )}
           {renderRoutes}
         </List>
+
+        {!miniSidenav && (
+          <MDBox px={2} pb={2} sx={{ flexShrink: 0 }}>
+            <Divider
+              light={
+                (!darkMode && !whiteSidenav && !transparentSidenav) ||
+                (darkMode && !transparentSidenav && whiteSidenav)
+              }
+            />
+            <MDBox pt={1.5}>
+              <TextField
+                select
+                size="small"
+                fullWidth
+                label={t("language.label", "Language")}
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                sx={{
+                  "& .MuiInputLabel-root": {
+                    color: textColor === "dark" ? "rgba(0,0,0,0.87)" : "#fff",
+                  },
+                  "& .MuiOutlinedInput-root": {
+                    color: textColor === "dark" ? "rgba(0,0,0,0.87)" : "#fff",
+                  },
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor:
+                      textColor === "dark"
+                        ? "rgba(0,0,0,0.23)"
+                        : "rgba(255,255,255,0.5)",
+                  },
+                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                    borderColor:
+                      textColor === "dark"
+                        ? "rgba(0,0,0,0.35)"
+                        : "rgba(255,255,255,0.7)",
+                  },
+                  "& .MuiSvgIcon-root": {
+                    color: textColor === "dark" ? "rgba(0,0,0,0.54)" : "#fff",
+                  },
+                }}
+              >
+                <MenuItem value="en">{t("language.en", "English")}</MenuItem>
+                <MenuItem value="zh-CN">
+                  {t("language.zhCN", "简体中文")}
+                </MenuItem>
+              </TextField>
+            </MDBox>
+          </MDBox>
+        )}
       </SidenavRoot>
     </>
   );
@@ -297,7 +353,6 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
 // Setting default values for the props of Sidenav
 Sidenav.defaultProps = {
   color: "info",
-  brand: "",
 };
 
 // Typechecking props for the Sidenav
@@ -311,7 +366,6 @@ Sidenav.propTypes = {
     "error",
     "dark",
   ]),
-  brand: PropTypes.string,
   brandName: PropTypes.string.isRequired,
   routes: PropTypes.arrayOf(PropTypes.object).isRequired,
 };

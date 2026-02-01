@@ -18,6 +18,7 @@ import MDButton from "components/MDButton";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Toast from "components/Toast";
+import { useTranslation } from "i18n";
 import {
   updatePerson,
   fetchPeople,
@@ -667,6 +668,7 @@ function PersonDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const isAddMode = id === "add";
   const theme = useTheme();
   const isMobileView = useMediaQuery(theme.breakpoints.down("xl"));
@@ -1250,13 +1252,16 @@ function PersonDetail() {
       if (!fileToUpload) {
         return;
       }
-      const targetPersonId = personIdOverride || id;
-      if (!targetPersonId || targetPersonId === "add") {
-        setUploadError(
-          "Please create the person first before uploading an image.",
-        );
-        return;
-      }
+	      const targetPersonId = personIdOverride || id;
+	      if (!targetPersonId || targetPersonId === "add") {
+	        setUploadError(
+	          t(
+	            "personDetailPage.errors.createFirstBeforeUpload",
+	            "Please create the person first before uploading an image.",
+	          ),
+	        );
+	        return;
+	      }
       setUploadError(null);
       try {
         const response = await uploadProfilePicture(
@@ -1270,16 +1275,19 @@ function PersonDetail() {
         setSelectedFile(null);
         localStorage.removeItem("people");
         await fetchPeople();
-      } catch (error) {
-        console.error("Error uploading profile picture:", error);
-        setUploadError(
-          error.response?.data?.message ||
-            "Failed to upload image. Please try again.",
-        );
-      }
-    },
-    [selectedFile, id],
-  );
+	      } catch (error) {
+	        console.error("Error uploading profile picture:", error);
+	        setUploadError(
+	          error.response?.data?.message ||
+	            t(
+	              "personDetailPage.errors.uploadFailed",
+	              "Failed to upload image. Please try again.",
+	            ),
+	        );
+	      }
+	    },
+	    [selectedFile, id, t],
+	  );
 
   const handleSave = useCallback(
     async (fieldsOverride = null) => {
@@ -1295,24 +1303,30 @@ function PersonDetail() {
             maxLength: 120,
           });
 
-          if (!name && !nameChi) {
-            setToast({
-              open: true,
-              message: "Please fill in Name or Chinese Name.",
-              severity: "error",
-            });
-            return;
-          }
+	          if (!name && !nameChi) {
+	            setToast({
+	              open: true,
+	              message: t(
+	                "personDetailPage.errors.nameRequired",
+	                "Please fill in Name or Chinese Name.",
+	              ),
+	              severity: "error",
+	            });
+	            return;
+	          }
 
-          if (looksLikeSqlInjection(name) || looksLikeSqlInjection(nameChi)) {
-            setToast({
-              open: true,
-              message:
-                "Invalid characters detected in Name/Chinese Name. Please remove special symbols.",
-              severity: "error",
-            });
-            return;
-          }
+	          if (looksLikeSqlInjection(name) || looksLikeSqlInjection(nameChi)) {
+	            setToast({
+	              open: true,
+	              message:
+	                t(
+	                  "personDetailPage.errors.invalidNameChars",
+	                  "Invalid characters detected in Name/Chinese Name. Please remove special symbols.",
+	                ),
+	              severity: "error",
+	            });
+	            return;
+	          }
         }
 
         const cleanedFieldsToUse = fieldsToUse.filter((field) => {
@@ -1481,9 +1495,14 @@ function PersonDetail() {
           if (storedPeople) {
             setPeopleList(JSON.parse(storedPeople));
           }
-          navigate("/people", {
-            state: { toast: { message: "Created", severity: "success" } },
-          });
+	          navigate("/people", {
+	            state: {
+	              toast: {
+	                message: t("personDetailPage.toasts.created", "Created"),
+	                severity: "success",
+	              },
+	            },
+	          });
         } else {
           await updatePerson(id, dataToSave);
           if (pendingProfilePicFile) {
@@ -1512,7 +1531,11 @@ function PersonDetail() {
             setPeopleList(people);
           }
           setIsEditing(false);
-          setToast({ open: true, message: "Saved", severity: "success" });
+	          setToast({
+	            open: true,
+	            message: t("personDetailPage.toasts.saved", "Saved"),
+	            severity: "success",
+	          });
         }
         setRelationshipFieldErrors({});
       } catch (error) {
@@ -1523,15 +1546,16 @@ function PersonDetail() {
       editedPerson,
       personalCustomFields,
       relationshipFields,
-      isAddMode,
-      id,
-      person,
-      navigate,
-      initializeCustomFields,
-      splitDynamicFields,
-      buildPersonPayloadWithCustomFields,
-      syncReciprocalRelationships,
-      handleProfilePicUpload,
+	      isAddMode,
+	      id,
+	      person,
+	      navigate,
+	      t,
+	      initializeCustomFields,
+	      splitDynamicFields,
+	      buildPersonPayloadWithCustomFields,
+	      syncReciprocalRelationships,
+	      handleProfilePicUpload,
       syncGroupsForPerson,
     ],
   ); // Dependencies for useCallback
@@ -1648,14 +1672,17 @@ function PersonDetail() {
     const isMongoObjectId = (value) =>
       typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
 
-    if (!isMongoObjectId(groupId)) {
-      setToast({
-        open: true,
-        message: "Remove from group is only available for saved groups.",
-        severity: "warning",
-      });
-      return;
-    }
+	    if (!isMongoObjectId(groupId)) {
+	      setToast({
+	        open: true,
+	        message: t(
+	          "personDetailPage.errors.removeFromGroupSavedOnly",
+	          "Remove from group is only available for saved groups.",
+	        ),
+	        severity: "warning",
+	      });
+	      return;
+	    }
 
     const run = async () => {
       try {
@@ -1674,28 +1701,36 @@ function PersonDetail() {
           Members: nextMembers,
         });
 
-        navigate(from, {
-          state: {
-            toast: {
-              message: "Removed from group.",
-              severity: "success",
-              actionLabel: "Undo",
-              autoHideDuration: 6000,
-              undo: { members: currentIds },
-            },
-          },
-        });
-      } catch (error) {
-        setToast({
-          open: true,
-          message: error?.message || "Failed to remove from group.",
-          severity: "error",
-        });
-      }
+	        navigate(from, {
+	          state: {
+	            toast: {
+	              message: t(
+	                "personDetailPage.toasts.removedFromGroup",
+	                "Removed from group.",
+	              ),
+	              severity: "success",
+	              actionLabel: t("actions.undo", "Undo"),
+	              autoHideDuration: 6000,
+	              undo: { members: currentIds },
+	            },
+	          },
+	        });
+	      } catch (error) {
+	        setToast({
+	          open: true,
+	          message:
+	            error?.message ||
+	            t(
+	              "personDetailPage.errors.removeFromGroupFailed",
+	              "Failed to remove from group.",
+	            ),
+	          severity: "error",
+	        });
+	      }
     };
 
     run();
-  }, [id, location.state?.from, navigate]);
+	  }, [id, location.state?.from, navigate, t]);
 
   const handleDelete = useCallback(() => {
     setShowDeleteModal(false);
@@ -1707,32 +1742,37 @@ function PersonDetail() {
         await deletePerson(personId);
         localStorage.removeItem("people");
         await fetchPeople();
-        navigate("/people", {
-          state: {
-            toast: {
-              message: "Person deleted.",
-              severity: "success",
-              autoHideDuration: 6000,
-              actionLabel: "Undo",
-              undo: { person: snapshot },
-            },
-          },
-        });
+	        navigate("/people", {
+	          state: {
+	            toast: {
+	              message: t(
+	                "personDetailPage.toasts.personDeleted",
+	                "Person deleted.",
+	              ),
+	              severity: "success",
+	              autoHideDuration: 6000,
+	              actionLabel: t("actions.undo", "Undo"),
+	              undo: { person: snapshot },
+	            },
+	          },
+	        });
       } catch (error) {
         console.error("Failed to delete:", error);
-        setToast({
-          open: true,
-          message: error?.message || "Failed to delete person.",
-          severity: "error",
-          actionLabel: null,
-          onAction: null,
-          autoHideDuration: 2000,
-        });
+	        setToast({
+	          open: true,
+	          message:
+	            error?.message ||
+	            t("personDetailPage.errors.deleteFailed", "Failed to delete person."),
+	          severity: "error",
+	          actionLabel: null,
+	          onAction: null,
+	          autoHideDuration: 2000,
+	        });
       }
     };
 
     run();
-  }, [deletePerson, editedPerson, fetchPeople, id, navigate, person]);
+	  }, [deletePerson, editedPerson, fetchPeople, id, navigate, person, t]);
 
   // Handlers for editing person details (passed to PersonEditForm)
   const handleChange = useCallback((field, value) => {
@@ -1821,7 +1861,9 @@ function PersonDetail() {
     }
   }, [closeDiscardConfirmModal, isAddMode, isEditing]);
 
-  if (!isAddMode && !person && !showNotFoundModal) return <div>Loading...</div>;
+  if (!isAddMode && !person && !showNotFoundModal) {
+    return <div>{t("common.loading", "Loading...")}</div>;
+  }
 
   const personalInfoCustomFieldsForRender = personalCustomFields
     .map((field, index) => ({
@@ -1885,10 +1927,10 @@ function PersonDetail() {
               }
             >
               {isAddMode
-                ? "Add Person"
+                ? t("personDetailPage.header.addTitle", "Add Person")
                 : isEditing
-                ? "Edit Person"
-                : "Person Details"}
+                ? t("personDetailPage.header.editTitle", "Edit Person")
+                : t("personDetailPage.header.viewTitle", "Person Details")}
             </MDTypography>
 
             {isMobileView ? (
@@ -1902,14 +1944,18 @@ function PersonDetail() {
                       color="info"
                       onClick={() => handleSave()}
                     >
-                      {isAddMode ? "Add" : "Save"}
+                      {isAddMode
+                        ? t("buttons.add", "Add")
+                        : t("buttons.save", "Save")}
                     </MDButton>
                     <MDButton
                       variant="gradient"
                       color="error"
                       onClick={() => requestDiscardIfDirty(handleDiscard)}
                     >
-                      {isAddMode ? "Cancel" : "Discard"}
+                      {isAddMode
+                        ? t("buttons.cancel", "Cancel")
+                        : t("buttons.discard", "Discard")}
                     </MDButton>
                   </>
                 ) : (
@@ -1921,21 +1967,24 @@ function PersonDetail() {
                           color="info"
                           onClick={handleEdit}
                         >
-                          Edit
+                          {t("actions.edit", "Edit")}
                         </MDButton>
                         <MDButton
                           variant="gradient"
                           color="error"
                           onClick={() => setShowDeleteModal(true)}
                         >
-                          Delete
+                          {t("actions.delete", "Delete")}
                         </MDButton>
                         <MDButton
                           variant="gradient"
                           color="error"
                           onClick={handleRemoveFromGroup}
                         >
-                          Remove From Group
+                          {t(
+                            "personDetailPage.groupsPanel.removeFromGroup",
+                            "Remove From Group",
+                          )}
                         </MDButton>
                       </MDBox>
                     ) : (
@@ -1945,7 +1994,7 @@ function PersonDetail() {
                           color="info"
                           onClick={handleEdit}
                         >
-                          Edit
+                          {t("actions.edit", "Edit")}
                         </MDButton>
                         <MDBox display="flex" flexDirection="column" gap={1}>
                           <MDButton
@@ -1953,7 +2002,7 @@ function PersonDetail() {
                             color="error"
                             onClick={() => setShowDeleteModal(true)}
                           >
-                            Delete
+                            {t("actions.delete", "Delete")}
                           </MDButton>
                         </MDBox>
                       </>
@@ -2041,9 +2090,9 @@ function PersonDetail() {
               >
                 {isEditing || isAddMode
                   ? isAddMode
-                    ? "Cancel"
-                    : "Discard Changes"
-                  : "Delete"}
+                    ? t("buttons.cancel", "Cancel")
+                    : t("buttons.discard", "Discard")
+                  : t("actions.delete", "Delete")}
               </MDTypography>
             </Card>
 
@@ -2066,7 +2115,10 @@ function PersonDetail() {
                   fontWeight="medium"
                   sx={{ color: "white.main", fontSize: "17px" }}
                 >
-                  Remove From Group
+                  {t(
+                    "personDetailPage.groupsPanel.removeFromGroup",
+                    "Remove From Group",
+                  )}
                 </MDTypography>
               </Card>
             )}
@@ -2138,45 +2190,59 @@ function PersonDetail() {
         onClose={handleCloseToast}
       />
       <Dialog open={showDiscardConfirmModal} onClose={closeDiscardConfirmModal}>
-        <DialogTitle>Discard changes?</DialogTitle>
+        <DialogTitle>
+          {t("personDetailPage.dialogs.discardTitle", "Discard changes?")}
+        </DialogTitle>
         <DialogContent>
           <MDTypography variant="body2">
-            You have unsaved changes. Discard them?
+            {t(
+              "personDetailPage.dialogs.discardBody",
+              "You have unsaved changes. Discard them?",
+            )}
           </MDTypography>
         </DialogContent>
         <DialogActions>
           <MDButton onClick={closeDiscardConfirmModal} color="info">
-            Keep editing
+            {t("buttons.keepEditing", "Keep editing")}
           </MDButton>
           <MDButton onClick={confirmDiscard} color="error">
-            Discard
+            {t("buttons.discard", "Discard")}
           </MDButton>
         </DialogActions>
       </Dialog>
       <Dialog open={showNotFoundModal} onClose={handleCloseModal}>
-        <DialogTitle>Person Not Found</DialogTitle>
+        <DialogTitle>
+          {t("personDetailPage.dialogs.notFoundTitle", "Person Not Found")}
+        </DialogTitle>
         <DialogContent>
           <MDTypography variant="body2">
-            The person you are looking for does not exist.
+            {t(
+              "personDetailPage.dialogs.notFoundBody",
+              "The person you are looking for does not exist.",
+            )}
           </MDTypography>
         </DialogContent>
         <DialogActions>
           <MDButton onClick={handleCloseModal} color="info">
-            OK
+            {t("buttons.ok", "OK")}
           </MDButton>
         </DialogActions>
       </Dialog>
       <Dialog open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-        <DialogTitle>Delete</DialogTitle>
+        <DialogTitle>
+          {t("personDetailPage.dialogs.deleteTitle", "Delete")}
+        </DialogTitle>
         <DialogContent>
-          <MDTypography variant="body2">Delete this person?</MDTypography>
+          <MDTypography variant="body2">
+            {t("personDetailPage.dialogs.deleteBody", "Delete this person?")}
+          </MDTypography>
         </DialogContent>
         <DialogActions>
           <MDButton onClick={() => setShowDeleteModal(false)} color="secondary">
-            Cancel
+            {t("buttons.cancel", "Cancel")}
           </MDButton>
           <MDButton onClick={handleDelete} color="error">
-            Delete
+            {t("actions.delete", "Delete")}
           </MDButton>
         </DialogActions>
       </Dialog>

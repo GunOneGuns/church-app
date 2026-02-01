@@ -26,6 +26,7 @@ import Icon from "@mui/material/Icon";
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import { useTranslation } from "i18n";
 
 const BREADCRUMB_LABEL_CHAR_LIMIT = 17;
 
@@ -41,9 +42,35 @@ function formatLabel(label) {
 }
 
 function Breadcrumbs({ icon, title, route, light }) {
+  const { t } = useTranslation();
   const routeArray = Array.isArray(route) ? route : String(route).split("/").filter(Boolean);
   const routes = routeArray.slice(0, -1);
+
+  const ROUTE_KEY_ALIASES = {
+    home: "home",
+    people: "people",
+    person: "people",
+    groups: "groups",
+    group: "groups",
+    events: "events",
+  };
+
+  const translateSegment = (segment) => {
+    const normalized = String(segment ?? "");
+    const aliasKey = ROUTE_KEY_ALIASES[normalized];
+    if (!aliasKey) return formatLabel(normalized);
+    return t(`nav.${aliasKey}`, formatLabel(normalized));
+  };
+
+  const getCrumbHref = (segment) => {
+    const normalized = String(segment ?? "");
+    if (normalized === "group") return "/groups";
+    if (normalized === "person") return "/people";
+    return `/${normalized}`;
+  };
+
   const formattedTitle = formatLabel(title);
+  const translatedTitle = translateSegment(title);
 
   return (
     <MDBox
@@ -60,7 +87,7 @@ function Breadcrumbs({ icon, title, route, light }) {
           },
         }}
       >
-        <Link to="/">
+        <Link to="/home">
           <MDTypography
             component="span"
             variant="body2"
@@ -72,15 +99,15 @@ function Breadcrumbs({ icon, title, route, light }) {
           </MDTypography>
         </Link>
         {routes.map((el, index) => {
-          const formattedEl = formatLabel(el);
-          const truncatedEl = truncateLabel(formattedEl);
+          const translatedEl = translateSegment(el);
+          const truncatedEl = truncateLabel(translatedEl);
 
           return (
             <Link
-              to={`/${el}`}
+              to={getCrumbHref(el)}
               key={`${el}-${index}`}
-              title={formattedEl}
-              aria-label={formattedEl}
+              title={translatedEl}
+              aria-label={translatedEl}
             >
               <MDTypography
                 component="span"
@@ -102,10 +129,10 @@ function Breadcrumbs({ icon, title, route, light }) {
           textTransform="capitalize"
           color={light ? "white" : "dark"}
           sx={{ lineHeight: 0 }}
-          title={formattedTitle}
-          aria-label={formattedTitle}
+          title={translatedTitle || formattedTitle}
+          aria-label={translatedTitle || formattedTitle}
         >
-          {truncateLabel(formattedTitle)}
+          {truncateLabel(translatedTitle || formattedTitle)}
         </MDTypography>
       </MuiBreadcrumbs>
       <MDTypography
@@ -119,7 +146,7 @@ function Breadcrumbs({ icon, title, route, light }) {
           wordBreak: "break-word",
         }}
       >
-        {formattedTitle}
+        {translatedTitle || formattedTitle}
       </MDTypography>
     </MDBox>
   );

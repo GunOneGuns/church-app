@@ -62,34 +62,35 @@ import {
 import MDButton from "components/MDButton";
 import { AuthContext } from "context";
 import { ACCENT_CYAN } from "constants.js";
+import { useTranslation } from "i18n";
 
-const MOBILE_TITLES = {
-  home: "Home",
-  people: "People",
-  person: "People",
-  groups: "Group",
-  group: "Group",
-  events: "Event",
-  event: "Event",
+const MOBILE_TITLE_KEYS = {
+  home: { key: "nav.home", fallback: "Home" },
+  people: { key: "nav.people", fallback: "People" },
+  person: { key: "nav.people", fallback: "People" },
+  groups: { key: "nav.groups", fallback: "Group" },
+  group: { key: "nav.groups", fallback: "Group" },
+  events: { key: "nav.events", fallback: "Event" },
+  event: { key: "nav.events", fallback: "Event" },
 };
 
-const getMobileTitle = (routeSegments = []) => {
+const getMobileTitle = (routeSegments = [], t) => {
   const normalizedSegments = Array.isArray(routeSegments)
     ? routeSegments.filter(Boolean)
     : [];
 
   if (!normalizedSegments.length) {
-    return "Home";
+    return typeof t === "function" ? t("nav.home", "Home") : "Home";
   }
 
   const first = normalizedSegments[0];
   const last = normalizedSegments[normalizedSegments.length - 1];
 
-  return (
-    MOBILE_TITLES[first] ||
-    MOBILE_TITLES[last] ||
-    String(last).replaceAll("-", " ")
-  );
+  const entry =
+    MOBILE_TITLE_KEYS[first] || MOBILE_TITLE_KEYS[last] || null;
+  if (entry && typeof t === "function") return t(entry.key, entry.fallback);
+  if (entry) return entry.fallback;
+  return String(last).replaceAll("-", " ");
 };
 
 function DashboardNavbar({
@@ -100,6 +101,7 @@ function DashboardNavbar({
   hideMobileBackButton,
 }) {
   const authContext = useContext(AuthContext);
+  const { t } = useTranslation();
   const [navbarType, setNavbarType] = useState();
   const [controller, dispatch] = useMaterialUIController();
   const {
@@ -215,14 +217,14 @@ function DashboardNavbar({
     const mobileBackground = theme.functions.linearGradient(
       ACCENT_CYAN,
       chroma(ACCENT_CYAN).darken(1).hex(),
-    );
+	    );
 
-    const mobileTitle = mobileNavbarTitle || getMobileTitle(route);
-    const mobileLight = true;
-    const mobileIconsStyle = getIconsStyle(mobileLight);
-    const mobileTitleText = String(mobileTitle || "");
-    const truncatedMobileTitle =
-      mobileTitleText.length > 26
+	    const mobileTitle = mobileNavbarTitle || getMobileTitle(route, t);
+	    const mobileLight = true;
+	    const mobileIconsStyle = getIconsStyle(mobileLight);
+	    const mobileTitleText = String(mobileTitle || "");
+	    const truncatedMobileTitle =
+	      mobileTitleText.length > 26
         ? `${mobileTitleText.slice(0, 26)}…`
         : mobileTitleText;
 

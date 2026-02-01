@@ -32,7 +32,7 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
-import { columns as peopleColumns } from "layouts/tables/data/peopleTableData";
+import { getPeopleColumns } from "layouts/tables/data/peopleTableData";
 import defaultProfilePic from "assets/images/default-profile-picture.png";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
@@ -40,6 +40,7 @@ import { setMobileNavbarTitle, useMaterialUIController } from "context";
 import { ACCENT_CYAN } from "constants.js";
 import Toast from "components/Toast";
 import GroupEditForm from "components/GroupDetail/GroupEditForm";
+import { useTranslation } from "i18n";
 import {
   fetchGroup,
   fetchPeople,
@@ -58,18 +59,19 @@ function isMongoObjectId(value) {
   return typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
 }
 
-function getPersonLabel(person) {
+function getPersonLabel(person, unknownLabel = "Unknown") {
   if (!person) return "";
   const name = person.Name || "";
   const nameChi = person.NameChi || "";
   if (name && nameChi) return `${name} (${nameChi})`;
   if (name || nameChi) return name || nameChi;
   const pid = person?._id || person?.id;
-  if (pid) return `Unknown (${String(pid).slice(-6)})`;
-  return "Unknown";
+  if (pid) return `${unknownLabel} (${String(pid).slice(-6)})`;
+  return unknownLabel;
 }
 
 function SearchFilterAdornment({ filter, onSelectFilter }) {
+  const { t } = useTranslation();
   const menuIdRef = useRef(
     `group-filter-menu-${Math.random().toString(36).slice(2)}`,
   );
@@ -90,10 +92,10 @@ function SearchFilterAdornment({ filter, onSelectFilter }) {
 
   return (
     <InputAdornment position="end">
-      <Tooltip title="Filters">
+      <Tooltip title={t("filters.label", "Filters")}>
         <IconButton
           size="small"
-          aria-label="Filters"
+          aria-label={t("filters.label", "Filters")}
           aria-controls={open ? menuIdRef.current : undefined}
           aria-haspopup="menu"
           aria-expanded={open ? "true" : undefined}
@@ -115,7 +117,7 @@ function SearchFilterAdornment({ filter, onSelectFilter }) {
       >
         <MDBox px={2} pt={1.25} pb={0.75}>
           <MDTypography variant="caption" fontWeight="bold">
-            Filter By
+            {t("filters.filterBy", "Filter By")}
           </MDTypography>
         </MDBox>
         <Divider />
@@ -126,7 +128,7 @@ function SearchFilterAdornment({ filter, onSelectFilter }) {
             handleClose(event);
           }}
         >
-          District
+          {t("filters.district", "District")}
         </MenuItem>
       </Menu>
     </InputAdornment>
@@ -197,6 +199,7 @@ function DesktopPaginationControls({
 }
 
 function ActionMenu({ person, navigate, slug, onRemove, iconColor }) {
+  const { t } = useTranslation();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const handleClick = (event) => {
@@ -241,17 +244,17 @@ function ActionMenu({ person, navigate, slug, onRemove, iconColor }) {
           <ListItemIcon>
             <VisibilityOutlinedIcon fontSize="small" />
           </ListItemIcon>
-          View
+          {t("actions.view", "View")}
         </MenuItem>
         <MenuItem onClick={handleEdit}>
           <ListItemIcon>
             <EditOutlinedIcon fontSize="small" />
           </ListItemIcon>
-          Edit
+          {t("actions.edit", "Edit")}
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleRemove} sx={{ color: "error.main" }}>
-          Remove from group
+          {t("groupDetailPage.actions.removeFromGroup", "Remove from group")}
         </MenuItem>
       </Menu>
     </>
@@ -259,11 +262,12 @@ function ActionMenu({ person, navigate, slug, onRemove, iconColor }) {
 }
 
 function PeopleCell({ image, name, nameChi, district, onClick }) {
+  const { t } = useTranslation();
   const englishName =
     typeof name === "string" && name.trim() ? name.trim() : "";
   const chineseName =
     typeof nameChi === "string" && nameChi.trim() ? nameChi.trim() : "";
-  const displayName = englishName || chineseName || "N/A";
+  const displayName = englishName || chineseName || t("common.na", "N/A");
   const suffix = englishName && chineseName ? ` (${chineseName})` : "";
 
   return (
@@ -302,7 +306,7 @@ function Job({ title, description }) {
   );
 }
 
-function buildGroupMemberRows(rawPeople, navigate, slug, onRemove) {
+function buildGroupMemberRows(rawPeople, navigate, slug, onRemove, naLabel = "N/A") {
   return rawPeople.map((person) => ({
     people: (
       <PeopleCell
@@ -336,7 +340,7 @@ function buildGroupMemberRows(rawPeople, navigate, slug, onRemove) {
         color="text"
         fontWeight="medium"
       >
-        {person.PhoneNumber || "N/A"}
+        {person.PhoneNumber || naLabel}
       </MDTypography>
     ),
     action: (
@@ -356,6 +360,8 @@ function GroupDetail() {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("xl"));
+  const { t } = useTranslation();
+  const translatedColumns = useMemo(() => getPeopleColumns(t), [t]);
   const [, dispatch] = useMaterialUIController();
   const [group, setGroup] = useState(null);
   const [members, setMembers] = useState([]);
@@ -388,7 +394,11 @@ function GroupDetail() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilter, setSearchFilter] = useState("default");
   const searchPlaceholder =
-    searchFilter === "district" ? "Search by District" : "Search...";
+    searchFilter === "district"
+      ? t("search.byDistrict", "Search by District")
+      : t("search.placeholder", "Search...");
+  const unknownLabel = t("common.unknown", "Unknown");
+  const naLabel = t("common.na", "N/A");
   // Pagination
   const [page, setPage] = useState(1);
   const [inputValue, setInputValue] = useState("1");
@@ -646,7 +656,7 @@ function GroupDetail() {
     if (!name) {
       setToast({
         open: true,
-        message: "Group name is required.",
+        message: t("groupForm.errors.nameRequired", "Group name is required."),
         severity: "error",
       });
       return;
@@ -681,26 +691,31 @@ function GroupDetail() {
       setIsEditing(false);
       setToast({
         open: true,
-        message: "Group updated.",
+        message: t("groupDetailPage.toasts.updated", "Group updated."),
         severity: "success",
       });
     } catch (error) {
       setToast({
         open: true,
-        message: error?.message || "Failed to update group.",
+        message:
+          error?.message ||
+          t("groupDetailPage.errors.updateFailed", "Failed to update group."),
         severity: "error",
       });
     } finally {
       setIsSaving(false);
     }
-  }, [editedGroup, group?.GroupPic, id, isSaving, selectedFile]);
+  }, [editedGroup, group?.GroupPic, id, isSaving, selectedFile, t]);
 
   const handleRemoveMember = useCallback(
     async (person) => {
       if (!isMongoObjectId(id)) {
         setToast({
           open: true,
-          message: "Remove member is only available for saved groups.",
+          message: t(
+            "groupDetailPage.errors.removeMemberSavedOnly",
+            "Remove member is only available for saved groups.",
+          ),
           severity: "warning",
         });
         return;
@@ -730,10 +745,10 @@ function GroupDetail() {
 
         setToast({
           open: true,
-          message: "Member removed.",
+          message: t("groupDetailPage.toasts.memberRemoved", "Member removed."),
           severity: "success",
           autoHideDuration: 6000,
-          actionLabel: "Undo",
+          actionLabel: t("actions.undo", "Undo"),
           onAction: async () => {
             await updateGroup(id, {
               Name: group?.Name || "",
@@ -751,7 +766,12 @@ function GroupDetail() {
       } catch (error) {
         setToast({
           open: true,
-          message: error?.message || "Failed to remove member.",
+          message:
+            error?.message ||
+            t(
+              "groupDetailPage.errors.removeMemberFailed",
+              "Failed to remove member.",
+            ),
           severity: "error",
           autoHideDuration: 2000,
           actionLabel: null,
@@ -759,7 +779,7 @@ function GroupDetail() {
         });
       }
     },
-    [group?.Description, group?.GroupPic, group?.Name, id, members],
+    [group?.Description, group?.GroupPic, group?.Name, id, members, t],
   );
 
   const filteredMembers = useMemo(() => {
@@ -785,8 +805,8 @@ function GroupDetail() {
 
   const rows = useMemo(
     () =>
-      buildGroupMemberRows(filteredMembers, navigate, id, handleRemoveMember),
-    [filteredMembers, navigate, id, handleRemoveMember],
+      buildGroupMemberRows(filteredMembers, navigate, id, handleRemoveMember, naLabel),
+    [filteredMembers, navigate, id, handleRemoveMember, naLabel],
   );
 
   const totalPages = Math.max(
@@ -876,7 +896,9 @@ function GroupDetail() {
       <DashboardLayout>
         <DashboardNavbar />
         <MDBox pt={{ xs: 3, xl: 6 }} pb={{ xs: 2, xl: 3 }}>
-          <MDTypography variant="h4">Group not found</MDTypography>
+          <MDTypography variant="h4">
+            {t("groupDetailPage.errors.notFound", "Group not found")}
+          </MDTypography>
         </MDBox>
         <Footer />
       </DashboardLayout>
@@ -887,7 +909,10 @@ function GroupDetail() {
     if (!isMongoObjectId(id)) {
       setToast({
         open: true,
-        message: "Add members is only available for saved groups.",
+        message: t(
+          "groupDetailPage.errors.addMembersSavedOnly",
+          "Add members is only available for saved groups.",
+        ),
         severity: "warning",
       });
       return;
@@ -923,13 +948,15 @@ function GroupDetail() {
       setAddMembersOpen(false);
       setToast({
         open: true,
-        message: "Members added.",
+        message: t("groupDetailPage.toasts.membersAdded", "Members added."),
         severity: "success",
       });
     } catch (error) {
       setToast({
         open: true,
-        message: error?.message || "Failed to add members.",
+        message:
+          error?.message ||
+          t("groupDetailPage.errors.addMembersFailed", "Failed to add members."),
         severity: "error",
       });
     }
@@ -962,7 +989,7 @@ function GroupDetail() {
                       }
                     : undefined
                 }
-                aria-label="Back"
+                aria-label={t("groupDetailPage.actions.back", "Back")}
               >
                 <ArrowBackIosNewIcon />
               </IconButton>
@@ -975,7 +1002,7 @@ function GroupDetail() {
                     : undefined
                 }
               >
-                Edit Group
+                {t("groupForm.header.editTitle", "Edit Group")}
               </MDTypography>
 
               {isMobile ? (
@@ -988,7 +1015,7 @@ function GroupDetail() {
                     onClick={handleSaveGroup}
                     disabled={isSaving}
                   >
-                    Save
+                    {t("buttons.save", "Save")}
                   </MDButton>
                   <MDButton
                     variant="gradient"
@@ -996,7 +1023,7 @@ function GroupDetail() {
                     onClick={() => requestDiscardIfDirty(discardEditsNow)}
                     disabled={isSaving}
                   >
-                    Discard
+                    {t("buttons.discard", "Discard")}
                   </MDButton>
                 </MDBox>
               )}
@@ -1072,12 +1099,12 @@ function GroupDetail() {
             >
               <PersonMobileViewList
                 items={paginatedMembers}
-                emptyText="No members."
+                emptyText={t("groupDetailPage.members.empty", "No members.")}
                 getAvatarSrc={(person) =>
                   person?.ProfilePic || defaultProfilePic
                 }
-                getAvatarName={(person) => person?.Name || "N/A"}
-                getPrimary={(person) => person?.Name || "N/A"}
+                getAvatarName={(person) => person?.Name || naLabel}
+                getPrimary={(person) => person?.Name || naLabel}
                 getSecondary={(person) => person?.District || ""}
                 onItemClick={(person) => {
                   const personId = person?._id || person?.id;
@@ -1163,14 +1190,15 @@ function GroupDetail() {
                       {(group.Category || "").trim()
                         ? `${group.Category} • `
                         : ""}
-                      {members.length} members
+                      {members.length}{" "}
+                      {t("groupDetailPage.members.countLabel", "members")}
                     </MDTypography>
                   </MDBox>
                   <MDButton
                     variant="contained"
                     color="white"
                     iconOnly
-                    aria-label="Add member"
+                    aria-label={t("groupDetailPage.actions.addMember", "Add member")}
                     onClick={() => {
                       handleOpenAddMembers();
                     }}
@@ -1185,19 +1213,22 @@ function GroupDetail() {
                   pt={3}
                   sx={{ maxHeight: "calc(100vh - 400px)", overflow: "auto" }}
                 >
-                  {paginatedRows.length ? (
-                    <DataTable
-                      table={{ columns: peopleColumns, rows: paginatedRows }}
-                      isSorted={false}
-                      entriesPerPage={false}
-                      showTotalEntries={false}
-                      noEndBorder
-                      pagination={false}
-                    />
+	                  {paginatedRows.length ? (
+	                    <DataTable
+	                      table={{
+	                        columns: translatedColumns,
+	                        rows: paginatedRows,
+	                      }}
+	                      isSorted={false}
+	                      entriesPerPage={false}
+	                      showTotalEntries={false}
+	                      noEndBorder
+	                      pagination={false}
+	                    />
                   ) : (
                     <MDBox p={2}>
                       <MDTypography variant="button" color="text">
-                        No members.
+                        {t("groupDetailPage.members.empty", "No members.")}
                       </MDTypography>
                     </MDBox>
                   )}
@@ -1270,7 +1301,7 @@ function GroupDetail() {
                     filter: "brightness(0.9)",
                   },
                 })}
-                aria-label="Add members"
+                aria-label={t("groupDetailPage.actions.addMembers", "Add members")}
               >
                 <Icon fontSize="large" sx={{ color: "#fff" }}>
                   add
@@ -1296,7 +1327,7 @@ function GroupDetail() {
                     filter: "brightness(0.9)",
                   },
                 })}
-                aria-label="Edit group"
+                aria-label={t("groupForm.header.editTitle", "Edit Group")}
               >
                 <Icon fontSize="large" sx={{ color: "#fff" }}>
                   edit
@@ -1396,9 +1427,9 @@ function GroupDetail() {
             pr: 1,
           }}
         >
-          <span>Add Members</span>
+          <span>{t("groupDetailPage.actions.addMembers", "Add members")}</span>
           <IconButton
-            aria-label="Close"
+            aria-label={t("buttons.close", "Close")}
             onClick={() => setAddMembersOpen(false)}
             size="small"
             sx={{ color: "text.secondary" }}
@@ -1441,7 +1472,7 @@ function GroupDetail() {
                 onClose={() => setMemberPickerOpen(false)}
                 openOnFocus
                 disableCloseOnSelect
-                getOptionLabel={getPersonLabel}
+                getOptionLabel={(option) => getPersonLabel(option, unknownLabel)}
                 isOptionEqualToValue={(opt, val) => opt?._id === val?._id}
                 getOptionDisabled={(option) =>
                   existingMemberIds.has(String(option?._id || option?.id))
@@ -1489,11 +1520,11 @@ function GroupDetail() {
                       <span
                         style={{ overflow: "hidden", textOverflow: "ellipsis" }}
                       >
-                        {getPersonLabel(option)}
+                        {getPersonLabel(option, unknownLabel)}
                       </span>
                       {isExisting && (
                         <span style={{ opacity: 0.8, fontSize: 12 }}>
-                          Added
+                          {t("groupDetailPage.addMembersDialog.added", "Added")}
                         </span>
                       )}
                     </li>
@@ -1503,8 +1534,11 @@ function GroupDetail() {
                   <TextField
                     {...params}
                     variant="outlined"
-                    label="Members"
-                    placeholder="Search people..."
+                    label={t("groupForm.fields.members", "Members")}
+                    placeholder={t(
+                      "groupForm.fields.searchPeople",
+                      "Search people...",
+                    )}
                     autoFocus
                     sx={{ mt: 1 }}
                   />
@@ -1519,14 +1553,14 @@ function GroupDetail() {
             color="secondary"
             onClick={() => setAddMembersOpen(false)}
           >
-            Cancel
+            {t("buttons.cancel", "Cancel")}
           </MDButton>
           <MDButton
             variant="gradient"
             color="info"
             onClick={handleConfirmAddMembers}
           >
-            Add
+            {t("buttons.add", "Add")}
           </MDButton>
         </DialogActions>
       </Dialog>
@@ -1547,18 +1581,23 @@ function GroupDetail() {
         }
       />
       <Dialog open={showDiscardConfirmModal} onClose={closeDiscardConfirmModal}>
-        <DialogTitle>Discard changes?</DialogTitle>
+        <DialogTitle>
+          {t("personDetailPage.dialogs.discardTitle", "Discard changes?")}
+        </DialogTitle>
         <DialogContent>
           <MDTypography variant="body2">
-            You have unsaved changes. Discard them?
+            {t(
+              "personDetailPage.dialogs.discardBody",
+              "You have unsaved changes. Discard them?",
+            )}
           </MDTypography>
         </DialogContent>
         <DialogActions>
           <MDButton onClick={closeDiscardConfirmModal} color="info">
-            Keep editing
+            {t("buttons.keepEditing", "Keep editing")}
           </MDButton>
           <MDButton onClick={confirmDiscard} color="error">
-            Discard
+            {t("buttons.discard", "Discard")}
           </MDButton>
         </DialogActions>
       </Dialog>

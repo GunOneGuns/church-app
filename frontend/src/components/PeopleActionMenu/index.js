@@ -9,6 +9,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import { useTranslation } from "i18n";
 
 export default function PeopleActionMenu({
   person,
@@ -16,6 +17,7 @@ export default function PeopleActionMenu({
   onDelete,
   iconColor,
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
@@ -33,7 +35,7 @@ export default function PeopleActionMenu({
           setAnchorEl(e.currentTarget);
         }}
         sx={iconColor ? { color: iconColor } : undefined}
-        aria-label="Person actions"
+        aria-label={t("actions.label", "Actions")}
       >
         <MoreVertIcon fontSize="small" />
       </IconButton>
@@ -56,7 +58,7 @@ export default function PeopleActionMenu({
           <ListItemIcon>
             <VisibilityOutlinedIcon fontSize="small" />
           </ListItemIcon>
-          View
+          {t("actions.view", "View")}
         </MenuItem>
         <MenuItem
           onClick={() => {
@@ -68,7 +70,7 @@ export default function PeopleActionMenu({
           <ListItemIcon>
             <EditOutlinedIcon fontSize="small" />
           </ListItemIcon>
-          Edit
+          {t("actions.edit", "Edit")}
         </MenuItem>
         <Divider />
         <MenuItem
@@ -79,7 +81,7 @@ export default function PeopleActionMenu({
           }}
           sx={{ color: "error.main" }}
         >
-          Delete
+          {t("actions.delete", "Delete")}
         </MenuItem>
       </Menu>
     </>

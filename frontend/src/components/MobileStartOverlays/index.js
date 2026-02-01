@@ -7,10 +7,13 @@ import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
 
-const FIRST_OVERLAY_BUTTONS = ["联系人", "信息分享", "聚会信息", "待开发"];
-const SECOND_OVERLAY_BUTTONS = ["本地", "海外", "福音", "访问"];
+import { useTranslation } from "i18n";
+
+const FIRST_OVERLAY_BUTTON_KEYS = ["contacts", "sharing", "meetingInfo", "comingSoon"];
+const SECOND_OVERLAY_BUTTON_KEYS = ["local", "overseas", "gospel", "visits"];
 
 export default function MobileStartOverlays({ open, onComplete, bottomOffset }) {
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
 
   useEffect(() => {
@@ -18,7 +21,7 @@ export default function MobileStartOverlays({ open, onComplete, bottomOffset }) 
     setStep(1);
   }, [open]);
 
-  const buttonLabels = step === 1 ? FIRST_OVERLAY_BUTTONS : SECOND_OVERLAY_BUTTONS;
+  const buttonKeys = step === 1 ? FIRST_OVERLAY_BUTTON_KEYS : SECOND_OVERLAY_BUTTON_KEYS;
 
   const handleButtonClick = () => {
     if (step === 1) {
@@ -47,8 +50,8 @@ export default function MobileStartOverlays({ open, onComplete, bottomOffset }) 
     >
       <Box sx={{ width: "min(420px, 100%)" }}>
         <Grid container spacing={2}>
-          {buttonLabels.map((label) => (
-            <Grid item xs={6} key={label}>
+          {buttonKeys.map((key) => (
+            <Grid item xs={6} key={key}>
               <Button
                 fullWidth
                 variant="contained"
@@ -63,7 +66,7 @@ export default function MobileStartOverlays({ open, onComplete, bottomOffset }) 
                   whiteSpace: "nowrap",
                 }}
               >
-                {label}
+                {t(`peopleOverlay.step${step}.${key}`, key)}
               </Button>
             </Grid>
           ))}

@@ -13,6 +13,7 @@ import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import Icon from "@mui/material/Icon";
 
 import { ACCENT_CYAN } from "constants.js";
+import { useTranslation } from "i18n";
 
 const getActiveTab = (pathname = "") => {
   const normalized = pathname.toLowerCase();
@@ -31,6 +32,12 @@ export default function MobileBottomNav() {
   const navigate = useNavigate();
   const [controller, dispatch] = useMaterialUIController();
   const { mobileNavbarTitle } = controller;
+  const { t } = useTranslation();
+  const homeTitle = t("nav.home", "Home");
+  const peopleTitle = t("nav.people", "People");
+  const groupsTitle = t("nav.groups", "Group");
+  const eventsTitle = t("nav.events", "Event");
+  const moreTitle = t("nav.more", "More");
 
   const [peopleOverlayOpen, setPeopleOverlayOpen] = useState(false);
 
@@ -49,19 +56,22 @@ export default function MobileBottomNav() {
     if (!shouldOpen) return;
 
     setPeopleOverlayOpen(true);
-    setMobileNavbarTitle(dispatch, "People");
-  }, [location.pathname, location.state, dispatch]);
+    setMobileNavbarTitle(dispatch, peopleTitle);
+  }, [location.pathname, location.state, dispatch, peopleTitle]);
 
   // Clear title when leaving people (and overlay isn't open)
   useEffect(() => {
     if (peopleOverlayOpen) return;
     const pathname = location.pathname.toLowerCase();
-    if (mobileNavbarTitle === "People" && !pathname.startsWith("/people")) {
+    if (mobileNavbarTitle === peopleTitle && !pathname.startsWith("/people")) {
       setMobileNavbarTitle(dispatch, null);
     }
-  }, [dispatch, location.pathname, mobileNavbarTitle, peopleOverlayOpen]);
+  }, [dispatch, location.pathname, mobileNavbarTitle, peopleOverlayOpen, peopleTitle]);
 
   const handleChange = (_event, nextValue) => {
+    const currentValue = peopleOverlayOpen ? "people" : value;
+    if (nextValue === currentValue) return;
+
     if (nextValue !== "people") {
       setPeopleOverlayOpen(false);
       if (mobileNavbarTitle) setMobileNavbarTitle(dispatch, null);
@@ -75,7 +85,7 @@ export default function MobileBottomNav() {
     setMiniSidenav(dispatch, true);
 
     if (nextValue === "people") {
-      setMobileNavbarTitle(dispatch, "People");
+      setMobileNavbarTitle(dispatch, peopleTitle);
       navigate("/people", { state: { openPeopleOverlay: true } });
       return;
     }
@@ -132,27 +142,27 @@ export default function MobileBottomNav() {
           })}
         >
           <BottomNavigationAction
-            label="Home"
+            label={homeTitle}
             value="home"
             icon={<Icon fontSize="small">home</Icon>}
           />
           <BottomNavigationAction
-            label="People"
+            label={peopleTitle}
             value="people"
             icon={<Icon fontSize="small">person</Icon>}
           />
           <BottomNavigationAction
-            label="Group"
+            label={groupsTitle}
             value="groups"
             icon={<Icon fontSize="small">groups</Icon>}
           />
           <BottomNavigationAction
-            label="Event"
+            label={eventsTitle}
             value="events"
             icon={<Icon fontSize="small">event</Icon>}
           />
           <BottomNavigationAction
-            label="More"
+            label={moreTitle}
             value="settings"
             icon={<Icon fontSize="small">menu</Icon>}
           />

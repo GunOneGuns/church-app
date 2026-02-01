@@ -45,8 +45,6 @@ import {
 } from "context";
 
 // Images
-import brandWhite from "assets/images/logo-ct.png";
-import brandDark from "assets/images/logo-ct-dark.png";
 
 import { setupAxiosInterceptors } from "./services/interceptor";
 import ProtectedRoute from "examples/ProtectedRoute";
@@ -61,9 +59,11 @@ import PersonDetail from "layouts/person-detail";
 import GroupDetail from "layouts/groups/group-detail";
 import GroupAdd from "layouts/groups/group-add";
 import { Helmet } from "react-helmet";
+import { useTranslation } from "i18n";
 
 export default function App() {
   const authContext = useContext(AuthContext);
+  const { t } = useTranslation();
 
   const [controller, dispatch] = useMaterialUIController();
   const {
@@ -265,18 +265,13 @@ export default function App() {
             <CssBaseline />
             {layout === "dashboard" && (
               <>
-                <Sidenav
-                  color={sidenavColor}
-                  brand={
-                    (transparentSidenav && !darkMode) || whiteSidenav
-                      ? brandDark
-                      : brandWhite
-                  }
-                  brandName="Material Dashboard 2"
-                  routes={routes}
-                  onMouseEnter={handleOnMouseEnter}
-                  onMouseLeave={handleOnMouseLeave}
-                />
+	                <Sidenav
+	                  color={sidenavColor}
+	                  brandName={t("nav.title")}
+	                  routes={routes}
+	                  onMouseEnter={handleOnMouseEnter}
+	                  onMouseLeave={handleOnMouseLeave}
+	                />
                 <Configurator />
                 {configsButton}
               </>
@@ -302,18 +297,13 @@ export default function App() {
           <CssBaseline />
           {layout === "dashboard" && (
             <>
-              <Sidenav
-                color={sidenavColor}
-                brand={
-                  (transparentSidenav && !darkMode) || whiteSidenav
-                    ? brandDark
-                    : brandWhite
-                }
-                brandName="Material Dashboard 2"
-                routes={routes}
-                onMouseEnter={handleOnMouseEnter}
-                onMouseLeave={handleOnMouseLeave}
-              />
+	              <Sidenav
+	                color={sidenavColor}
+	                brandName={t("nav.title")}
+	                routes={routes}
+	                onMouseEnter={handleOnMouseEnter}
+	                onMouseLeave={handleOnMouseLeave}
+	              />
               <Configurator />
               {configsButton}
             </>

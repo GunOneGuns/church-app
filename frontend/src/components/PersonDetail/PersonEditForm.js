@@ -26,6 +26,7 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "i18n";
 import {
   FIELD_NAME_SUGGESTIONS,
   RELATION_SUGGESTIONS,
@@ -42,10 +43,6 @@ const FIELD_LABEL_SX = { fontSize: "1rem" };
 
 const GROUP_TITLE_CHAR_LIMIT = 7;
 const CREATE_GROUP_OPTION_ID = "__create_group__";
-const CREATE_GROUP_OPTION = {
-  _id: CREATE_GROUP_OPTION_ID,
-  Name: "No groups — create one now",
-};
 
 function truncateText(value, limit = GROUP_TITLE_CHAR_LIMIT) {
   const text = String(value ?? "");
@@ -78,15 +75,51 @@ function PersonEditForm({
   selectedFile,
   uploadError,
 }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isMobileView = useMediaQuery(theme.breakpoints.down("xl"));
   const navigate = useNavigate();
   const location = useLocation();
 
+  const nilLabel = t("common.nil", "NIL");
+  const userLabel = t("common.user", "User");
+  const customLabel = t("common.custom", "Custom");
+  const otherLabel = t("common.other", "Other");
+  const removeFromGroupLabel = t(
+    "personDetailPage.groupsPanel.removeFromGroup",
+    "Remove From Group",
+  );
+
   const findPersonById = (id) =>
     peopleList.find((person) => person._id === id) || null;
 
   const normalizeRelation = (relation = "") => relation.trim().toLowerCase();
+  const getRelationLabel = useCallback(
+    (relation = "") => {
+      const normalized = normalizeRelation(relation);
+      if (!normalized) return "";
+      return t(`relations.${normalized}`, relation);
+    },
+    [t],
+  );
+
+  const relationSuggestionOptions = useMemo(
+    () =>
+      RELATION_SUGGESTIONS.map((value) => ({
+        value,
+        label: getRelationLabel(value),
+      })),
+    [getRelationLabel],
+  );
+
+  const relationOptionByValue = useMemo(() => {
+    const map = new Map();
+    relationSuggestionOptions.forEach((option) => {
+      map.set(option.value, option);
+    });
+    return map;
+  }, [relationSuggestionOptions]);
+
   const getAutoReciprocalValue = (relation = "") =>
     RELATION_AUTO_RECIPROCALS[normalizeRelation(relation)] || "";
   const getReciprocalOptions = (relation = "") =>
@@ -110,8 +143,16 @@ function PersonEditForm({
 
   const groupOptions = useMemo(() => {
     if (Array.isArray(groupsList) && groupsList.length) return groupsList;
-    return [CREATE_GROUP_OPTION];
-  }, [groupsList]);
+    return [
+      {
+        _id: CREATE_GROUP_OPTION_ID,
+        Name: t(
+          "personDetailPage.groupsPanel.createOneNow",
+          "No groups — create one now",
+        ),
+      },
+    ];
+  }, [groupsList, t]);
 
   const isValidRelationSuggestion = (relation = "") => {
     const trimmed = relation.trim();
@@ -476,7 +517,7 @@ function PersonEditForm({
               <MDBox
                 component="img"
                 src={displayImageSrc}
-                alt={`${editedPerson?.Name || "User"}'s profile`}
+                alt={`${editedPerson?.Name || userLabel}'s profile`}
                 draggable={false}
                 onLoad={handlePreviewImageLoad}
                 sx={{
@@ -509,7 +550,7 @@ function PersonEditForm({
                 onClick={openCropper}
                 sx={{ mt: 1 }}
               >
-                Adjust Photo
+                {t("personDetailPage.photo.adjustPhoto", "Adjust Photo")}
               </MDButton>
             )}
 
@@ -540,7 +581,12 @@ function PersonEditForm({
                   fullWidth
                   startIcon={<UploadFileIcon />}
                 >
-                  {selectedFile ? selectedFile.name : "Choose Profile Picture"}
+                  {selectedFile
+                    ? selectedFile.name
+                    : t(
+                        "personDetailPage.photo.chooseProfilePicture",
+                        "Choose Profile Picture",
+                      )}
                 </MDButton>
               </label>
               {uploadError && (
@@ -557,14 +603,17 @@ function PersonEditForm({
           {/* Panel 1: Personal Information */}
           <Card sx={{ mb: 3, p: 2 }}>
             <MDTypography variant="h6" fontWeight="bold" mb={2}>
-              Personal Information
+              {t(
+                "personDetailPage.sections.personalInformation",
+                "Personal Information",
+              )}
             </MDTypography>
 
             <MDBox display="flex" flexDirection="column" gap={2}>
               {/* Core personal info fields (schema default fields) */}
               <TextField
                 variant="outlined"
-                label="Name *"
+                label={t("personDetailPage.fields.nameRequired", "Name *")}
                 value={editedPerson?.Name ?? ""}
                 onChange={(e) => handleChange("Name", e.target.value)}
                 fullWidth
@@ -574,7 +623,10 @@ function PersonEditForm({
 
               <TextField
                 variant="outlined"
-                label="Chinese Name *"
+                label={t(
+                  "personDetailPage.fields.chineseNameRequired",
+                  "Chinese Name *",
+                )}
                 value={editedPerson?.NameChi ?? ""}
                 onChange={(e) => handleChange("NameChi", e.target.value)}
                 fullWidth
@@ -584,7 +636,7 @@ function PersonEditForm({
 
               <TextField
                 variant="outlined"
-                label="Birth Year"
+                label={t("personDetailPage.fields.birthYear", "Birth Year")}
                 type="number"
                 value={editedPerson?.BirthYear ?? ""}
                 onChange={(e) => {
@@ -602,7 +654,7 @@ function PersonEditForm({
 
               <TextField
                 variant="outlined"
-                label="Phone Number"
+                label={t("personDetailPage.fields.phoneNumber", "Phone Number")}
                 type="number"
                 value={editedPerson?.PhoneNumber ?? ""}
                 onChange={(e) => {
@@ -620,7 +672,7 @@ function PersonEditForm({
 
               <TextField
                 variant="outlined"
-                label="Email"
+                label={t("personDetailPage.fields.email", "Email")}
                 value={editedPerson?.Email ?? ""}
                 onChange={(e) => handleChange("Email", e.target.value)}
                 fullWidth
@@ -630,7 +682,7 @@ function PersonEditForm({
 
               <TextField
                 variant="outlined"
-                label="District"
+                label={t("personDetailPage.fields.district", "District")}
                 value={editedPerson?.District ?? ""}
                 onChange={(e) => handleChange("District", e.target.value)}
                 fullWidth
@@ -642,7 +694,7 @@ function PersonEditForm({
 
               <TextField
                 variant="outlined"
-                label="Address"
+                label={t("personDetailPage.fields.address", "Address")}
                 value={editedPerson?.Address ?? ""}
                 onChange={(e) => handleChange("Address", e.target.value)}
                 fullWidth
@@ -653,7 +705,10 @@ function PersonEditForm({
               <TextField
                 variant="outlined"
                 select
-                label="Announcement Group"
+                label={t(
+                  "personDetailPage.fields.announcementGroup",
+                  "Announcement Group",
+                )}
                 value={announcementGroupValue}
                 onChange={(e) =>
                   handleChange("AnnouncementGroup", e.target.value)
@@ -665,7 +720,7 @@ function PersonEditForm({
                 {!YES_NO_OPTIONS.includes(announcementGroupValue) &&
                   announcementGroupValue !== "" && (
                     <MenuItem value={announcementGroupValue}>
-                      Other ({announcementGroupValue})
+                      {otherLabel} ({announcementGroupValue})
                     </MenuItem>
                   )}
                 {YES_NO_OPTIONS.map((option) => (
@@ -678,7 +733,7 @@ function PersonEditForm({
               <TextField
                 variant="outlined"
                 select
-                label="Chat Group"
+                label={t("personDetailPage.fields.chatGroup", "Chat Group")}
                 value={chatGroupValue}
                 onChange={(e) => handleChange("ChatGroup", e.target.value)}
                 fullWidth
@@ -688,7 +743,7 @@ function PersonEditForm({
                 {!YES_NO_OPTIONS.includes(chatGroupValue) &&
                   chatGroupValue !== "" && (
                     <MenuItem value={chatGroupValue}>
-                      Other ({chatGroupValue})
+                      {otherLabel} ({chatGroupValue})
                     </MenuItem>
                   )}
                 {YES_NO_OPTIONS.map((option) => (
@@ -705,7 +760,7 @@ function PersonEditForm({
                     ? field.originalIndex
                     : index;
                 const fieldName = String(field.key || "").trim();
-                const cardTitle = fieldName || "Custom";
+                const cardTitle = fieldName || customLabel;
                 const hasFieldName = Boolean(fieldName);
 
                 return (
@@ -737,7 +792,10 @@ function PersonEditForm({
 
                     <IconButton
                       size="small"
-                      aria-label="Remove custom field"
+                      aria-label={t(
+                        "personDetailPage.customFields.removeCustomFieldAria",
+                        "Remove custom field",
+                      )}
                       onClick={() => removePersonalCustomField(fieldIndex)}
                       sx={{
                         position: "absolute",
@@ -788,7 +846,10 @@ function PersonEditForm({
                           <TextField
                             {...params}
                             variant="outlined"
-                            label="Field Name"
+                            label={t(
+                              "personDetailPage.customFields.fieldName",
+                              "Field Name",
+                            )}
                             sx={{
                               "& .MuiOutlinedInput-root": { height: "56px" },
                             }}
@@ -817,7 +878,7 @@ function PersonEditForm({
 
                       <TextField
                         variant="outlined"
-                        label="Value"
+                        label={t("personDetailPage.customFields.value", "Value")}
                         value={field.value}
                         disabled={!hasFieldName}
                         onChange={(e) =>
@@ -846,7 +907,10 @@ function PersonEditForm({
                 sx={{ mt: 1, height: "56px" }}
                 startIcon={<AddIcon />}
               >
-                Add Custom Field
+                {t(
+                  "personDetailPage.customFields.addCustomField",
+                  "Add Custom Field",
+                )}
               </MDButton>
             </MDBox>
           </Card>
@@ -854,7 +918,7 @@ function PersonEditForm({
           {/* Panel 2: Related Persons */}
           <Card sx={{ p: 2 }}>
             <MDTypography variant="h6" fontWeight="bold" mb={2}>
-              Related Persons
+              {t("personDetailPage.sections.relatedPersons", "Related Persons")}
             </MDTypography>
 
             <MDBox display="flex" flexDirection="column" gap={2}>
@@ -885,7 +949,10 @@ function PersonEditForm({
                 const relationErrorMessage =
                   fieldError.relationType ||
                   (relationHasValue && !relationIsValid
-                    ? "Please select a relation from the list."
+                    ? t(
+                        "personDetailPage.relationships.invalidRelation",
+                        "Please select a relation from the list.",
+                      )
                     : "");
                 const reciprocalErrorMessage = fieldError.reciprocal || "";
 
@@ -920,13 +987,19 @@ function PersonEditForm({
                       }}
                     >
                       <MDTypography variant="caption" fontWeight="medium">
-                        Relationship
+                        {t(
+                          "personDetailPage.relationships.relationship",
+                          "Relationship",
+                        )}
                       </MDTypography>
                     </MDBox>
 
                     <IconButton
                       size="small"
-                      aria-label="Remove relationship"
+                      aria-label={t(
+                        "personDetailPage.relationships.removeRelationshipAria",
+                        "Remove relationship",
+                      )}
                       onClick={() => removeRelationshipField(fieldIndex)}
                       sx={{
                         position: "absolute",
@@ -1062,7 +1135,10 @@ function PersonEditForm({
                             <TextField
                               {...params}
                               variant="outlined"
-                              label="Person's Name"
+                              label={t(
+                                "personDetailPage.relationships.personName",
+                                "Person's Name",
+                              )}
                               error={Boolean(personErrorMessage)}
                               sx={{
                                 "& .MuiOutlinedInput-root": { height: "56px" },
@@ -1090,13 +1166,36 @@ function PersonEditForm({
 
                         <Autocomplete
                           freeSolo
-                          options={RELATION_SUGGESTIONS}
-                          value={field.value2 || ""}
+                          options={relationSuggestionOptions}
+                          value={
+                            relationOptionByValue.get(field.value2) ||
+                            field.value2 ||
+                            ""
+                          }
+                          inputValue={
+                            relationOptionByValue.get(field.value2)?.label ||
+                            field.value2 ||
+                            ""
+                          }
+                          isOptionEqualToValue={(option, value) =>
+                            option?.value && value?.value
+                              ? option.value === value.value
+                              : option?.value === value
+                          }
+                          getOptionLabel={(option) =>
+                            typeof option === "string"
+                              ? option
+                              : option?.label || option?.value || ""
+                          }
                           filterOptions={(options, { inputValue }) => {
                             if (!inputValue) return options;
                             const input = inputValue.toLowerCase();
                             return options.filter((option) => {
-                              const rel = option.toLowerCase();
+                              const rel = (
+                                option?.label ||
+                                option?.value ||
+                                ""
+                              ).toLowerCase();
                               if (rel.includes(input)) return true;
                               let relIdx = 0;
                               for (let i = 0; i < input.length; i++) {
@@ -1108,12 +1207,11 @@ function PersonEditForm({
                             });
                           }}
                           onChange={(event, newValue) => {
-                            const updatedValue = newValue || "";
-                            updateRelationshipField(
-                              fieldIndex,
-                              "value2",
-                              updatedValue,
-                            );
+                            const updatedValue =
+                              typeof newValue === "string"
+                                ? newValue
+                                : newValue?.value || "";
+                            updateRelationshipField(fieldIndex, "value2", updatedValue);
 
                             if (isValidRelationSuggestion(updatedValue)) {
                               const autoValue =
@@ -1131,12 +1229,9 @@ function PersonEditForm({
                               updateRelationshipField(fieldIndex, "value3", "");
                             }
                           }}
-                          onInputChange={(event, newInputValue) => {
-                            updateRelationshipField(
-                              fieldIndex,
-                              "value2",
-                              newInputValue,
-                            );
+                          onInputChange={(event, newInputValue, reason) => {
+                            if (reason === "reset") return;
+                            updateRelationshipField(fieldIndex, "value2", newInputValue);
 
                             if (isValidRelationSuggestion(newInputValue)) {
                               const autoValue =
@@ -1158,12 +1253,20 @@ function PersonEditForm({
                             <TextField
                               {...params}
                               variant="outlined"
-                              label="Their Relation to Me"
+                              label={t(
+                                "personDetailPage.relationships.theirRelationToMe",
+                                "Their Relation to Me",
+                              )}
                               error={Boolean(relationErrorMessage)}
                               sx={{
                                 "& .MuiOutlinedInput-root": { height: "56px" },
                               }}
                             />
+                          )}
+                          renderOption={(props, option) => (
+                            <li {...props} key={option?.value || option?.label}>
+                              {option?.label || option?.value || ""}
+                            </li>
                           )}
                         />
                       </MDBox>
@@ -1172,8 +1275,14 @@ function PersonEditForm({
                         (autoReciprocalValue ? (
                           <TextField
                             variant="outlined"
-                            label="My Relation to Them"
-                            value={autoReciprocalValue}
+                            label={t(
+                              "personDetailPage.relationships.myRelationToThem",
+                              "My Relation to Them",
+                            )}
+                            value={
+                              getRelationLabel(autoReciprocalValue) ||
+                              autoReciprocalValue
+                            }
                             disabled
                             sx={{
                               flex: isMobileView ? "unset" : "1 1 0",
@@ -1201,13 +1310,42 @@ function PersonEditForm({
 
                             <Autocomplete
                               freeSolo
-                              options={reciprocalOptions}
-                              value={field.value3 || ""}
+                              options={reciprocalOptions.map((value) => ({
+                                value,
+                                label: getRelationLabel(value),
+                              }))}
+                              value={
+                                reciprocalOptions.includes(field.value3)
+                                  ? {
+                                      value: field.value3,
+                                      label: getRelationLabel(field.value3),
+                                    }
+                                  : field.value3 || ""
+                              }
+                              inputValue={
+                                reciprocalOptions.includes(field.value3)
+                                  ? getRelationLabel(field.value3)
+                                  : field.value3 || ""
+                              }
+                              isOptionEqualToValue={(option, value) =>
+                                option?.value && value?.value
+                                  ? option.value === value.value
+                                  : option?.value === value
+                              }
+                              getOptionLabel={(option) =>
+                                typeof option === "string"
+                                  ? option
+                                  : option?.label || option?.value || ""
+                              }
                               filterOptions={(options, { inputValue }) => {
                                 if (!inputValue) return options;
                                 const input = inputValue.toLowerCase();
                                 return options.filter((option) => {
-                                  const rel = option.toLowerCase();
+                                  const rel = (
+                                    option?.label ||
+                                    option?.value ||
+                                    ""
+                                  ).toLowerCase();
                                   if (rel.includes(input)) return true;
                                   let relIdx = 0;
                                   for (let i = 0; i < input.length; i++) {
@@ -1219,7 +1357,10 @@ function PersonEditForm({
                                 });
                               }}
                               onChange={(event, newValue) => {
-                                const newReciprocal = newValue || "";
+                                const newReciprocal =
+                                  typeof newValue === "string"
+                                    ? newValue
+                                    : newValue?.value || "";
                                 updateRelationshipField(
                                   fieldIndex,
                                   "value3",
@@ -1230,12 +1371,9 @@ function PersonEditForm({
                                   newReciprocal,
                                 );
                               }}
-                              onInputChange={(event, newInputValue) => {
-                                updateRelationshipField(
-                                  fieldIndex,
-                                  "value3",
-                                  newInputValue,
-                                );
+                              onInputChange={(event, newInputValue, reason) => {
+                                if (reason === "reset") return;
+                                updateRelationshipField(fieldIndex, "value3", newInputValue);
                                 syncReciprocalAcrossCategory(
                                   index,
                                   newInputValue,
@@ -1245,7 +1383,10 @@ function PersonEditForm({
                                 <TextField
                                   {...params}
                                   variant="outlined"
-                                  label="My Relation to Them"
+                                  label={t(
+                                    "personDetailPage.relationships.myRelationToThem",
+                                    "My Relation to Them",
+                                  )}
                                   error={Boolean(reciprocalErrorMessage)}
                                   sx={{
                                     "& .MuiOutlinedInput-root": {
@@ -1253,6 +1394,11 @@ function PersonEditForm({
                                     },
                                   }}
                                 />
+                              )}
+                              renderOption={(props, option) => (
+                                <li {...props} key={option?.value || option?.label}>
+                                  {option?.label || option?.value || ""}
+                                </li>
                               )}
                             />
                           </MDBox>
@@ -1269,7 +1415,10 @@ function PersonEditForm({
                 sx={{ mt: 1, height: "56px" }}
                 startIcon={<AddIcon />}
               >
-                Add Relationship
+                {t(
+                  "personDetailPage.relationships.addRelationship",
+                  "Add Relationship",
+                )}
               </MDButton>
             </MDBox>
           </Card>
@@ -1277,7 +1426,7 @@ function PersonEditForm({
           {/* Panel 3: Groups */}
           <Card sx={{ p: 2, mt: 3 }}>
             <MDTypography variant="h6" fontWeight="bold" mb={2}>
-              Groups
+              {t("personDetailPage.sections.groups", "Groups")}
             </MDTypography>
 
             <Autocomplete
@@ -1307,18 +1456,21 @@ function PersonEditForm({
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  variant="outlined"
-                  label="Add to groups"
-                  placeholder="Search groups..."
-                  sx={{ "& .MuiOutlinedInput-root": { minHeight: "56px" } }}
-                />
-              )}
-              renderOption={(props, option) => {
-                const { key, ...rest } = props;
-                const groupName = option?.Name || "NIL";
-                const groupPic = option?.GroupPic || defaultProfilePic;
-                const isCreateOption =
-                  String(option?._id) === CREATE_GROUP_OPTION_ID;
+                variant="outlined"
+                label={t("personDetailPage.groupsPanel.addToGroups", "Add to groups")}
+                placeholder={t(
+                  "personDetailPage.groupsPanel.searchGroups",
+                  "Search groups...",
+                )}
+                sx={{ "& .MuiOutlinedInput-root": { minHeight: "56px" } }}
+              />
+            )}
+            renderOption={(props, option) => {
+              const { key, ...rest } = props;
+              const groupName = option?.Name || nilLabel;
+              const groupPic = option?.GroupPic || defaultProfilePic;
+              const isCreateOption =
+                String(option?._id) === CREATE_GROUP_OPTION_ID;
 
                 if (isCreateOption) {
                   return (
@@ -1370,7 +1522,7 @@ function PersonEditForm({
             <MDBox mt={2} display="flex" flexWrap="wrap" gap={2}>
               {selectedGroups.map((group) => {
                 const groupId = group?._id;
-                const groupName = group?.Name || "NIL";
+                const groupName = group?.Name || nilLabel;
                 const truncatedGroupName = truncateText(groupName);
                 const groupPic = group?.GroupPic || defaultProfilePic;
 
@@ -1386,7 +1538,7 @@ function PersonEditForm({
                   >
                     <IconButton
                       size="small"
-                      aria-label={`Remove ${groupName}`}
+                      aria-label={`${removeFromGroupLabel}: ${groupName}`}
                       onClick={() => {
                         if (!setSelectedGroupIds || !groupId) return;
                         setSelectedGroupIds((prev) =>
@@ -1431,7 +1583,10 @@ function PersonEditForm({
 
               {selectedGroups.length === 0 && (
                 <MDTypography variant="body2" color="text">
-                  No groups selected.
+                  {t(
+                    "personDetailPage.groupsPanel.noGroupsSelected",
+                    "No groups selected.",
+                  )}
                 </MDTypography>
               )}
             </MDBox>
@@ -1445,7 +1600,12 @@ function PersonEditForm({
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>Adjust Profile Picture</DialogTitle>
+        <DialogTitle>
+          {t(
+            "personDetailPage.photo.adjustProfilePicture",
+            "Adjust Profile Picture",
+          )}
+        </DialogTitle>
         <DialogContent>
           <MDBox
             width="100%"
@@ -1482,7 +1642,7 @@ function PersonEditForm({
               <MDBox
                 component="img"
                 src={displayImageSrc}
-                alt={`${editedPerson?.Name || "User"}'s profile`}
+                alt={`${editedPerson?.Name || userLabel}'s profile`}
                 draggable={false}
                 onLoad={handlePreviewImageLoad}
                 sx={{
@@ -1528,8 +1688,10 @@ function PersonEditForm({
           </MDBox>
 
           <MDTypography variant="caption" color="text">
-            Drag to reposition and use the slider or trackpad scroll to zoom;
-            only the highlighted circle becomes the profile photo.
+            {t(
+              "personDetailPage.photo.cropperHelp",
+              "Drag to reposition and use the slider or trackpad scroll to zoom; only the highlighted circle becomes the profile photo.",
+            )}
           </MDTypography>
 
           <MDBox width="100%" mt={1}>
@@ -1550,14 +1712,14 @@ function PersonEditForm({
             color="secondary"
             onClick={handleCropperClose}
           >
-            Close
+            {t("buttons.close", "Close")}
           </MDButton>
           <MDButton
             variant="gradient"
             color="info"
             onClick={handleCropperClose}
           >
-            Done Adjusting
+            {t("personDetailPage.photo.doneAdjusting", "Done Adjusting")}
           </MDButton>
         </DialogActions>
       </Dialog>

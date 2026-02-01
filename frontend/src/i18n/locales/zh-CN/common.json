@@ -1,0 +1,266 @@
+{
+  "language": {
+    "label": "语言",
+    "en": "English",
+    "zhCN": "中文"
+  },
+  "nav": {
+    "title": "泛亚基督徒聚会",
+    "home": "首页",
+    "people": "人员",
+    "groups": "小组",
+    "events": "活动",
+    "more": "更多"
+  },
+  "home": {
+    "visitors": "访客",
+    "donations": "奉献",
+    "baptisms": "受洗",
+    "prayerRequests": "祷告请求"
+  },
+  "actions": {
+    "label": "操作",
+    "view": "查看",
+    "edit": "编辑",
+    "delete": "删除",
+    "undo": "撤销"
+  },
+  "buttons": {
+    "add": "新增",
+    "save": "保存",
+    "cancel": "取消",
+    "discard": "放弃",
+    "keepEditing": "继续编辑",
+    "ok": "确定",
+    "close": "关闭",
+    "done": "完成"
+  },
+  "common": {
+    "loading": "加载中...",
+    "nil": "无",
+    "na": "无",
+    "user": "用户",
+    "custom": "自定义",
+    "other": "其他",
+    "unknown": "未知"
+  },
+  "relations": {
+    "father": "父亲",
+    "mother": "母亲",
+    "son": "儿子",
+    "daughter": "女儿",
+    "brother": "兄弟",
+    "sister": "姐妹",
+    "husband": "丈夫",
+    "wife": "妻子",
+    "spouse": "配偶",
+    "parent": "父母",
+    "child": "子女",
+    "sibling": "兄弟姐妹",
+    "grandfather": "祖父",
+    "grandmother": "祖母",
+    "grandson": "孙子",
+    "granddaughter": "孙女",
+    "grandparent": "祖父母",
+    "grandchild": "孙辈",
+    "father-in-law": "岳父/公公",
+    "mother-in-law": "岳母/婆婆",
+    "parent-in-law": "岳父岳母/公婆",
+    "son-in-law": "女婿",
+    "daughter-in-law": "儿媳",
+    "child-in-law": "女婿/儿媳",
+    "brother-in-law": "姻亲兄弟",
+    "sister-in-law": "姻亲姐妹",
+    "sibling-in-law": "姻亲兄弟姐妹",
+    "uncle": "叔叔/舅舅",
+    "aunt": "阿姨/姑姑",
+    "cousin": "堂/表兄弟姐妹",
+    "niece": "侄女/外甥女",
+    "nephew": "侄子/外甥",
+    "niece/nephew": "侄子/侄女/外甥/外甥女",
+    "friend": "朋友",
+    "colleague": "同事"
+  },
+  "search": {
+    "placeholder": "搜索...",
+    "byDistrict": "按地区搜索"
+  },
+  "filters": {
+    "label": "筛选",
+    "filterBy": "筛选条件",
+    "district": "地区",
+    "test": "测试"
+  },
+  "peoplePage": {
+    "title": "弟兄姊妹",
+    "noPeopleFound": "没有人员。",
+    "columns": {
+      "name": "姓名",
+      "address": "地址",
+      "status": "状态",
+      "mobile": "手机号码"
+    }
+  },
+  "groupsPage": {
+    "searchPlaceholder": "按小组名称搜索...",
+    "noGroupsFound": "没有小组。"
+  },
+  "peopleOverlay": {
+    "step1": {
+      "contacts": "联系人",
+      "sharing": "信息分享",
+      "meetingInfo": "聚会信息",
+      "comingSoon": "待开发"
+    },
+    "step2": {
+      "local": "本地",
+      "overseas": "海外",
+      "gospel": "福音",
+      "visits": "访问"
+    }
+  },
+  "groupForm": {
+    "header": {
+      "addTitle": "新增小组",
+      "editTitle": "编辑小组"
+    },
+    "sections": {
+      "groupInformation": "小组信息"
+    },
+    "fields": {
+      "groupNameRequired": "小组名称 *",
+      "description": "简介",
+      "members": "成员",
+      "searchPeople": "搜索人员..."
+    },
+    "photo": {
+      "chooseGroupPicture": "选择小组头像",
+      "adjustPhoto": "调整照片",
+      "adjustGroupPicture": "调整小组头像",
+      "cropperHelp": "拖动以调整位置，并使用滑块或触控板滚动来缩放；只有高亮圆形区域会成为小组头像。",
+      "doneAdjusting": "完成调整"
+    },
+    "errors": {
+      "nameRequired": "请填写小组名称。",
+      "addFailed": "新增小组失败。"
+    },
+    "toasts": {
+      "added": "已新增小组。"
+    }
+  },
+  "groupDetailPage": {
+    "actions": {
+      "removeFromGroup": "从小组移除",
+      "addMember": "新增成员",
+      "addMembers": "新增成员",
+      "back": "返回"
+    },
+    "members": {
+      "empty": "没有成员。",
+      "countLabel": "成员"
+    },
+    "addMembersDialog": {
+      "added": "已添加"
+    },
+    "toasts": {
+      "updated": "已更新小组。",
+      "membersAdded": "已添加成员。",
+      "memberRemoved": "已移除成员。"
+    },
+    "errors": {
+      "notFound": "未找到小组",
+      "updateFailed": "更新小组失败。",
+      "addMembersSavedOnly": "仅已保存的小组才可添加成员。",
+      "addMembersFailed": "添加成员失败。",
+      "removeMemberSavedOnly": "仅已保存的小组才可移除成员。",
+      "removeMemberFailed": "移除成员失败。"
+    }
+  },
+  "personDetailPage": {
+    "header": {
+      "addTitle": "新增人员",
+      "editTitle": "编辑人员",
+      "viewTitle": "人员详情"
+    },
+    "sections": {
+      "personalInformation": "个人信息",
+      "relatedPersons": "关联人员",
+      "groups": "小组"
+    },
+    "fields": {
+      "nameRequired": "姓名 *",
+      "chineseNameRequired": "中文名 *",
+      "nameLabel": "姓名：",
+      "chineseNameLabel": "中文名：",
+      "birthYear": "出生年份",
+      "birthYearLabel": "出生年份：",
+      "phoneNumber": "电话号码",
+      "phoneNumberLabel": "电话号码：",
+      "announcementGroup": "公告群组",
+      "announcementGroupLabel": "公告群组：",
+      "chatGroup": "聊天群组",
+      "chatGroupLabel": "聊天群组：",
+      "email": "邮箱",
+      "emailLabel": "邮箱：",
+      "district": "地区",
+      "districtLabel": "地区：",
+      "address": "地址",
+      "addressLabel": "地址："
+    },
+    "customFields": {
+      "fieldName": "信息名称",
+      "value": "信息",
+      "addCustomField": "新增自定义信息",
+      "removeCustomFieldAria": "移除自定义信息"
+    },
+    "relationships": {
+      "relationship": "关系",
+      "addRelationship": "新增关系",
+      "removeRelationshipAria": "移除关系",
+      "personName": "对方姓名",
+      "theirRelationToMe": "对方与我的关系",
+      "myRelationToThem": "我与对方的关系",
+      "invalidRelation": "请选择列表中的关系。",
+      "noneFound": "没有关联人员。",
+      "clearAllTest": "清除全部（测试）"
+    },
+    "groupsPanel": {
+      "createOneNow": "没有小组 — 现在创建一个",
+      "addToGroups": "加入小组",
+      "searchGroups": "搜索小组...",
+      "noGroupsSelected": "未选择小组。",
+      "noGroupsFound": "没有小组。",
+      "removeFromGroup": "移出小组"
+    },
+    "photo": {
+      "chooseProfilePicture": "选择头像",
+      "adjustPhoto": "调整照片",
+      "adjustProfilePicture": "调整头像",
+      "cropperHelp": "拖动以调整位置，并使用滑块或触控板滚动来缩放；只有高亮圆形区域会成为头像。",
+      "doneAdjusting": "完成调整"
+    },
+    "dialogs": {
+      "discardTitle": "放弃更改？",
+      "discardBody": "你有未保存的更改。确定放弃吗？",
+      "notFoundTitle": "未找到人员",
+      "notFoundBody": "你要查找的人员不存在。",
+      "deleteTitle": "删除",
+      "deleteBody": "删除此人员？"
+    },
+    "errors": {
+      "createFirstBeforeUpload": "请先创建人员，然后再上传图片。",
+      "uploadFailed": "上传图片失败，请重试。",
+      "nameRequired": "请填写姓名或中文名。",
+      "invalidNameChars": "姓名/中文名中包含无效字符，请移除特殊符号。",
+      "removeFromGroupSavedOnly": "仅已保存的小组才可移除成员。",
+      "removeFromGroupFailed": "从小组移除失败。",
+      "deleteFailed": "删除人员失败。"
+    },
+    "toasts": {
+      "created": "已创建",
+      "saved": "已保存",
+      "removedFromGroup": "已从小组移除。",
+      "personDeleted": "人员已删除。"
+    }
+  }
+}

@@ -5,6 +5,7 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "i18n";
 
 const GROUP_TITLE_CHAR_LIMIT = 7;
 
@@ -25,6 +26,10 @@ function PersonDisplay({
   onClearRelationships,
 }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const nilLabel = t("common.nil", "NIL");
+  const userLabel = t("common.user", "User");
+  const customLabel = t("common.custom", "Custom");
 
   const handleRelatedPersonClick = (relatedPerson) => {
     if (!relatedPerson?._id) return;
@@ -46,8 +51,15 @@ function PersonDisplay({
   };
 
   const displayOrNil = (v) => {
-    if (v === undefined || v === null || v === "") return "NIL";
+    if (v === undefined || v === null || v === "") return nilLabel;
     return String(v);
+  };
+
+  const normalizeRelationKey = (value = "") => String(value).trim().toLowerCase();
+  const getRelationLabel = (value = "") => {
+    const normalized = normalizeRelationKey(value);
+    if (!normalized) return "";
+    return t(`relations.${normalized}`, value);
   };
 
   const profilePicSrc = person?.ProfilePic
@@ -81,7 +93,7 @@ function PersonDisplay({
           <MDBox
             component="img"
             src={profilePicSrc}
-            alt={`${person?.Name || "User"}'s profile`}
+            alt={`${person?.Name || userLabel}'s profile`}
             width="150px"
             height="150px"
             borderRadius="50%"
@@ -100,7 +112,10 @@ function PersonDisplay({
         {/* Panel 1: Personal Information */}
         <Card sx={{ mb: 3, p: 2 }}>
           <MDTypography variant="h5" fontWeight="bold" mb={2}>
-            Personal Information
+            {t(
+              "personDetailPage.sections.personalInformation",
+              "Personal Information",
+            )}
           </MDTypography>
 
           <MDBox display="flex" flexDirection="column" gap={1}>
@@ -111,7 +126,7 @@ function PersonDisplay({
                 fontWeight="bold"
                 sx={{ fontSize: "1rem" }}
               >
-                Name:
+                {t("personDetailPage.fields.nameLabel", "Name:")}
               </MDTypography>{" "}
               {displayOrNil(person?.Name)}
             </MDTypography>
@@ -122,7 +137,7 @@ function PersonDisplay({
                 fontWeight="bold"
                 sx={{ fontSize: "1rem" }}
               >
-                Chinese Name:
+                {t("personDetailPage.fields.chineseNameLabel", "Chinese Name:")}
               </MDTypography>{" "}
               {displayOrNil(person?.NameChi)}
             </MDTypography>
@@ -133,7 +148,7 @@ function PersonDisplay({
                 fontWeight="bold"
                 sx={{ fontSize: "1rem" }}
               >
-                Birth Year:
+                {t("personDetailPage.fields.birthYearLabel", "Birth Year:")}
               </MDTypography>{" "}
               {displayOrNil(person?.BirthYear)}
             </MDTypography>
@@ -144,7 +159,7 @@ function PersonDisplay({
                 fontWeight="bold"
                 sx={{ fontSize: "1rem" }}
               >
-                Phone Number:
+                {t("personDetailPage.fields.phoneNumberLabel", "Phone Number:")}
               </MDTypography>{" "}
               {displayOrNil(person?.PhoneNumber)}
             </MDTypography>
@@ -155,7 +170,10 @@ function PersonDisplay({
                 fontWeight="bold"
                 sx={{ fontSize: "1rem" }}
               >
-                Announcement Group:
+                {t(
+                  "personDetailPage.fields.announcementGroupLabel",
+                  "Announcement Group:",
+                )}
               </MDTypography>{" "}
               {displayOrNil(person?.AnnouncementGroup)}
             </MDTypography>
@@ -166,7 +184,7 @@ function PersonDisplay({
                 fontWeight="bold"
                 sx={{ fontSize: "1rem" }}
               >
-                Chat Group:
+                {t("personDetailPage.fields.chatGroupLabel", "Chat Group:")}
               </MDTypography>{" "}
               {displayOrNil(person?.ChatGroup)}
             </MDTypography>
@@ -177,7 +195,7 @@ function PersonDisplay({
                 fontWeight="bold"
                 sx={{ fontSize: "1rem" }}
               >
-                Email:
+                {t("personDetailPage.fields.emailLabel", "Email:")}
               </MDTypography>{" "}
               {displayOrNil(person?.Email)}
             </MDTypography>
@@ -188,7 +206,7 @@ function PersonDisplay({
                 fontWeight="bold"
                 sx={{ fontSize: "1rem" }}
               >
-                District:
+                {t("personDetailPage.fields.districtLabel", "District:")}
               </MDTypography>{" "}
               {displayOrNil(person?.District)}
             </MDTypography>
@@ -199,7 +217,7 @@ function PersonDisplay({
                 fontWeight="bold"
                 sx={{ fontSize: "1rem" }}
               >
-                Address:
+                {t("personDetailPage.fields.addressLabel", "Address:")}
               </MDTypography>{" "}
               {displayOrNil(person?.Address)}
             </MDTypography>
@@ -212,12 +230,12 @@ function PersonDisplay({
                   fontWeight="bold"
                   sx={{ fontSize: "1rem" }}
                 >
-                  {field.key || "Custom"}:
+                  {field.key || customLabel}:
                 </MDTypography>{" "}
                 {field.value === undefined ||
                 field.value === null ||
                 field.value === ""
-                  ? "NIL"
+                  ? nilLabel
                   : typeof field.value === "object"
                   ? JSON.stringify(field.value)
                   : String(field.value)}
@@ -236,7 +254,7 @@ function PersonDisplay({
             gap={1}
           >
             <MDTypography variant="h5" fontWeight="bold">
-              Related Persons
+              {t("personDetailPage.sections.relatedPersons", "Related Persons")}
             </MDTypography>
 
             {onClearRelationships && (
@@ -247,7 +265,7 @@ function PersonDisplay({
                 onClick={onClearRelationships}
                 disabled={relationshipCustomFieldsForRender.length === 0}
               >
-                Clear All (Test)
+                {t("personDetailPage.relationships.clearAllTest", "Clear All")}
               </MDButton>
             )}
           </MDBox>
@@ -260,8 +278,10 @@ function PersonDisplay({
                 : peopleList.find((p) => p.Name === field.value);
 
               const relatedPersonName =
-                relatedPerson?.Name || field.value || "NIL";
-              const relatedPersonRelation = field.value2 || "NIL";
+                relatedPerson?.Name || field.value || nilLabel;
+              const relatedPersonRelation = field.value2
+                ? getRelationLabel(field.value2) || field.value2
+                : nilLabel;
               const relatedPersonProfilePic =
                 relatedPerson?.ProfilePic || defaultProfilePic;
 
@@ -314,7 +334,10 @@ function PersonDisplay({
 
             {relationshipCustomFieldsForRender.length === 0 && (
               <MDTypography variant="body2" color="text">
-                No related persons found.
+                {t(
+                  "personDetailPage.relationships.noneFound",
+                  "No related persons found.",
+                )}
               </MDTypography>
             )}
           </MDBox>
@@ -323,12 +346,12 @@ function PersonDisplay({
         {/* Panel 3: Groups */}
         <Card sx={{ p: 2, mt: 3 }}>
           <MDTypography variant="h5" fontWeight="bold" mb={2}>
-            Groups
+            {t("personDetailPage.sections.groups", "Groups")}
           </MDTypography>
 
           <MDBox display="flex" flexWrap="wrap" gap={2}>
             {personGroups.map((group, index) => {
-              const groupName = group?.Name || "NIL";
+              const groupName = group?.Name || nilLabel;
               const truncatedGroupName = truncateText(groupName);
               const groupPic = group?.GroupPic || defaultProfilePic;
               const key = group?._id || groupName || index;
@@ -380,7 +403,7 @@ function PersonDisplay({
 
             {personGroups.length === 0 && (
               <MDTypography variant="body2" color="text">
-                No groups found.
+                {t("personDetailPage.groupsPanel.noGroupsFound", "No groups found.")}
               </MDTypography>
             )}
           </MDBox>

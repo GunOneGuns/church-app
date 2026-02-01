@@ -25,16 +25,16 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 import peopleTableData, {
-  columns as peopleColumns,
   buildRows as buildPeopleRows,
+  getPeopleColumns,
 } from "layouts/tables/data/peopleTableData";
 import { setMobileNavbarTitle, useMaterialUIController } from "context";
 import defaultProfilePic from "assets/images/default-profile-picture.png";
 import { ACCENT_CYAN } from "constants.js";
 import Toast from "components/Toast";
 import { deletePerson, updatePerson } from "services/convo-broker.js";
+import { useTranslation } from "i18n";
 
-const PEOPLE_TABLE_TITLE = "Brothers & Sisters";
 const MOBILE_PAGINATION_HEIGHT = 30;
 const DELETE_UNDO_TIMEOUT_MS = 6000;
 
@@ -135,6 +135,7 @@ function MobilePaginationControls({ page, totalPages, goToPage }) {
 }
 
 function SearchFilterAdornment({ filter, onSelectFilter }) {
+  const { t } = useTranslation();
   const menuIdRef = useRef(
     `people-filter-menu-${Math.random().toString(36).slice(2)}`,
   );
@@ -155,10 +156,10 @@ function SearchFilterAdornment({ filter, onSelectFilter }) {
 
   return (
     <InputAdornment position="end">
-      <Tooltip title="Filters">
+      <Tooltip title={t("filters.label", "Filters")}>
         <IconButton
           size="small"
-          aria-label="Filters"
+          aria-label={t("filters.label", "Filters")}
           aria-controls={open ? menuIdRef.current : undefined}
           aria-haspopup="menu"
           aria-expanded={open ? "true" : undefined}
@@ -180,7 +181,7 @@ function SearchFilterAdornment({ filter, onSelectFilter }) {
       >
         <MDBox px={2} pt={1.25} pb={0.75}>
           <MDTypography variant="caption" fontWeight="bold">
-            Filter By
+            {t("filters.filterBy", "Filter By")}
           </MDTypography>
         </MDBox>
         <Divider />
@@ -191,7 +192,7 @@ function SearchFilterAdornment({ filter, onSelectFilter }) {
             handleClose(event);
           }}
         >
-          District
+          {t("filters.district", "District")}
         </MenuItem>
       </Menu>
     </InputAdornment>
@@ -204,6 +205,9 @@ function People() {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const { t } = useTranslation();
+  const pageTitle = t("peoplePage.title", "Brothers & Sisters");
+  const translatedColumns = useMemo(() => getPeopleColumns(t), [t]);
 
   const overlayActive = location.state?.openPeopleOverlay === true;
   const [, dispatch] = useMaterialUIController();
@@ -293,16 +297,18 @@ function People() {
       setMobileNavbarTitle(dispatch, null);
       return undefined;
     }
-    if (overlayActive) setMobileNavbarTitle(dispatch, "People");
-    else setMobileNavbarTitle(dispatch, PEOPLE_TABLE_TITLE);
+    if (overlayActive) setMobileNavbarTitle(dispatch, t("nav.people", "People"));
+    else setMobileNavbarTitle(dispatch, pageTitle);
     return () => setMobileNavbarTitle(dispatch, null);
-  }, [dispatch, isMobile, overlayActive]);
+  }, [dispatch, isMobile, overlayActive, pageTitle, t]);
 
   // Search
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilter, setSearchFilter] = useState("default");
   const searchPlaceholder =
-    searchFilter === "district" ? "Search by District" : "Search...";
+    searchFilter === "district"
+      ? t("search.byDistrict", "Search by District")
+      : t("search.placeholder", "Search...");
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -539,12 +545,14 @@ function People() {
             >
               <PersonMobileViewList
                 items={paginatedPeople}
-                emptyText="No people found."
+                emptyText={t("peoplePage.noPeopleFound", "No people found.")}
                 getAvatarSrc={(person) =>
                   person?.ProfilePic || defaultProfilePic
                 }
-                getAvatarName={(person) => person?.Name || "N/A"}
-                getPrimary={(person) => person?.Name || "N/A"}
+                getAvatarName={(person) =>
+                  person?.Name || t("common.na", "N/A")
+                }
+                getPrimary={(person) => person?.Name || t("common.na", "N/A")}
                 getSecondary={(person) => person?.NameChi?.trim?.() || null}
                 onItemClick={(person) => {
                   const personId = person?._id || person?.id;
@@ -604,9 +612,9 @@ function People() {
                   justifyContent="space-between"
                   alignItems="center"
                 >
-                  <MDTypography variant="h6" color="white">
-                    {PEOPLE_TABLE_TITLE}
-                  </MDTypography>
+	                <MDTypography variant="h6" color="white">
+	                    {pageTitle}
+	                  </MDTypography>
                   <MDButton
                     variant="contained"
                     color="white"
@@ -627,14 +635,14 @@ function People() {
                   pt={3}
                   sx={{ maxHeight: "calc(100vh - 450px)", overflow: "auto" }}
                 >
-                  <DataTable
-                    table={{ columns: peopleColumns, rows: paginatedRows }}
-                    isSorted={false}
-                    entriesPerPage={false}
-                    showTotalEntries={false}
-                    noEndBorder
-                    pagination={false}
-                  />
+	                  <DataTable
+	                    table={{ columns: translatedColumns, rows: paginatedRows }}
+	                    isSorted={false}
+	                    entriesPerPage={false}
+	                    showTotalEntries={false}
+	                    noEndBorder
+	                    pagination={false}
+	                  />
                 </MDBox>
 
                 <MDBox

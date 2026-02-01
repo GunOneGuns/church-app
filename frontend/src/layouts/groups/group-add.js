@@ -14,6 +14,7 @@ import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import Toast from "components/Toast";
 import GroupEditForm from "components/GroupDetail/GroupEditForm";
+import { useTranslation } from "i18n";
 import {
   createGroup,
   fetchPeople,
@@ -33,6 +34,7 @@ export default function GroupAdd() {
   const location = useLocation();
   const theme = useTheme();
   const isMobileView = useMediaQuery(theme.breakpoints.down("xl"));
+  const { t } = useTranslation();
   const [editedGroup, setEditedGroup] = useState(DEFAULT_GROUP);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadError, setUploadError] = useState(null);
@@ -49,9 +51,9 @@ export default function GroupAdd() {
     const baseRoute = ["groups"];
     const trimmedName = editedGroup?.Name?.trim() || "";
     if (trimmedName) baseRoute.push(trimmedName);
-    else baseRoute.push("add");
+    else baseRoute.push(t("groupForm.header.addTitle", "Add Group"));
     return baseRoute;
-  }, [editedGroup?.Name]);
+  }, [editedGroup?.Name, t]);
 
   const navigateBack = useCallback(() => {
     const from = location.state?.from;
@@ -104,7 +106,7 @@ export default function GroupAdd() {
     if (!editedGroup.Name.trim()) {
       setToast({
         open: true,
-        message: "Group name is required.",
+        message: t("groupForm.errors.nameRequired", "Group name is required."),
         severity: "error",
       });
       return;
@@ -129,7 +131,7 @@ export default function GroupAdd() {
       navigate(`/group/${created._id}`, {
         state: {
           toast: {
-            message: "Group added successfully.",
+            message: t("groupForm.toasts.added", "Group added successfully."),
             severity: "success",
           },
         },
@@ -137,13 +139,13 @@ export default function GroupAdd() {
     } catch (error) {
       setToast({
         open: true,
-        message: error?.message || "Failed to add group.",
+        message: error?.message || t("groupForm.errors.addFailed", "Failed to add group."),
         severity: "error",
       });
     } finally {
       setIsSaving(false);
     }
-  }, [editedGroup, navigate, selectedFile]);
+  }, [editedGroup, isSaving, navigate, selectedFile, t]);
 
   return (
     <DashboardLayout>
@@ -174,9 +176,13 @@ export default function GroupAdd() {
 
             <MDTypography
               variant="h4"
-              sx={isMobileView ? { textAlign: "center", m: 0, lineHeight: 1.1 } : undefined}
+              sx={
+                isMobileView
+                  ? { textAlign: "center", m: 0, lineHeight: 1.1 }
+                  : undefined
+              }
             >
-              Add Group
+              {t("groupForm.header.addTitle", "Add Group")}
             </MDTypography>
 
             {isMobileView ? (
@@ -189,7 +195,7 @@ export default function GroupAdd() {
                   onClick={handleAdd}
                   disabled={isSaving}
                 >
-                  Add
+                  {t("buttons.add", "Add")}
                 </MDButton>
                 <MDButton
                   variant="gradient"
@@ -197,7 +203,7 @@ export default function GroupAdd() {
                   onClick={navigateBack}
                   disabled={isSaving}
                 >
-                  Cancel
+                  {t("buttons.cancel", "Cancel")}
                 </MDButton>
               </MDBox>
             )}
@@ -240,7 +246,7 @@ export default function GroupAdd() {
                 fontWeight="medium"
                 sx={{ color: "white.main", fontSize: "17px" }}
               >
-                Cancel
+                {t("buttons.cancel", "Cancel")}
               </MDTypography>
             </Card>
           </MDBox>

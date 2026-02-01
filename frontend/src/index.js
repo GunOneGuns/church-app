@@ -22,6 +22,7 @@ import * as serviceWorkerRegistration from "serviceWorkerRegistration";
 
 // Material Dashboard 2 React Context Provider
 import { MaterialUIControllerProvider } from "context";
+import { I18nProvider } from "i18n";
 
 const rootElement = document.getElementById("root");
 const root = createRoot(rootElement);
@@ -30,7 +31,9 @@ root.render(
   <BrowserRouter>
     <AuthContextProvider>
       <MaterialUIControllerProvider>
-        <App />
+        <I18nProvider>
+          <App />
+        </I18nProvider>
       </MaterialUIControllerProvider>
     </AuthContextProvider>
   </BrowserRouter>

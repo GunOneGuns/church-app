@@ -14,19 +14,20 @@ import useMediaQuery from "@mui/material/useMediaQuery";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
+import { useTranslation } from "i18n";
 import defaultProfilePic from "assets/images/default-profile-picture.png";
 
 const FIELD_LABEL_SX = { fontSize: "1rem" };
 
-function getPersonLabel(person) {
+function getPersonLabel(person, unknownLabel = "Unknown") {
   if (!person) return "";
   const name = person.Name || "";
   const nameChi = person.NameChi || "";
   if (name && nameChi) return `${name} (${nameChi})`;
   if (name || nameChi) return name || nameChi;
   const id = person?._id || person?.id;
-  if (id) return `Unknown (${String(id).slice(-6)})`;
-  return "Unknown";
+  if (id) return `${unknownLabel} (${String(id).slice(-6)})`;
+  return unknownLabel;
 }
 
 export default function GroupEditForm({
@@ -39,10 +40,13 @@ export default function GroupEditForm({
   registerGroupPicProcessor,
   uploadError,
 }) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isMobileView = useMediaQuery(theme.breakpoints.down("xl"));
   const [memberQuery, setMemberQuery] = useState("");
   const [membersOpen, setMembersOpen] = useState(false);
+  const unknownLabel = t("common.unknown", "Unknown");
+  const groupLabel = t("nav.groups", "Group");
 
   const DRAG_CONTAINER_SIZE = 180;
   const PREVIEW_BOX_SIZE = 260;
@@ -364,7 +368,7 @@ export default function GroupEditForm({
               <MDBox
                 component="img"
                 src={displayImageSrc}
-                alt={`${editedGroup?.Name || "Group"}'s picture`}
+                alt={`${editedGroup?.Name || groupLabel}'s picture`}
                 draggable={false}
                 onLoad={handlePreviewImageLoad}
                 sx={{
@@ -397,7 +401,7 @@ export default function GroupEditForm({
                 onClick={openCropper}
                 sx={{ mt: 1 }}
               >
-                Adjust Photo
+                {t("groupForm.photo.adjustPhoto", "Adjust Photo")}
               </MDButton>
             )}
 
@@ -424,7 +428,12 @@ export default function GroupEditForm({
                   fullWidth
                   startIcon={<UploadFileIcon />}
                 >
-                  {selectedFile ? selectedFile.name : "Choose Group Picture"}
+                  {selectedFile
+                    ? selectedFile.name
+                    : t(
+                        "groupForm.photo.chooseGroupPicture",
+                        "Choose Group Picture",
+                      )}
                 </MDButton>
               </label>
               {uploadError && (
@@ -440,13 +449,13 @@ export default function GroupEditForm({
         <Grid item xs={12} md={8} lg={9}>
           <Card sx={{ p: 2 }}>
             <MDTypography variant="h6" fontWeight="bold" mb={2}>
-              Group Information
+              {t("groupForm.sections.groupInformation", "Group Information")}
             </MDTypography>
 
             <MDBox display="flex" flexDirection="column" gap={2}>
               <TextField
                 variant="outlined"
-                label="Group Name *"
+                label={t("groupForm.fields.groupNameRequired", "Group Name *")}
                 value={editedGroup?.Name ?? ""}
                 onChange={(e) => onChangeField("Name", e.target.value)}
                 fullWidth
@@ -456,7 +465,7 @@ export default function GroupEditForm({
 
               <TextField
                 variant="outlined"
-                label="Description"
+                label={t("groupForm.fields.description", "Description")}
                 value={editedGroup?.Description ?? ""}
                 onChange={(e) => onChangeField("Description", e.target.value)}
                 fullWidth
@@ -502,7 +511,7 @@ export default function GroupEditForm({
                 onClose={() => setMembersOpen(false)}
                 openOnFocus
                 disableCloseOnSelect
-                getOptionLabel={getPersonLabel}
+                getOptionLabel={(option) => getPersonLabel(option, unknownLabel)}
                 isOptionEqualToValue={(opt, val) => opt?._id === val?._id}
                 filterOptions={(options, state) =>
                   filterPeopleOptions(options, state.inputValue)
@@ -512,7 +521,7 @@ export default function GroupEditForm({
                   const { key, ...rest } = props;
                   return (
                     <li key={option?._id || option?.id || key} {...rest}>
-                      {getPersonLabel(option)}
+                      {getPersonLabel(option, unknownLabel)}
                     </li>
                   );
                 }}
@@ -520,8 +529,11 @@ export default function GroupEditForm({
                   <TextField
                     {...params}
                     variant="outlined"
-                    label="Members"
-                    placeholder="Search people..."
+                    label={t("groupForm.fields.members", "Members")}
+                    placeholder={t(
+                      "groupForm.fields.searchPeople",
+                      "Search people...",
+                    )}
                     InputLabelProps={{ sx: FIELD_LABEL_SX }}
                   />
                 )}
@@ -537,7 +549,9 @@ export default function GroupEditForm({
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>Adjust Group Picture</DialogTitle>
+        <DialogTitle>
+          {t("groupForm.photo.adjustGroupPicture", "Adjust Group Picture")}
+        </DialogTitle>
         <DialogContent>
           <MDBox width="100%" display="flex" justifyContent="center" mt={1} mb={2}>
             <MDBox
@@ -568,7 +582,7 @@ export default function GroupEditForm({
               <MDBox
                 component="img"
                 src={displayImageSrc}
-                alt={`${editedGroup?.Name || "Group"}'s picture`}
+                alt={`${editedGroup?.Name || groupLabel}'s picture`}
                 draggable={false}
                 onLoad={handlePreviewImageLoad}
                 sx={{
@@ -614,8 +628,10 @@ export default function GroupEditForm({
           </MDBox>
 
           <MDTypography variant="caption" color="text">
-            Drag to reposition and use the slider or trackpad scroll to zoom; only
-            the highlighted circle becomes the group picture.
+            {t(
+              "groupForm.photo.cropperHelp",
+              "Drag to reposition and use the slider or trackpad scroll to zoom; only the highlighted circle becomes the group picture.",
+            )}
           </MDTypography>
 
           <MDBox width="100%" mt={1}>
@@ -631,10 +647,10 @@ export default function GroupEditForm({
         </DialogContent>
         <DialogActions>
           <MDButton variant="text" color="secondary" onClick={handleCropperClose}>
-            Close
+            {t("buttons.close", "Close")}
           </MDButton>
           <MDButton variant="gradient" color="info" onClick={handleCropperClose}>
-            Done Adjusting
+            {t("groupForm.photo.doneAdjusting", "Done Adjusting")}
           </MDButton>
         </DialogActions>
       </Dialog>

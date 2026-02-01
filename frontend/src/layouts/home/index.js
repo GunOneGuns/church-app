@@ -14,6 +14,7 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import { ACCENT_CYAN } from "constants.js";
 import { fetchPeopleStats } from "services/convo-broker";
+import { useTranslation } from "i18n";
 
 const splitValueForHighlight = (value) => {
   const text = String(value ?? "");
@@ -44,6 +45,7 @@ const renderCyanNumberValue = (value) => {
 
 function Home() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("xl"));
 
@@ -77,34 +79,35 @@ function Home() {
   const homeStats = useMemo(
     () => [
       {
-        title: "People",
+        key: "people",
+        title: t("nav.people", "People"),
         value: peopleStats.peopleCount ?? "—",
         detail: "Total people",
       },
       {
-        title: "Group",
+        key: "groups",
+        title: t("nav.groups", "Group"),
         value: peopleStats.groupCount ?? "—",
         detail: "Small groups",
       },
-      { title: "Event", value: "5", detail: "Upcoming" },
-      { title: "Visitors", value: "14", detail: "This month" },
-      { title: "Donations", value: "$1,250", detail: "This week" },
-      { title: "Baptisms", value: "2", detail: "This quarter" },
-      { title: "Prayer Requests", value: "9", detail: "Open" },
+      { key: "events", title: t("nav.events", "Event"), value: "5", detail: "Upcoming" },
+      { key: "visitors", title: t("home.visitors", "Visitors"), value: "14", detail: "This month" },
+      { key: "donations", title: t("home.donations", "Donations"), value: "$1,250", detail: "This week" },
+      { key: "baptisms", title: t("home.baptisms", "Baptisms"), value: "2", detail: "This quarter" },
+      { key: "prayerRequests", title: t("home.prayerRequests", "Prayer Requests"), value: "9", detail: "Open" },
     ],
-    [peopleStats.groupCount, peopleStats.peopleCount],
+    [peopleStats.groupCount, peopleStats.peopleCount, t],
   );
 
-  const getCardNavigation = (title) => {
-    const normalized = String(title || "").toLowerCase();
-    if (normalized === "people") {
+  const getCardNavigation = (key) => {
+    if (key === "people") {
       return () =>
         navigate(
           "/people",
           isMobile ? { state: { openPeopleOverlay: true } } : undefined,
         );
     }
-    if (normalized === "group" || normalized === "groups") {
+    if (key === "groups") {
       return () => navigate("/groups");
     }
     return null;
@@ -114,17 +117,17 @@ function Home() {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox pt={6} pb={3}>
-        <Grid container spacing={2}>
-          {homeStats.map((item) => {
-            const onCardClick = getCardNavigation(item.title);
-            const isClickable = typeof onCardClick === "function";
+	        <Grid container spacing={2}>
+	          {homeStats.map((item) => {
+	            const onCardClick = getCardNavigation(item.key);
+	            const isClickable = typeof onCardClick === "function";
 
-            return (
-              <Grid item xs={6} md={3} key={item.title}>
-                <Card
-                  sx={{
-                    height: "100%",
-                    aspectRatio: "1 / 1",
+	            return (
+	              <Grid item xs={6} md={3} key={item.key}>
+	                <Card
+	                  sx={{
+	                    height: "100%",
+	                    aspectRatio: "1 / 1",
                     borderRadius: 2,
                   }}
                 >
