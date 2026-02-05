@@ -584,7 +584,7 @@ function Groups() {
                   alignItems="center"
                 >
                   <MDTypography variant="h6" color="white">
-                    {GROUPS_TABLE_TITLE}
+                    {pageTitle}
                   </MDTypography>
                   <MDButton
                     variant="contained"
