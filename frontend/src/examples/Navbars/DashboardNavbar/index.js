@@ -86,8 +86,7 @@ const getMobileTitle = (routeSegments = [], t) => {
   const first = normalizedSegments[0];
   const last = normalizedSegments[normalizedSegments.length - 1];
 
-  const entry =
-    MOBILE_TITLE_KEYS[first] || MOBILE_TITLE_KEYS[last] || null;
+  const entry = MOBILE_TITLE_KEYS[first] || MOBILE_TITLE_KEYS[last] || null;
   if (entry && typeof t === "function") return t(entry.key, entry.fallback);
   if (entry) return entry.fallback;
   return String(last).replaceAll("-", " ");
@@ -137,7 +136,7 @@ function DashboardNavbar({
     function handleTransparentNavbar() {
       setTransparentNavbar(
         dispatch,
-        (fixedNavbar && window.scrollY === 0) || !fixedNavbar
+        (fixedNavbar && window.scrollY === 0) || !fixedNavbar,
       );
     }
 
@@ -217,14 +216,14 @@ function DashboardNavbar({
     const mobileBackground = theme.functions.linearGradient(
       ACCENT_CYAN,
       chroma(ACCENT_CYAN).darken(1).hex(),
-	    );
+    );
 
-	    const mobileTitle = mobileNavbarTitle || getMobileTitle(route, t);
-	    const mobileLight = true;
-	    const mobileIconsStyle = getIconsStyle(mobileLight);
-	    const mobileTitleText = String(mobileTitle || "");
-	    const truncatedMobileTitle =
-	      mobileTitleText.length > 26
+    const mobileTitle = mobileNavbarTitle || getMobileTitle(route, t);
+    const mobileLight = true;
+    const mobileIconsStyle = getIconsStyle(mobileLight);
+    const mobileTitleText = String(mobileTitle || "");
+    const truncatedMobileTitle =
+      mobileTitleText.length > 26
         ? `${mobileTitleText.slice(0, 26)}…`
         : mobileTitleText;
 
@@ -258,25 +257,18 @@ function DashboardNavbar({
             overflow: "hidden",
           }}
         >
-          {showBackButton ? (
-            <IconButton
-              size="small"
-              disableRipple
-              color="inherit"
-              onClick={() => navigate("/groups")}
-              aria-label="Back to groups"
-              sx={{
-                width: 40,
-                height: 40,
-                flexShrink: 0,
-                "& .MuiSvgIcon-root": { fontSize: 28 },
-              }}
-            >
-              <ArrowBackIosNewIcon sx={mobileIconsStyle} />
-            </IconButton>
-          ) : (
-            <MDBox sx={{ width: 40, flexShrink: 0 }} />
-          )}
+          <IconButton
+            disableRipple
+            onClick={() => setMiniSidenav(dispatch, false)}
+            aria-label={t("nav.more", "More")}
+            sx={{
+              width: 40,
+              height: 40,
+              flexShrink: 0,
+            }}
+          >
+            <Icon sx={(muiTheme) => mobileIconsStyle(muiTheme)}>menu</Icon>
+          </IconButton>
 
           <MDBox sx={{ flex: 1, minWidth: 0, px: 1 }}>
             <MDTypography
@@ -300,7 +292,25 @@ function DashboardNavbar({
             </MDTypography>
           </MDBox>
 
-          <MDBox sx={{ width: 40, flexShrink: 0 }} />
+          {showBackButton ? (
+            <IconButton
+              size="small"
+              disableRipple
+              color="inherit"
+              onClick={() => navigate("/groups")}
+              aria-label={t("groupDetailPage.actions.back", "Back")}
+              sx={{
+                width: 40,
+                height: 40,
+                flexShrink: 0,
+                "& .MuiSvgIcon-root": { fontSize: 28 },
+              }}
+            >
+              <ArrowBackIosNewIcon sx={mobileIconsStyle} />
+            </IconButton>
+          ) : (
+            <MDBox sx={{ width: 40, flexShrink: 0 }} />
+          )}
         </Toolbar>
       </AppBar>
     );
