@@ -136,3 +136,77 @@ export const uploadGroupPicture = async (groupId, file) => {
 
   return response.data;
 };
+
+export const fetchEvents = async ({ month, fromKey, toKey, signal } = {}) => {
+  const params = new URLSearchParams();
+  if (month) params.set("month", month);
+  if (fromKey) params.set("fromKey", fromKey);
+  if (toKey) params.set("toKey", toKey);
+  params.set("_ts", String(Date.now()));
+
+  const response = await fetch(`${baseURL}/events?${params.toString()}`, {
+    method: "GET",
+    headers: {
+      "Cache-Control": "no-cache",
+    },
+    signal,
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || "Failed to fetch events");
+  }
+  return data;
+};
+
+export const createEvent = async (eventData) => {
+  const response = await fetch(`${baseURL}/events`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(eventData || {}),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || "Failed to create event");
+  }
+  return data;
+};
+
+export const updateEvent = async (id, eventData) => {
+  const response = await fetch(`${baseURL}/events/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(eventData || {}),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || "Failed to update event");
+  }
+  return data;
+};
+
+export const deleteEvent = async (id) => {
+  const response = await fetch(`${baseURL}/events/${id}`, {
+    method: "DELETE",
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || "Failed to delete event");
+  }
+  return data;
+};
+
+export const restoreEvent = async (id) => {
+  const response = await fetch(`${baseURL}/events/${id}/restore`, {
+    method: "POST",
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || "Failed to restore event");
+  }
+  return data;
+};

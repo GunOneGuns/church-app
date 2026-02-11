@@ -12,11 +12,64 @@
     "events": "Event",
     "more": "More"
   },
+  "months": [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December"
+  ],
+  "monthsShort": [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+  ],
   "home": {
     "visitors": "Visitors",
     "donations": "Donations",
     "baptisms": "Baptisms",
     "prayerRequests": "Prayer Requests"
+  },
+  "eventsPage": {
+    "noEvents": "No events.",
+    "loadFailed": "Failed to load events.",
+    "addEvent": "Add event",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "selectYear": "Select year",
+    "selectMonth": "Select month"
+  },
+  "eventsForm": {
+    "title": "New Event",
+    "sections": {
+      "time": "Time"
+    },
+    "fields": {
+      "title": "Title",
+      "location": "Location",
+      "allDay": "All-day",
+      "starts": "Starts",
+      "ends": "Ends",
+      "tagColour": "Tag Colour",
+      "start": "Start",
+      "end": "End"
+    }
   },
   "actions": {
     "label": "Actions",
@@ -83,12 +136,17 @@
   },
   "search": {
     "placeholder": "Search...",
-    "byDistrict": "Search by District"
+    "byDistrict": "Search by District",
+    "byLocation": "Search by Location",
+    "byDate": "Search by Date",
+    "eventsPlaceholder": "Search events..."
   },
   "filters": {
     "label": "Filters",
     "filterBy": "Filter By",
     "district": "District",
+    "location": "Location",
+    "date": "Date",
     "test": "test"
   },
   "peoplePage": {

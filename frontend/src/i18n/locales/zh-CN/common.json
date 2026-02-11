@@ -12,11 +12,87 @@
     "events": "活动",
     "more": "更多"
   },
+  "months": [
+    "一月",
+    "二月",
+    "三月",
+    "四月",
+    "五月",
+    "六月",
+    "七月",
+    "八月",
+    "九月",
+    "十月",
+    "十一月",
+    "十二月"
+  ],
+  "monthsShort": [
+    "一月",
+    "二月",
+    "三月",
+    "四月",
+    "五月",
+    "六月",
+    "七月",
+    "八月",
+    "九月",
+    "十月",
+    "十一月",
+    "十二月"
+  ],
   "home": {
     "visitors": "访客",
     "donations": "奉献",
     "baptisms": "受洗",
     "prayerRequests": "祷告请求"
+  },
+  "eventsPage": {
+    "noEvents": "没有活动。",
+    "loadFailed": "加载活动失败。",
+    "addEvent": "新增活动",
+    "previousMonth": "上个月",
+    "nextMonth": "下个月",
+    "selectYear": "选择年份",
+    "selectMonth": "选择月份"
+  },
+  "eventsForm": {
+    "title": "新增活动",
+    "editTitle": "编辑活动",
+    "delete": "删除活动",
+    "sections": {
+      "time": "时间"
+    },
+    "toasts": {
+      "created": "已新增活动。",
+      "updated": "已更新活动。",
+      "deleted": "已删除活动。"
+    },
+    "errors": {
+      "titleRequired": "请填写标题。",
+      "invalidRange": "结束时间必须晚于开始时间。",
+      "addFailed": "新增活动失败。",
+      "updateFailed": "更新活动失败。",
+      "deleteFailed": "删除活动失败。"
+    },
+    "fields": {
+      "title": "标题",
+      "location": "地点",
+      "allDay": "全天",
+      "starts": "开始",
+      "ends": "结束",
+      "tagColour": "标签颜色",
+      "repeat": "重复",
+      "start": "开始",
+      "end": "结束"
+    },
+    "repeat": {
+      "never": "从不",
+      "daily": "每天",
+      "weekly": "每周",
+      "biweekly": "每两周",
+      "monthly": "每月",
+      "yearly": "每年"
+    }
   },
   "actions": {
     "label": "操作",
@@ -83,12 +159,17 @@
   },
   "search": {
     "placeholder": "搜索...",
-    "byDistrict": "按地区搜索"
+    "byDistrict": "按地区搜索",
+    "byLocation": "按地点搜索",
+    "byDate": "按日期搜索",
+    "eventsPlaceholder": "搜索活动..."
   },
   "filters": {
     "label": "筛选",
     "filterBy": "筛选条件",
     "district": "地区",
+    "location": "地点",
+    "date": "日期",
     "test": "测试"
   },
   "peoplePage": {

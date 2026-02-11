@@ -98,6 +98,9 @@ function DashboardNavbar({
   isMini,
   customRoute,
   hideMobileBackButton,
+  mobileRightIcon,
+  mobileRightAriaLabel,
+  onMobileRightIconClick,
 }) {
   const authContext = useContext(AuthContext);
   const { t } = useTranslation();
@@ -308,6 +311,21 @@ function DashboardNavbar({
             >
               <ArrowBackIosNewIcon sx={mobileIconsStyle} />
             </IconButton>
+          ) : mobileRightIcon ? (
+            <IconButton
+              disableRipple
+              onClick={onMobileRightIconClick}
+              aria-label={mobileRightAriaLabel || t("search.placeholder", "Search")}
+              sx={{
+                width: 40,
+                height: 40,
+                flexShrink: 0,
+              }}
+            >
+              <Icon sx={(muiTheme) => mobileIconsStyle(muiTheme)}>
+                {mobileRightIcon}
+              </Icon>
+            </IconButton>
           ) : (
             <MDBox sx={{ width: 40, flexShrink: 0 }} />
           )}
@@ -411,6 +429,9 @@ DashboardNavbar.defaultProps = {
   isMini: false,
   customRoute: null,
   hideMobileBackButton: false,
+  mobileRightIcon: null,
+  mobileRightAriaLabel: null,
+  onMobileRightIconClick: null,
 };
 
 // Typechecking props for the DashboardNavbar
@@ -420,6 +441,9 @@ DashboardNavbar.propTypes = {
   isMini: PropTypes.bool,
   customRoute: PropTypes.arrayOf(PropTypes.string),
   hideMobileBackButton: PropTypes.bool,
+  mobileRightIcon: PropTypes.string,
+  mobileRightAriaLabel: PropTypes.string,
+  onMobileRightIconClick: PropTypes.func,
 };
 
 export default DashboardNavbar;
