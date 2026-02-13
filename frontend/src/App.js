@@ -58,7 +58,6 @@ import UserManagement from "layouts/user-management";
 import PersonDetail from "layouts/person-detail";
 import GroupDetail from "layouts/groups/group-detail";
 import GroupAdd from "layouts/groups/group-add";
-import EventAdd from "layouts/events/event-add";
 import { Helmet } from "react-helmet";
 import { useTranslation } from "i18n";
 
@@ -344,16 +343,6 @@ export default function App() {
                 </ProtectedRoute>
               }
               key="person-detail"
-            />
-            <Route
-              exact
-              path="event/add"
-              element={
-                <ProtectedRoute isAuthenticated={true}>
-                  <EventAdd />
-                </ProtectedRoute>
-              }
-              key="event-add"
             />
             <Route
               exact

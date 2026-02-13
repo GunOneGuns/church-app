@@ -1,165 +1,89 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// layouts/groups/group-detail.js
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import IconButton from "@mui/material/IconButton";
-import Icon from "@mui/material/Icon";
+import TextField from "@mui/material/TextField";
+import InputAdornment from "@mui/material/InputAdornment";
+import Tooltip from "@mui/material/Tooltip";
+import Autocomplete from "@mui/material/Autocomplete";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Divider from "@mui/material/Divider";
-import Skeleton from "@mui/material/Skeleton";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import Switch from "@mui/material/Switch";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
-import List from "@mui/material/List";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemText from "@mui/material/ListItemText";
-import CircularProgress from "@mui/material/CircularProgress";
-import TextField from "@mui/material/TextField";
-import InputAdornment from "@mui/material/InputAdornment";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
-import Tooltip from "@mui/material/Tooltip";
+import Icon from "@mui/material/Icon";
+import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import TuneIcon from "@mui/icons-material/Tune";
-import { useTheme } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
+import MDAvatar from "components/MDAvatar";
+import MDBadge from "components/MDBadge";
+import PersonMobileViewList from "components/PersonMobileViewList";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
-import Toast from "components/Toast";
+import DataTable from "examples/Tables/DataTable";
+import { getPeopleColumns } from "layouts/tables/data/peopleTableData";
+import defaultProfilePic from "assets/images/default-profile-picture.png";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { setMobileNavbarTitle, useMaterialUIController } from "context";
 import { ACCENT_CYAN } from "constants.js";
+import Toast from "components/Toast";
+import GroupEditForm from "components/GroupDetail/GroupEditForm";
 import { useTranslation } from "i18n";
-import { useNavigate } from "react-router-dom";
+import {
+  fetchGroup,
+  fetchPeople,
+  updateGroup,
+  uploadGroupPicture,
+} from "services/convo-broker.js";
 
+const MOBILE_PAGINATION_HEIGHT = 30;
 const MOBILE_FAB_BOTTOM_OFFSET = "calc(env(safe-area-inset-bottom) + 88px)";
-const CELL_HEIGHT_MOBILE = 100;
-const CELL_HEIGHT_DESKTOP = 104;
-const MAX_VISIBLE_EVENTS = 3;
-const SWIPE_THRESHOLD = 50;
+const MOBILE_VIEW_FAB_BOTTOM_OFFSET = `calc(env(safe-area-inset-bottom) + ${
+  MOBILE_PAGINATION_HEIGHT + 40
+}px)`;
+const MOBILE_VIEW_FAB_STACK_GAP = 88;
 
-const toDateKey = (date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-const fromDateKey = (key) => {
-  const [y, m, d] = String(key)
-    .split("-")
-    .map((v) => parseInt(v, 10));
-  if (!y || !m || !d) return null;
-  return new Date(y, m - 1, d);
-};
-
-const startOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
-
-const addMonths = (date, delta) =>
-  new Date(date.getFullYear(), date.getMonth() + delta, 1);
-
-const daysInMonth = (date) =>
-  new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-
-const addDays = (date, deltaDays) => {
-  const next = new Date(date);
-  next.setDate(next.getDate() + deltaDays);
-  return next;
-};
-
-const EVENT_TITLES = [
-  "Lord's Day Meeting",
-  "Prayer Meeting",
-  "Bible Study",
-  "Gospel Meeting",
-  "Fellowship",
-  "Home Meeting",
-  "Small Group",
-];
-
-const EVENT_COLORS = [
-  "#4CAF50",
-  "#2196F3",
-  "#FF9800",
-  "#9C27B0",
-  "#E91E63",
-  "#00BCD4",
-  "#FF5722",
-];
-
-const getRandomInt = (min, max) =>
-  Math.floor(Math.random() * (max - min + 1)) + min;
-
-function fakeFetchMonthEvents(monthDate, { signal }) {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      const monthStart = startOfMonth(monthDate);
-      const total = daysInMonth(monthDate);
-      const eventMap = {};
-      const highlightDays = new Set();
-      const daysWithEvents = Math.min(10, Math.max(4, Math.round(total / 3)));
-      for (let i = 0; i < daysWithEvents; i++) {
-        highlightDays.add(getRandomInt(1, total));
-      }
-      Array.from(highlightDays).forEach((dayNum) => {
-        const count = getRandomInt(1, 7);
-        const date = new Date(
-          monthStart.getFullYear(),
-          monthStart.getMonth(),
-          dayNum,
-        );
-        const key = toDateKey(date);
-        eventMap[key] = Array.from({ length: count }).map((_, idx) => ({
-          id: `${key}-${idx}`,
-          title: EVENT_TITLES[getRandomInt(0, EVENT_TITLES.length - 1)],
-          time: `${String(getRandomInt(9, 20)).padStart(2, "0")}:${String(
-            getRandomInt(0, 1) ? 0 : 30,
-          ).padStart(2, "0")}`,
-          location: getRandomInt(0, 1) ? "Hall" : "Home",
-          description: "",
-          color: EVENT_COLORS[getRandomInt(0, EVENT_COLORS.length - 1)],
-        }));
-      });
-      resolve({
-        eventsByDate: eventMap,
-      });
-    }, 500);
-    signal.onabort = () => {
-      clearTimeout(timeout);
-      reject(new DOMException("aborted", "AbortError"));
-    };
-  });
+function isMongoObjectId(value) {
+  return typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
 }
 
-function buildCalendarCells(monthDate) {
-  const first = startOfMonth(monthDate);
-  const last = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
-  const startDate = addDays(first, -first.getDay());
-  const endDate = addDays(last, 6 - last.getDay());
-  const cells = [];
-  for (
-    let cursor = startDate;
-    cursor.getTime() <= endDate.getTime();
-    cursor = addDays(cursor, 1)
-  ) {
-    const date = cursor;
-    const isInMonth =
-      date.getFullYear() === monthDate.getFullYear() &&
-      date.getMonth() === monthDate.getMonth();
-    const dayNum = date.getDate();
-    cells.push({ index: cells.length, dayNum, isInMonth, date });
-  }
-  return cells;
+function getPersonLabel(person, unknownLabel = "Unknown") {
+  if (!person) return "";
+  const name = person.Name || "";
+  const nameChi = person.NameChi || "";
+  if (name && nameChi) return `${name} (${nameChi})`;
+  if (name || nameChi) return name || nameChi;
+  const pid = person?._id || person?.id;
+  if (pid) return `${unknownLabel} (${String(pid).slice(-6)})`;
+  return unknownLabel;
 }
 
-function SearchFilterAdornment({ filter, onSelectFilter }) {
+function SearchFilterAdornment({
+  filter,
+  onSelectFilter,
+  includeAwca,
+  onToggleIncludeAwca,
+}) {
   const { t } = useTranslation();
   const menuIdRef = useRef(
-    `event-filter-menu-${Math.random().toString(36).slice(2)}`,
+    `group-filter-menu-${Math.random().toString(36).slice(2)}`,
   );
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
-  const isActive = filter && filter !== "default";
+  const isActive = (filter && filter !== "default") || includeAwca === false;
 
   const handleOpen = (event) => {
     event.preventDefault();
@@ -188,6 +112,7 @@ function SearchFilterAdornment({ filter, onSelectFilter }) {
           <TuneIcon fontSize="small" />
         </IconButton>
       </Tooltip>
+
       <Menu
         id={menuIdRef.current}
         anchorEl={anchorEl}
@@ -203,825 +128,1315 @@ function SearchFilterAdornment({ filter, onSelectFilter }) {
         </MDBox>
         <Divider />
         <MenuItem
-          selected={filter === "location"}
           onClick={(event) => {
-            onSelectFilter?.(filter === "location" ? "default" : "location");
-            handleClose(event);
+            event.preventDefault();
+            event.stopPropagation();
+            onToggleIncludeAwca?.();
           }}
+          sx={{ cursor: "default" }}
         >
-          {t("filters.location", "Location")}
+          <MDBox
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            width="100%"
+            gap={2}
+          >
+            <MDTypography variant="button" color="text">
+              {t("filters.awca", "AWCA")}
+            </MDTypography>
+            <Switch
+              edge="end"
+              checked={includeAwca !== false}
+              onChange={(event) => {
+                event.stopPropagation();
+                onToggleIncludeAwca?.();
+              }}
+              color="success"
+              sx={(muiTheme) => ({
+                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                  backgroundColor: `${muiTheme.palette.success.main} !important`,
+                  borderColor: `${muiTheme.palette.success.main} !important`,
+                  opacity: "1 !important",
+                },
+                "& .MuiSwitch-switchBase.Mui-checked .MuiSwitch-thumb": {
+                  borderColor: `${muiTheme.palette.success.main} !important`,
+                },
+              })}
+              inputProps={{ "aria-label": t("filters.awca", "AWCA") }}
+            />
+          </MDBox>
         </MenuItem>
         <MenuItem
-          selected={filter === "date"}
+          selected={filter === "district"}
           onClick={(event) => {
-            onSelectFilter?.(filter === "date" ? "default" : "date");
+            onSelectFilter?.(filter === "district" ? "default" : "district");
             handleClose(event);
           }}
         >
-          {t("filters.date", "Date")}
+          {t("filters.district", "District")}
         </MenuItem>
       </Menu>
     </InputAdornment>
   );
 }
 
-function Events() {
+/**
+ * FIX (web/desktop paginator):
+ * - Keep paginator component OUTSIDE GroupDetail so it doesn't remount on every keystroke.
+ * - Digits-only input + Enter to commit.
+ */
+function DesktopPaginationControls({
+  page,
+  totalPages,
+  inputValue,
+  onInputChange,
+  onCommit,
+  goToPage,
+}) {
+  if (totalPages <= 1) return null;
+
+  return (
+    <MDBox
+      display="flex"
+      alignItems="center"
+      justifyContent="flex-end"
+      gap={1}
+      sx={{ width: { xs: "100%", sm: "auto" } }}
+    >
+      <IconButton
+        onClick={() => goToPage(page - 1)}
+        size="small"
+        disabled={page <= 1}
+        sx={{ visibility: page <= 1 ? "hidden" : "visible" }}
+      >
+        <ArrowBackIosNewIcon fontSize="small" />
+      </IconButton>
+
+      <TextField
+        value={inputValue}
+        onChange={onInputChange}
+        onBlur={onCommit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onCommit();
+          }
+        }}
+        size="small"
+        sx={{ width: 60 }}
+        inputProps={{
+          style: { textAlign: "center" },
+          inputMode: "numeric",
+          pattern: "[0-9]*",
+        }}
+      />
+
+      <IconButton
+        onClick={() => goToPage(page + 1)}
+        size="small"
+        disabled={page >= totalPages}
+        sx={{ visibility: page >= totalPages ? "hidden" : "visible" }}
+      >
+        <ArrowForwardIosIcon fontSize="small" />
+      </IconButton>
+    </MDBox>
+  );
+}
+
+function ActionMenu({ person, navigate, slug, onRemove, iconColor }) {
+  const { t } = useTranslation();
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
+  const handleClick = (event) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = (event) => {
+    event.stopPropagation();
+    setAnchorEl(null);
+  };
+  const handleView = (event) => {
+    event.stopPropagation();
+    navigate(`/person/${person._id}`, {
+      state: { from: `/group/${slug}` },
+    });
+    handleClose(event);
+  };
+  const handleEdit = (event) => {
+    event.stopPropagation();
+    navigate(`/person/${person._id}`, {
+      state: { edit: true, from: `/group/${slug}` },
+    });
+    handleClose(event);
+  };
+  const handleRemove = (event) => {
+    event.stopPropagation();
+    if (onRemove) onRemove(person);
+    handleClose(event);
+  };
+  return (
+    <>
+      <IconButton onClick={handleClick} size="small">
+        <Icon fontSize="small">more_vert</Icon>
+      </IconButton>
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <MenuItem onClick={handleView}>
+          <ListItemIcon>
+            <VisibilityOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          {t("actions.view", "View")}
+        </MenuItem>
+        <MenuItem onClick={handleEdit}>
+          <ListItemIcon>
+            <EditOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          {t("actions.edit", "Edit")}
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleRemove} sx={{ color: "error.main" }}>
+          {t("groupDetailPage.actions.removeFromGroup", "Remove from group")}
+        </MenuItem>
+      </Menu>
+    </>
+  );
+}
+
+function PeopleCell({ image, name, nameChi, district, onClick }) {
+  const { t } = useTranslation();
+  const englishName =
+    typeof name === "string" && name.trim() ? name.trim() : "";
+  const chineseName =
+    typeof nameChi === "string" && nameChi.trim() ? nameChi.trim() : "";
+  const displayName = englishName || chineseName || t("common.na", "N/A");
+  const suffix = englishName && chineseName ? ` (${chineseName})` : "";
+
+  return (
+    <MDBox
+      display="flex"
+      alignItems="center"
+      lineHeight={1}
+      onClick={onClick}
+      sx={{ cursor: "pointer" }}
+    >
+      <MDAvatar src={image} name={displayName} size="sm" />
+      <MDBox ml={2} lineHeight={1}>
+        <MDTypography display="block" variant="button" fontWeight="medium">
+          {displayName}
+          {suffix}
+        </MDTypography>
+        <MDTypography variant="caption">{district}</MDTypography>
+      </MDBox>
+    </MDBox>
+  );
+}
+
+function Job({ title, description }) {
+  return (
+    <MDBox lineHeight={1} textAlign="left">
+      <MDTypography
+        display="block"
+        variant="caption"
+        color="text"
+        fontWeight="medium"
+      >
+        {title}
+      </MDTypography>
+      <MDTypography variant="caption">{description}</MDTypography>
+    </MDBox>
+  );
+}
+
+function buildGroupMemberRows(rawPeople, navigate, slug, onRemove, naLabel = "N/A") {
+  return rawPeople.map((person) => ({
+    people: (
+      <PeopleCell
+        image={person.ProfilePic || defaultProfilePic}
+        name={person.Name}
+        nameChi={person.NameChi}
+        district={person.District || ""}
+        onClick={() =>
+          navigate(`/person/${person._id}`, {
+            state: { from: `/group/${slug}` },
+          })
+        }
+      />
+    ),
+    address: <Job title={person.Address || "-"} />,
+    status: (
+      <MDBox ml={-1}>
+        <MDBadge
+          badgeContent="baptised"
+          color="success"
+          variant="gradient"
+          size="sm"
+        />
+      </MDBox>
+    ),
+    mobile: (
+      <MDTypography
+        component="a"
+        href="#"
+        variant="caption"
+        color="text"
+        fontWeight="medium"
+      >
+        {person.PhoneNumber || naLabel}
+      </MDTypography>
+    ),
+    action: (
+      <ActionMenu
+        person={person}
+        navigate={navigate}
+        slug={slug}
+        onRemove={onRemove}
+      />
+    ),
+  }));
+}
+
+function GroupDetail() {
+  const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("xl"));
   const { t } = useTranslation();
-  const requestAbortController = useRef(null);
-  const [monthDate, setMonthDate] = useState(startOfMonth(new Date()));
-  const [selectedKey, setSelectedKey] = useState(() => toDateKey(new Date()));
-  const [eventsByDate, setEventsByDate] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const [pickerView, setPickerView] = useState("year");
+  const translatedColumns = useMemo(() => getPeopleColumns(t), [t]);
+  const [, dispatch] = useMaterialUIController();
+  const [group, setGroup] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [isEditing, setIsEditing] = useState(location.state?.edit === true);
+  const [editedGroup, setEditedGroup] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadError, setUploadError] = useState(null);
+  const groupPicProcessorRef = useRef(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showDiscardConfirmModal, setShowDiscardConfirmModal] = useState(false);
+  const [fabMenuOpen, setFabMenuOpen] = useState(false);
+  const fabToggleRef = useRef(null);
+  const fabAddRef = useRef(null);
+  const fabEditRef = useRef(null);
+  const pendingDiscardActionRef = useRef(null);
   const [toast, setToast] = useState({
     open: false,
     message: "",
-    severity: "info",
+    severity: "success",
+    actionLabel: null,
+    onAction: null,
+    autoHideDuration: 2000,
   });
-  const [fabVisible, setFabVisible] = useState(true);
-  const scrollTimeout = useRef(null);
-  const isTouching = useRef(false);
-  const hasScrolled = useRef(false);
-  const listRef = useRef(null);
-  const calendarRef = useRef(null);
-  const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
-  const touchEndX = useRef(null);
-  const isSwiping = useRef(false);
-
-  // Search state
+  const [peopleOptions, setPeopleOptions] = useState([]);
+  const [addMembersOpen, setAddMembersOpen] = useState(false);
+  const [memberQuery, setMemberQuery] = useState("");
+  const [memberPickerOpen, setMemberPickerOpen] = useState(false);
+  const [selectedToAdd, setSelectedToAdd] = useState([]);
+  // Search
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilter, setSearchFilter] = useState("default");
+  const [includeAwca, setIncludeAwca] = useState(true);
+  const searchPlaceholder =
+    searchFilter === "district"
+      ? t("search.byDistrict", "Search by District")
+      : t("search.placeholder", "Search...");
+  const unknownLabel = t("common.unknown", "Unknown");
+  const naLabel = t("common.na", "N/A");
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [inputValue, setInputValue] = useState("1");
+  const rowsPerPage = 10;
 
-  const searchPlaceholder = useMemo(() => {
-    if (searchFilter === "location") {
-      return t("search.byLocation", "Search by Location");
-    }
-    if (searchFilter === "date") {
-      return t("search.byDate", "Search by Date");
-    }
-    return t("search.eventsPlaceholder", "Search events...");
-  }, [searchFilter, t]);
+  const baseGroupForEdit = useMemo(() => {
+    const memberIds = Array.isArray(group?.Members)
+      ? group.Members.map((m) => m?._id || m?.id)
+          .filter(Boolean)
+          .map(String)
+      : [];
 
-  // Handle scroll to hide/show FAB
+    return {
+      Name: group?.Name || "",
+      Description: group?.Description || "",
+      GroupPic: group?.GroupPic || "",
+      Members: memberIds,
+    };
+  }, [group?.Description, group?.GroupPic, group?.Members, group?.Name]);
+
+  const hasEditChanges = useMemo(() => {
+    if (!isEditing) return false;
+    if (!editedGroup) return false;
+
+    const normalizeIds = (ids) =>
+      Array.from(new Set((ids || []).map(String)))
+        .sort()
+        .join("|");
+
+    return (
+      editedGroup.Name !== baseGroupForEdit.Name ||
+      editedGroup.Description !== baseGroupForEdit.Description ||
+      normalizeIds(editedGroup.Members) !==
+        normalizeIds(baseGroupForEdit.Members) ||
+      Boolean(selectedFile)
+    );
+  }, [baseGroupForEdit, editedGroup, isEditing, selectedFile]);
+
   useEffect(() => {
-    if (!isMobile) return;
+    const toastFromNav = location.state?.toast;
+    if (!toastFromNav?.message) return;
 
-    const handleScroll = () => {
-      setFabVisible(false);
-      hasScrolled.current = true;
+    const { undo } = toastFromNav || {};
 
-      if (scrollTimeout.current) {
-        clearTimeout(scrollTimeout.current);
+    setToast({
+      open: true,
+      message: toastFromNav.message,
+      severity: toastFromNav.severity || "success",
+      autoHideDuration: toastFromNav.autoHideDuration ?? 2000,
+      actionLabel: toastFromNav.actionLabel || null,
+      onAction:
+        undo?.members && isMongoObjectId(id)
+          ? async () => {
+              const base = await fetchGroup(id);
+              await updateGroup(id, {
+                Name: base?.Name || group?.Name || "",
+                Description: base?.Description || group?.Description || "",
+                GroupPic: base?.GroupPic || group?.GroupPic || "",
+                Members: undo.members,
+              });
+              const refreshed = await fetchGroup(id);
+              setGroup(refreshed);
+              setMembers(
+                Array.isArray(refreshed?.Members) ? refreshed.Members : [],
+              );
+            }
+          : null,
+    });
+
+    const nextState = { ...(location.state || {}) };
+    delete nextState.toast;
+    navigate(location.pathname, {
+      replace: true,
+      state: Object.keys(nextState).length ? nextState : null,
+    });
+  }, [
+    group?.Description,
+    group?.GroupPic,
+    group?.Name,
+    id,
+    location.pathname,
+    location.state,
+    navigate,
+  ]);
+
+  useEffect(() => {
+    const loadGroup = async () => {
+      if (!isMongoObjectId(id)) {
+        setGroup(null);
+        setMembers([]);
+        return;
       }
 
-      scrollTimeout.current = setTimeout(() => {
-        if (!isTouching.current) {
-          setFabVisible(true);
+      try {
+        const fetched = await fetchGroup(id);
+        setGroup(fetched);
+        setMembers(Array.isArray(fetched?.Members) ? fetched.Members : []);
+      } catch (error) {
+        console.error("Failed to load group:", error);
+        setGroup(null);
+        setMembers([]);
+      }
+    };
+
+    loadGroup();
+  }, [id]);
+
+  useEffect(() => {
+    if (!group) return;
+    if (!isEditing) return;
+    if (editedGroup) return;
+    setEditedGroup(baseGroupForEdit);
+  }, [baseGroupForEdit, editedGroup, group, isEditing]);
+
+  useEffect(() => {
+    if (location.state?.edit !== true) return;
+
+    if (!isEditing) {
+      setEditedGroup(baseGroupForEdit);
+      setSelectedFile(null);
+      setUploadError(null);
+      setIsEditing(true);
+    }
+
+    const nextState = { ...(location.state || {}) };
+    delete nextState.edit;
+    navigate(location.pathname, {
+      replace: true,
+      state: Object.keys(nextState).length ? nextState : null,
+    });
+  }, [
+    baseGroupForEdit,
+    isEditing,
+    location.pathname,
+    location.state,
+    navigate,
+  ]);
+
+  useEffect(() => {
+    if (isEditing) setFabMenuOpen(false);
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (!fabMenuOpen) return undefined;
+
+    const handleClickAway = (event) => {
+      const target = event.target;
+      if (!target) return;
+
+      if (
+        fabToggleRef.current?.contains(target) ||
+        fabAddRef.current?.contains(target) ||
+        fabEditRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      setFabMenuOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handleClickAway);
+    return () => document.removeEventListener("pointerdown", handleClickAway);
+  }, [fabMenuOpen]);
+
+  useEffect(() => {
+    const loadPeople = async () => {
+      await fetchPeople();
+      const stored = localStorage.getItem("people");
+      if (stored) setPeopleOptions(JSON.parse(stored));
+    };
+    loadPeople();
+  }, []);
+
+  // Mobile navbar title = group name
+  useEffect(() => {
+    if (!isMobile) {
+      setMobileNavbarTitle(dispatch, null);
+      return undefined;
+    }
+    const title = (isEditing ? editedGroup?.Name : null) || group?.Name || null;
+    if (title) {
+      setMobileNavbarTitle(dispatch, title);
+    }
+    return () => setMobileNavbarTitle(dispatch, null);
+  }, [dispatch, editedGroup?.Name, group?.Name, isEditing, isMobile]);
+
+  const registerGroupPicProcessor = useCallback((processor) => {
+    groupPicProcessorRef.current = processor;
+  }, []);
+
+  const handleFileChange = useCallback((event) => {
+    const file = event?.target?.files?.[0] || null;
+    setUploadError(null);
+    setSelectedFile(file);
+  }, []);
+
+  const startEditing = useCallback(() => {
+    setEditedGroup(baseGroupForEdit);
+    setSelectedFile(null);
+    setUploadError(null);
+    setFabMenuOpen(false);
+    setIsEditing(true);
+  }, [baseGroupForEdit]);
+
+  const discardEditsNow = useCallback(() => {
+    setEditedGroup(baseGroupForEdit);
+    setSelectedFile(null);
+    setUploadError(null);
+    setIsEditing(false);
+  }, [baseGroupForEdit]);
+
+  const requestDiscardIfDirty = useCallback(
+    (onDiscard) => {
+      const discardAction =
+        typeof onDiscard === "function" ? onDiscard : discardEditsNow;
+
+      if (!hasEditChanges) {
+        discardAction();
+        return;
+      }
+      pendingDiscardActionRef.current = discardAction;
+      setShowDiscardConfirmModal(true);
+    },
+    [discardEditsNow, hasEditChanges],
+  );
+
+  const confirmDiscard = useCallback(() => {
+    setShowDiscardConfirmModal(false);
+    const discardAction = pendingDiscardActionRef.current || discardEditsNow;
+    pendingDiscardActionRef.current = null;
+    discardAction();
+  }, [discardEditsNow]);
+
+  const closeDiscardConfirmModal = useCallback(() => {
+    setShowDiscardConfirmModal(false);
+    pendingDiscardActionRef.current = null;
+  }, []);
+
+  const handleEditBack = useCallback(() => {
+    const from = location.state?.from;
+    requestDiscardIfDirty(() => {
+      if (typeof from === "string" && from.length) {
+        navigate(from);
+        return;
+      }
+      discardEditsNow();
+    });
+  }, [discardEditsNow, location.state?.from, navigate, requestDiscardIfDirty]);
+
+  const handleSaveGroup = useCallback(async () => {
+    if (!isMongoObjectId(id)) return;
+    if (isSaving) return;
+
+    const name = (editedGroup?.Name || "").trim();
+    if (!name) {
+      setToast({
+        open: true,
+        message: t("groupForm.errors.nameRequired", "Group name is required."),
+        severity: "error",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const memberIds = Array.isArray(editedGroup?.Members)
+        ? editedGroup.Members.map(String).filter(isMongoObjectId)
+        : [];
+
+      await updateGroup(id, {
+        Name: name,
+        Description: editedGroup?.Description || "",
+        GroupPic: group?.GroupPic || "",
+        Members: memberIds,
+      });
+
+      if (selectedFile) {
+        const processor = groupPicProcessorRef.current;
+        const fileToUpload = processor ? await processor() : selectedFile;
+        if (fileToUpload) {
+          await uploadGroupPicture(id, fileToUpload);
         }
-      }, 150);
-    };
-
-    const handleTouchStart = () => {
-      isTouching.current = true;
-      hasScrolled.current = false;
-    };
-
-    const handleTouchEnd = () => {
-      isTouching.current = false;
-      if (hasScrolled.current) {
-        setFabVisible(true);
-        hasScrolled.current = false;
       }
-    };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("touchstart", handleTouchStart, { passive: true });
-    window.addEventListener("touchend", handleTouchEnd, { passive: true });
-    window.addEventListener("touchcancel", handleTouchEnd, { passive: true });
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchend", handleTouchEnd);
-      window.removeEventListener("touchcancel", handleTouchEnd);
-      if (scrollTimeout.current) {
-        clearTimeout(scrollTimeout.current);
-      }
-    };
-  }, [isMobile]);
-
-  const today = useMemo(() => new Date(), []);
-  const todayKey = useMemo(() => toDateKey(today), [today]);
-
-  const selectedDate = useMemo(() => fromDateKey(selectedKey), [selectedKey]);
-  const selectedEvents = useMemo(
-    () => eventsByDate[selectedKey] || [],
-    [eventsByDate, selectedKey],
-  );
-  const calendarCells = useMemo(
-    () => buildCalendarCells(monthDate),
-    [monthDate],
-  );
-  const calendarRowCount = useMemo(
-    () => Math.max(1, Math.ceil(calendarCells.length / 7)),
-    [calendarCells.length],
-  );
-  const lastRowStartIndex = useMemo(
-    () => (calendarRowCount - 1) * 7,
-    [calendarRowCount],
-  );
-  const monthLabel = useMemo(
-    () =>
-      t(
-        `months.${monthDate.getMonth()}`,
-        monthDate.toLocaleString(undefined, { month: "long" }),
-      ),
-    [monthDate, t],
-  );
-  const yearLabel = useMemo(
-    () => String(monthDate.getFullYear() || ""),
-    [monthDate],
-  );
-  const weekdayLabels = useMemo(
-    () => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-    [],
-  );
-
-  const isToday = useCallback(
-    (date) => {
-      if (!date) return false;
-      return toDateKey(date) === todayKey;
-    },
-    [todayKey],
-  );
-
-  const fetchMonth = useCallback(
-    (date) => {
-      const controller = new AbortController();
-      setIsLoading(true);
-      fakeFetchMonthEvents(date, { signal: controller.signal })
-        .then(({ eventsByDate: nextMap }) => {
-          setEventsByDate(nextMap || {});
-          setIsLoading(false);
-          setIsInitialLoad(false);
-        })
-        .catch((error) => {
-          if (error?.name === "AbortError") return;
-          setIsLoading(false);
-          setIsInitialLoad(false);
-          setToast({
-            open: true,
-            message:
-              error?.message ||
-              t("eventsPage.loadFailed", "Failed to load events."),
-            severity: "error",
-          });
-        });
-      requestAbortController.current = controller;
-    },
-    [t],
-  );
-
-  useEffect(() => {
-    fetchMonth(monthDate);
-    return () => requestAbortController.current?.abort();
-  }, [fetchMonth, monthDate]);
-
-  const setActiveMonth = useCallback(
-    (nextMonth, nextSelectedDate = nextMonth) => {
-      requestAbortController.current?.abort?.();
-      setEventsByDate({});
-      setMonthDate(nextMonth);
-      setSelectedKey(toDateKey(nextSelectedDate));
-    },
-    [],
-  );
-
-  const handleMonthChange = useCallback(
-    (delta) => {
-      const next = addMonths(monthDate, delta);
-      setActiveMonth(next, next);
-    },
-    [monthDate, setActiveMonth],
-  );
-
-  const handleSelectDate = (date) => {
-    if (isSwiping.current) return;
-    if (!date) return;
-    if (!isSameMonth(date)) {
-      setActiveMonth(startOfMonth(date), date);
-    } else {
-      setSelectedKey(toDateKey(date));
+      const refreshed = await fetchGroup(id);
+      setGroup(refreshed);
+      setMembers(Array.isArray(refreshed?.Members) ? refreshed.Members : []);
+      setEditedGroup(null);
+      setSelectedFile(null);
+      setIsEditing(false);
+      setToast({
+        open: true,
+        message: t("groupDetailPage.toasts.updated", "Group updated."),
+        severity: "success",
+      });
+    } catch (error) {
+      setToast({
+        open: true,
+        message:
+          error?.message ||
+          t("groupDetailPage.errors.updateFailed", "Failed to update group."),
+        severity: "error",
+      });
+    } finally {
+      setIsSaving(false);
     }
-    if (isMobile) {
-      setTimeout(
-        () => listRef.current?.scrollIntoView?.({ behavior: "smooth" }),
-        0,
+  }, [editedGroup, group?.GroupPic, id, isSaving, selectedFile, t]);
+
+  const handleRemoveMember = useCallback(
+    async (person) => {
+      if (!isMongoObjectId(id)) {
+        setToast({
+          open: true,
+          message: t(
+            "groupDetailPage.errors.removeMemberSavedOnly",
+            "Remove member is only available for saved groups.",
+          ),
+          severity: "warning",
+        });
+        return;
+      }
+
+      const personId = person?._id || person?.id;
+      if (!personId) return;
+
+      const currentIds = (members || [])
+        .map((m) => m?._id || m?.id)
+        .filter(Boolean)
+        .map(String);
+
+      const nextMembers = currentIds.filter((mid) => mid !== String(personId));
+
+      try {
+        await updateGroup(id, {
+          Name: group?.Name || "",
+          Description: group?.Description || "",
+          GroupPic: group?.GroupPic || "",
+          Members: nextMembers,
+        });
+
+        const refreshed = await fetchGroup(id);
+        setGroup(refreshed);
+        setMembers(Array.isArray(refreshed?.Members) ? refreshed.Members : []);
+
+        setToast({
+          open: true,
+          message: t("groupDetailPage.toasts.memberRemoved", "Member removed."),
+          severity: "success",
+          autoHideDuration: 6000,
+          actionLabel: t("actions.undo", "Undo"),
+          onAction: async () => {
+            await updateGroup(id, {
+              Name: group?.Name || "",
+              Description: group?.Description || "",
+              GroupPic: group?.GroupPic || "",
+              Members: currentIds,
+            });
+            const restored = await fetchGroup(id);
+            setGroup(restored);
+            setMembers(
+              Array.isArray(restored?.Members) ? restored.Members : [],
+            );
+          },
+        });
+      } catch (error) {
+        setToast({
+          open: true,
+          message:
+            error?.message ||
+            t(
+              "groupDetailPage.errors.removeMemberFailed",
+              "Failed to remove member.",
+            ),
+          severity: "error",
+          autoHideDuration: 2000,
+          actionLabel: null,
+          onAction: null,
+        });
+      }
+    },
+    [group?.Description, group?.GroupPic, group?.Name, id, members, t],
+  );
+
+  const filteredMembers = useMemo(() => {
+    const baseMembers = includeAwca
+      ? members
+      : (members || []).filter((p) => p?.inAwca === "N");
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return baseMembers;
+    if (searchFilter === "district") {
+      return baseMembers.filter((p) =>
+        (p?.District || "").toLowerCase().includes(q),
       );
     }
+
+    const qDigits = q.replace(/\D/g, "");
+
+    return baseMembers.filter((p) => {
+      const name = (p?.Name || "").toLowerCase();
+      const nameChi = (p?.NameChi || "").toLowerCase();
+      const phoneRaw = (p?.PhoneNumber ?? p?.phoneNumber ?? "").toString();
+      const phoneDigits = phoneRaw.replace(/\D/g, "");
+      const phoneMatch = qDigits ? phoneDigits.includes(qDigits) : false;
+      return name.includes(q) || nameChi.includes(q) || phoneMatch;
+    });
+  }, [includeAwca, members, searchQuery, searchFilter]);
+
+  const rows = useMemo(
+    () =>
+      buildGroupMemberRows(filteredMembers, navigate, id, handleRemoveMember, naLabel),
+    [filteredMembers, navigate, id, handleRemoveMember, naLabel],
+  );
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredMembers.length / rowsPerPage),
+  );
+
+  const paginatedMembers = filteredMembers.slice(
+    (page - 1) * rowsPerPage,
+    page * rowsPerPage,
+  );
+  const paginatedRows = rows.slice(
+    (page - 1) * rowsPerPage,
+    page * rowsPerPage,
+  );
+
+  useEffect(() => {
+    setPage(1);
+    setInputValue("1");
+  }, [includeAwca, searchQuery, searchFilter]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+      setInputValue(totalPages.toString());
+    }
+  }, [page, totalPages]);
+
+  const goToPage = (nextPage) => {
+    const normalized = Math.min(totalPages, Math.max(1, nextPage));
+    setPage(normalized);
+    setInputValue(normalized.toString());
   };
 
-  const handleGoToToday = () => {
-    const todayDate = new Date();
-    const todayMonth = startOfMonth(todayDate);
-    if (
-      todayMonth.getFullYear() !== monthDate.getFullYear() ||
-      todayMonth.getMonth() !== monthDate.getMonth()
-    ) {
-      setActiveMonth(todayMonth, todayDate);
-    } else {
-      setSelectedKey(toDateKey(todayDate));
+  // Desktop page input handlers (FIXED: digits only + Enter commits without losing focus)
+  const handleInputChange = (e) => {
+    const digitsOnly = e.target.value.replace(/\D/g, "");
+    setInputValue(digitsOnly);
+  };
+
+  const handleInputBlur = () => {
+    if (inputValue === "") {
+      setInputValue(page.toString());
+      return;
+    }
+    const value = parseInt(inputValue, 10);
+    if (Number.isNaN(value)) {
+      setInputValue(page.toString());
+      return;
+    }
+    goToPage(value);
+  };
+
+  // Mobile pagination (matches People page)
+  const MobilePaginationControls = () => (
+    <MDBox
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      gap={1}
+      sx={{ width: "100%" }}
+    >
+      <IconButton
+        onClick={() => goToPage(page - 1)}
+        size="small"
+        disabled={page <= 1}
+        sx={{ visibility: page <= 1 ? "hidden" : "visible" }}
+      >
+        <ArrowBackIosNewIcon fontSize="small" />
+      </IconButton>
+      <MDTypography variant="caption" color="text">
+        {page} / {totalPages}
+      </MDTypography>
+      <IconButton
+        onClick={() => goToPage(page + 1)}
+        size="small"
+        disabled={page >= totalPages}
+        sx={{ visibility: page >= totalPages ? "hidden" : "visible" }}
+      >
+        <ArrowForwardIosIcon fontSize="small" />
+      </IconButton>
+    </MDBox>
+  );
+
+  if (!group) {
+    return (
+      <DashboardLayout>
+        <DashboardNavbar />
+        <MDBox pt={{ xs: 3, xl: 6 }} pb={{ xs: 2, xl: 3 }}>
+          <MDTypography variant="h4">
+            {t("groupDetailPage.errors.notFound", "Group not found")}
+          </MDTypography>
+        </MDBox>
+        <Footer />
+      </DashboardLayout>
+    );
+  }
+
+  const handleOpenAddMembers = () => {
+    if (!isMongoObjectId(id)) {
+      setToast({
+        open: true,
+        message: t(
+          "groupDetailPage.errors.addMembersSavedOnly",
+          "Add members is only available for saved groups.",
+        ),
+        severity: "warning",
+      });
+      return;
+    }
+    setSelectedToAdd([]);
+    setMemberQuery("");
+    setMemberPickerOpen(true);
+    setAddMembersOpen(true);
+  };
+
+  const handleConfirmAddMembers = async () => {
+    if (!isMongoObjectId(id)) return;
+    const currentIds = (members || [])
+      .map((m) => m?._id || m?.id)
+      .filter(Boolean)
+      .map(String);
+    const nextIds = (selectedToAdd || [])
+      .map((p) => p?._id || p?.id)
+      .filter(Boolean)
+      .map(String);
+    const merged = Array.from(new Set([...currentIds, ...nextIds]));
+
+    try {
+      await updateGroup(id, {
+        Name: group?.Name || "",
+        Description: group?.Description || "",
+        GroupPic: group?.GroupPic || "",
+        Members: merged,
+      });
+      const refreshed = await fetchGroup(id);
+      setGroup(refreshed);
+      setMembers(Array.isArray(refreshed?.Members) ? refreshed.Members : []);
+      setAddMembersOpen(false);
+      setToast({
+        open: true,
+        message: t("groupDetailPage.toasts.membersAdded", "Members added."),
+        severity: "success",
+      });
+    } catch (error) {
+      setToast({
+        open: true,
+        message:
+          error?.message ||
+          t("groupDetailPage.errors.addMembersFailed", "Failed to add members."),
+        severity: "error",
+      });
     }
   };
-
-  const isSameMonth = (date) =>
-    date &&
-    date.getFullYear() === monthDate.getFullYear() &&
-    date.getMonth() === monthDate.getMonth();
-
-  const isSelected = (date) => {
-    if (!date) return false;
-    return toDateKey(date) === selectedKey;
-  };
-
-  const yearOptions = useMemo(() => {
-    const current = monthDate.getFullYear();
-    const start = current - 30;
-    const end = current + 30;
-    return Array.from({ length: end - start + 1 }, (_, idx) => start + idx);
-  }, [monthDate]);
-
-  const monthOptions = useMemo(
-    () =>
-      Array.from({ length: 12 }, (_, idx) =>
-        t(
-          `monthsShort.${idx}`,
-          new Date(2000, idx, 1).toLocaleString(undefined, { month: "short" }),
-        ),
-      ),
-    [t],
-  );
-
-  const openMonthPicker = () => {
-    setPickerView("month");
-    setIsPickerOpen(true);
-  };
-
-  const openYearPicker = () => {
-    setPickerView("year");
-    setIsPickerOpen(true);
-  };
-
-  const closeMonthYearPicker = () => {
-    setIsPickerOpen(false);
-  };
-
-  const handlePickYear = (year) => {
-    const next = new Date(year, monthDate.getMonth(), 1);
-    setActiveMonth(next, next);
-    setIsPickerOpen(false);
-  };
-
-  const handlePickMonth = (monthIndex) => {
-    const next = new Date(monthDate.getFullYear(), monthIndex, 1);
-    setActiveMonth(next, next);
-    setIsPickerOpen(false);
-  };
-
-  // Swipe handlers for calendar - using native event listeners
-  useEffect(() => {
-    if (!isMobile) return;
-
-    const calendarElement = calendarRef.current;
-    if (!calendarElement) return;
-
-    const handleTouchStart = (e) => {
-      const touch = e.touches[0];
-      touchStartX.current = touch.clientX;
-      touchStartY.current = touch.clientY;
-      touchEndX.current = touch.clientX;
-      isSwiping.current = false;
-    };
-
-    const handleTouchMove = (e) => {
-      if (touchStartX.current === null) return;
-
-      const touch = e.touches[0];
-      touchEndX.current = touch.clientX;
-
-      const deltaX = touch.clientX - touchStartX.current;
-      const deltaY = touch.clientY - touchStartY.current;
-
-      // If horizontal movement is dominant, mark as swiping
-      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
-        isSwiping.current = true;
-      }
-    };
-
-    const handleTouchEnd = () => {
-      if (touchStartX.current === null || touchEndX.current === null) return;
-
-      const deltaX = touchEndX.current - touchStartX.current;
-
-      if (Math.abs(deltaX) > SWIPE_THRESHOLD && isSwiping.current) {
-        if (deltaX > 0) {
-          // Swipe right - previous month
-          handleMonthChange(-1);
-        } else {
-          // Swipe left - next month
-          handleMonthChange(1);
-        }
-      }
-
-      // Reset after a small delay to prevent click from firing
-      setTimeout(() => {
-        touchStartX.current = null;
-        touchStartY.current = null;
-        touchEndX.current = null;
-        isSwiping.current = false;
-      }, 50);
-    };
-
-    calendarElement.addEventListener("touchstart", handleTouchStart, {
-      passive: true,
-    });
-    calendarElement.addEventListener("touchmove", handleTouchMove, {
-      passive: true,
-    });
-    calendarElement.addEventListener("touchend", handleTouchEnd, {
-      passive: true,
-    });
-
-    return () => {
-      calendarElement.removeEventListener("touchstart", handleTouchStart);
-      calendarElement.removeEventListener("touchmove", handleTouchMove);
-      calendarElement.removeEventListener("touchend", handleTouchEnd);
-    };
-  }, [isMobile, handleMonthChange]);
-
-  const calendarContent = (
-    <>
-      <MDBox
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        px={2}
-        py={1.5}
-        sx={{ borderBottom: 1, borderColor: "divider" }}
-      >
-        <IconButton
-          onClick={() => handleMonthChange(-1)}
-          size="small"
-          aria-label={t("eventsPage.previousMonth", "Previous month")}
-        >
-          <Icon>chevron_left</Icon>
-        </IconButton>
-        <MDBox
-          display="flex"
-          alignItems="baseline"
-          justifyContent="center"
-          gap={0.75}
-          sx={{ minWidth: 0 }}
-        >
-          <MDButton
-            variant="text"
-            color="info"
-            onClick={openMonthPicker}
-            sx={{ px: 1, minWidth: 0 }}
-          >
-            <MDTypography
-              variant={isMobile ? "h5" : "h4"}
-              fontWeight="bold"
-              sx={{ lineHeight: 1.1, whiteSpace: "nowrap" }}
-            >
-              {monthLabel}
-            </MDTypography>
-          </MDButton>
-          <MDButton
-            variant="text"
-            color="info"
-            onClick={openYearPicker}
-            sx={{ px: 1, minWidth: 0 }}
-          >
-            <MDTypography
-              variant={isMobile ? "h5" : "h4"}
-              fontWeight="bold"
-              sx={{ lineHeight: 1.1, whiteSpace: "nowrap" }}
-            >
-              {yearLabel}
-            </MDTypography>
-          </MDButton>
-        </MDBox>
-        <IconButton
-          onClick={() => handleMonthChange(1)}
-          size="small"
-          aria-label={t("eventsPage.nextMonth", "Next month")}
-        >
-          <Icon>chevron_right</Icon>
-        </IconButton>
-      </MDBox>
-      <MDBox
-        ref={calendarRef}
-        p={isMobile ? 1 : 2}
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 1,
-          userSelect: "none",
-          position: "relative",
-          minHeight: isMobile
-            ? calendarRowCount * CELL_HEIGHT_MOBILE + 50
-            : calendarRowCount * CELL_HEIGHT_DESKTOP + 50,
-        }}
-      >
-        {/* Loading overlay */}
-        {isLoading && (
-          <MDBox
-            sx={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              bgcolor: "rgba(255, 255, 255, 0.8)",
-              zIndex: 10,
-              borderRadius: 2,
-            }}
-          >
-            <CircularProgress size={40} sx={{ color: ACCENT_CYAN }} />
-          </MDBox>
-        )}
-        <MDBox
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(7, 1fr)",
-            gap: 0,
-          }}
-        >
-          {weekdayLabels.map((label) => (
-            <MDBox
-              key={label}
-              sx={{
-                textAlign: "center",
-                py: 0.75,
-                borderBottom: 1,
-                borderColor: "divider",
-              }}
-            >
-              <MDTypography variant="caption" fontWeight="bold">
-                {label}
-              </MDTypography>
-            </MDBox>
-          ))}
-        </MDBox>
-        <MDBox
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(7, 1fr)",
-            gridTemplateRows: `repeat(${calendarRowCount}, ${
-              isMobile ? CELL_HEIGHT_MOBILE : CELL_HEIGHT_DESKTOP
-            }px)`,
-            gap: 0,
-            border: 1,
-            borderColor: "divider",
-            borderRadius: 2,
-            overflow: "hidden",
-            opacity: isInitialLoad ? 0 : 1,
-            transition: "opacity 0.3s ease",
-          }}
-        >
-          {calendarCells.map(({ index, isInMonth, date, dayNum }) => {
-            const selected = isSelected(date);
-            const isTodayDate = isToday(date);
-            const dayEvents = eventsByDate[toDateKey(date)] || [];
-            const visibleEvents = dayEvents.slice(0, MAX_VISIBLE_EVENTS);
-            const remainingCount = dayEvents.length - MAX_VISIBLE_EVENTS;
-            const content = (
-              <MDBox
-                sx={{
-                  width: "100%",
-                  height: "100%",
-                  p: 0.5,
-                  cursor: "pointer",
-                  bgcolor: selected
-                    ? "rgba(0, 188, 212, 0.12)"
-                    : isInMonth
-                    ? "transparent"
-                    : "grey.50",
-                  color: isInMonth ? "text.primary" : "text.secondary",
-                  opacity: isInMonth ? 1 : 0.6,
-                  borderBottom:
-                    index >= lastRowStartIndex ? "none" : "1px solid",
-                  borderColor: "divider",
-                  "&:hover": {
-                    bgcolor: selected
-                      ? "rgba(0, 188, 212, 0.12)"
-                      : "rgba(0, 188, 212, 0.08)",
-                  },
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  justifyContent: "flex-start",
-                  gap: 0.25,
-                  overflow: "hidden",
-                  minWidth: 0,
-                }}
-              >
-                <MDBox
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: isMobile ? 24 : 28,
-                    height: isMobile ? 24 : 28,
-                    borderRadius: "50%",
-                    bgcolor: isTodayDate ? ACCENT_CYAN : "transparent",
-                    ml: 0.25,
-                  }}
-                >
-                  <MDTypography
-                    variant="button"
-                    fontWeight={selected || isTodayDate ? "bold" : "regular"}
-                    sx={{
-                      fontSize: isMobile ? "0.85rem" : "0.95rem",
-                      lineHeight: 1,
-                      color: isTodayDate ? "#fff" : "inherit",
-                    }}
-                  >
-                    {dayNum}
-                  </MDTypography>
-                </MDBox>
-                {isInMonth && dayEvents.length > 0 && (
-                  <MDBox
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 0.25,
-                      width: "100%",
-                      overflow: "hidden",
-                      minWidth: 0,
-                      flex: 1,
-                    }}
-                  >
-                    {visibleEvents.map((event) => (
-                      <MDBox
-                        key={event.id}
-                        sx={{
-                          bgcolor: event.color || ACCENT_CYAN,
-                          color: "#fff",
-                          borderRadius: "12px",
-                          px: 0.75,
-                          py: 0.2,
-                          fontSize: isMobile ? "0.65rem" : "0.7rem",
-                          fontWeight: 500,
-                          lineHeight: 1.3,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          minWidth: 0,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {event.title}
-                      </MDBox>
-                    ))}
-                    {remainingCount > 0 && (
-                      <MDTypography
-                        variant="caption"
-                        sx={{
-                          fontSize: isMobile ? "0.6rem" : "0.65rem",
-                          fontWeight: 600,
-                          color: "text.secondary",
-                          pl: 0.5,
-                          lineHeight: 1.2,
-                        }}
-                      >
-                        +{remainingCount}
-                      </MDTypography>
-                    )}
-                  </MDBox>
-                )}
-              </MDBox>
-            );
-            return (
-              <MDBox
-                key={`cell-${index}`}
-                onClick={() => handleSelectDate(date)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleSelectDate(date);
-                  }
-                }}
-                sx={{
-                  width: "100%",
-                  height: "100%",
-                  overflow: "hidden",
-                  minWidth: 0,
-                }}
-              >
-                {content}
-              </MDBox>
-            );
-          })}
-        </MDBox>
-      </MDBox>
-    </>
-  );
 
   return (
     <DashboardLayout>
-      <DashboardNavbar customRoute={["events"]} />
-      <MDBox pt={isMobile ? 2 : 3} pb={3}>
-        <Grid container spacing={isMobile ? 2 : 3}>
-          {/* Search bar - mobile only */}
-          {isMobile && (
-            <Grid item xs={12}>
-              <MDBox px={2}>
-                <TextField
-                  placeholder={searchPlaceholder}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Icon sx={{ color: "text.secondary" }}>search</Icon>
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <SearchFilterAdornment
-                        filter={searchFilter}
-                        onSelectFilter={setSearchFilter}
-                      />
-                    ),
-                  }}
-                  size="small"
-                  fullWidth
-                />
-              </MDBox>
-            </Grid>
-          )}
-          <Grid item xs={12} sx={isMobile ? { px: 0 } : undefined}>
-            {isMobile ? (
-              <MDBox sx={{ width: "100%" }}>{calendarContent}</MDBox>
-            ) : (
-              <Card sx={{ overflow: "hidden" }}>{calendarContent}</Card>
-            )}
-          </Grid>
-          <Grid item xs={12}>
+      <DashboardNavbar
+        customRoute={["groups", group.Name]}
+        hideMobileBackButton={isEditing}
+      />
+      <MDBox pt={{ xs: 3, xl: 6 }} pb={{ xs: 2, xl: 3 }}>
+        {isEditing ? (
+          <Card>
             <MDBox
-              display="flex"
-              justifyContent="flex-start"
+              display={isMobile ? "grid" : "flex"}
+              gridTemplateColumns={isMobile ? "48px 1fr 48px" : undefined}
+              justifyContent={isMobile ? undefined : "space-between"}
               alignItems="center"
-              mb={1}
-              px={isMobile ? 2 : 0}
+              p={3}
+              sx={{ borderBottom: 1, borderColor: "divider" }}
             >
-              <MDButton
-                variant="outlined"
-                color="info"
-                size="small"
-                onClick={handleGoToToday}
-                startIcon={<Icon>today</Icon>}
+              <IconButton
+                onClick={handleEditBack}
+                size={isMobile ? "medium" : "small"}
+                sx={
+                  isMobile
+                    ? {
+                        "& .MuiSvgIcon-root": { fontSize: 28 },
+                      }
+                    : undefined
+                }
+                aria-label={t("groupDetailPage.actions.back", "Back")}
               >
-                {t("eventsPage.today", "Today")}
-              </MDButton>
-            </MDBox>
-          </Grid>
-          <Grid item xs={12} ref={listRef}>
-            <Card sx={{ p: 2 }}>
-              <MDBox display="flex" alignItems="baseline" gap={1} mb={1}>
-                <MDTypography variant="h6" fontWeight="bold">
-                  {t("nav.events", "Event")}
-                </MDTypography>
-                {selectedDate && (
-                  <MDTypography variant="caption" color="text">
-                    {selectedDate.toLocaleDateString()}
-                  </MDTypography>
-                )}
-              </MDBox>
-              <Divider sx={{ mb: 1.5 }} />
-              {isLoading ? (
-                <MDBox display="flex" flexDirection="column" gap={1}>
-                  <Skeleton variant="rounded" height={72} />
-                  <Skeleton variant="rounded" height={72} />
-                </MDBox>
-              ) : selectedEvents.length ? (
-                <MDBox display="flex" flexDirection="column" gap={1.5}>
-                  {selectedEvents.map((eventItem) => (
-                    <Card
-                      key={eventItem.id}
-                      variant="outlined"
-                      sx={{ p: 1.5, borderRadius: 2 }}
-                    >
-                      <MDBox
-                        display="flex"
-                        justifyContent="space-between"
-                        alignItems="center"
-                        gap={1}
-                      >
-                        <MDTypography
-                          variant="button"
-                          fontWeight="bold"
-                          sx={{ color: eventItem.color || ACCENT_CYAN }}
-                        >
-                          {eventItem.title}
-                        </MDTypography>
-                        <MDTypography variant="caption" color="text">
-                          {eventItem.time}
-                        </MDTypography>
-                      </MDBox>
-                      <MDTypography variant="caption" color="text">
-                        {eventItem.location}
-                      </MDTypography>
-                      {eventItem.description ? (
-                        <MDTypography variant="body2" mt={0.75}>
-                          {eventItem.description}
-                        </MDTypography>
-                      ) : null}
-                    </Card>
-                  ))}
-                </MDBox>
+                <ArrowBackIosNewIcon />
+              </IconButton>
+
+              <MDTypography
+                variant="h4"
+                sx={
+                  isMobile
+                    ? { textAlign: "center", m: 0, lineHeight: 1.1 }
+                    : undefined
+                }
+              >
+                {t("groupForm.header.editTitle", "Edit Group")}
+              </MDTypography>
+
+              {isMobile ? (
+                <MDBox />
               ) : (
-                <MDTypography variant="body2" color="text">
-                  {t("eventsPage.noEvents", "No events.")}
-                </MDTypography>
+                <MDBox display="flex" gap={1}>
+                  <MDButton
+                    variant="gradient"
+                    color="info"
+                    onClick={handleSaveGroup}
+                    disabled={isSaving}
+                  >
+                    {t("buttons.save", "Save")}
+                  </MDButton>
+                  <MDButton
+                    variant="gradient"
+                    color="error"
+                    onClick={() => requestDiscardIfDirty(discardEditsNow)}
+                    disabled={isSaving}
+                  >
+                    {t("buttons.discard", "Discard")}
+                  </MDButton>
+                </MDBox>
               )}
-            </Card>
-          </Grid>
-        </Grid>
-      </MDBox>
-      <Dialog
-        open={isPickerOpen}
-        onClose={closeMonthYearPicker}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle sx={{ pb: 1 }}>
-          {pickerView === "year"
-            ? t("eventsPage.selectYear", "Select year")
-            : t("eventsPage.selectMonth", "Select month")}
-        </DialogTitle>
-        <DialogContent sx={{ pt: 0 }}>
-          {pickerView === "year" ? (
-            <List dense sx={{ maxHeight: 420, overflow: "auto" }}>
-              {yearOptions.map((year) => (
-                <ListItemButton
-                  key={year}
-                  selected={year === monthDate.getFullYear()}
-                  onClick={() => handlePickYear(year)}
-                >
-                  <ListItemText primary={String(year)} />
-                </ListItemButton>
-              ))}
-            </List>
-          ) : (
+            </MDBox>
+
+            <MDBox p={3}>
+              <GroupEditForm
+                editedGroup={editedGroup || baseGroupForEdit}
+                peopleOptions={peopleOptions}
+                selectedFile={selectedFile}
+                onChangeField={(key, value) =>
+                  setEditedGroup((prev) => ({
+                    ...(prev || baseGroupForEdit),
+                    [key]: value,
+                  }))
+                }
+                onChangeMembers={(memberIds) =>
+                  setEditedGroup((prev) => ({
+                    ...(prev || baseGroupForEdit),
+                    Members: memberIds,
+                  }))
+                }
+                handleFileChange={handleFileChange}
+                registerGroupPicProcessor={registerGroupPicProcessor}
+                uploadError={uploadError}
+              />
+            </MDBox>
+          </Card>
+        ) : isMobile ? (
+          // -------------------------
+          // MOBILE VIEW (matches People page layout)
+          // -------------------------
+          <MDBox
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              height: "calc(100dvh - 200px)",
+              overflow: "hidden",
+            }}
+          >
+            <MDBox
+              p={2}
+              display="flex"
+              alignItems="center"
+              gap={1}
+              sx={{ flexShrink: 0 }}
+	            >
+	              <TextField
+	                placeholder={searchPlaceholder}
+	                value={searchQuery}
+	                onChange={(e) => setSearchQuery(e.target.value)}
+	                InputProps={{
+	                  endAdornment: (
+	                    <SearchFilterAdornment
+	                      filter={searchFilter}
+	                      onSelectFilter={setSearchFilter}
+	                      includeAwca={includeAwca}
+	                      onToggleIncludeAwca={() =>
+	                        setIncludeAwca((prev) => !prev)
+	                      }
+	                    />
+	                  ),
+	                }}
+	                size="small"
+	                sx={{ flex: 1 }}
+	              />
+            </MDBox>
             <MDBox
               sx={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 1,
-                pt: 1,
+                flex: 1,
+                overflow: "auto",
+                pb: 2,
+                // "&::-webkit-scrollbar": { display: "none" },
+                msOverflowStyle: "none",
+                scrollbarWidth: "none",
               }}
             >
-              {monthOptions.map((label, idx) => (
-                <MDButton
-                  key={label}
-                  variant="outlined"
-                  color="info"
-                  onClick={() => handlePickMonth(idx)}
-                  sx={{ py: 1.2 }}
-                >
-                  {label}
-                </MDButton>
-              ))}
+              <PersonMobileViewList
+                items={paginatedMembers}
+                emptyText={t("groupDetailPage.members.empty", "No members.")}
+                getAvatarSrc={(person) =>
+                  person?.ProfilePic || defaultProfilePic
+                }
+                getAvatarName={(person) => person?.Name || naLabel}
+                getPrimary={(person) => person?.Name || naLabel}
+                getSecondary={(person) => person?.District || ""}
+                onItemClick={(person) => {
+                  const personId = person?._id || person?.id;
+                  if (!personId) return;
+                  navigate(`/person/${personId}`, {
+                    state: { from: `/group/${id}` },
+                  });
+                }}
+                renderAction={(person) => (
+                  <ActionMenu
+                    person={person}
+                    navigate={navigate}
+                    slug={id}
+                    onRemove={handleRemoveMember}
+                    iconColor={ACCENT_CYAN}
+                  />
+                )}
+                primaryTypographyProps={{
+                  noWrap: true,
+                  sx: { color: ACCENT_CYAN },
+                }}
+                secondaryTypographyProps={{ noWrap: true }}
+              />
             </MDBox>
+            <MDBox
+              sx={(muiTheme) => ({
+                height: MOBILE_PAGINATION_HEIGHT,
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderTop: `1px solid ${muiTheme.palette.divider}`,
+                px: 2,
+              })}
+            >
+              <MobilePaginationControls />
+            </MDBox>
+          </MDBox>
+        ) : (
+          // -------------------------
+          // DESKTOP VIEW (table layout)
+          // -------------------------
+          <Grid container spacing={{ xs: 2, xl: 6 }}>
+            <Grid item xs={12}>
+              <Card>
+                <MDBox
+                  mx={2}
+                  mt={-3}
+                  py={3}
+                  px={2}
+                  variant="gradient"
+                  bgColor="info"
+                  borderRadius="lg"
+                  coloredShadow="info"
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <MDBox sx={{ minWidth: 0, flex: 1, pr: 2 }}>
+                    <MDTypography
+                      variant="h6"
+                      color="white"
+                      noWrap
+                      sx={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {group.Name}
+                    </MDTypography>
+                    <MDTypography
+                      variant="caption"
+                      color="white"
+                      noWrap
+                      sx={{
+                        display: "block",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {(group.Category || "").trim()
+                        ? `${group.Category} • `
+                        : ""}
+                      {members.length}{" "}
+                      {t("groupDetailPage.members.countLabel", "members")}
+                    </MDTypography>
+                  </MDBox>
+                  <MDButton
+                    variant="contained"
+                    color="white"
+                    iconOnly
+                    aria-label={t("groupDetailPage.actions.addMember", "Add member")}
+                    onClick={() => {
+                      handleOpenAddMembers();
+                    }}
+                    sx={{
+                      "& .MuiIcon-root": { fontSize: "27px !important" },
+                    }}
+                  >
+                    <Icon sx={{ fontSize: 332 }}>add</Icon>
+                  </MDButton>
+                </MDBox>
+                <MDBox
+                  pt={3}
+                  sx={{ maxHeight: "calc(100vh - 400px)", overflow: "auto" }}
+                >
+	                  {paginatedRows.length ? (
+	                    <DataTable
+	                      table={{
+	                        columns: translatedColumns,
+	                        rows: paginatedRows,
+	                      }}
+	                      isSorted={false}
+	                      entriesPerPage={false}
+	                      showTotalEntries={false}
+	                      noEndBorder
+	                      pagination={false}
+	                    />
+                  ) : (
+                    <MDBox p={2}>
+                      <MDTypography variant="button" color="text">
+                        {t("groupDetailPage.members.empty", "No members.")}
+                      </MDTypography>
+                    </MDBox>
+                  )}
+                </MDBox>
+                <MDBox
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  p={2}
+                  gap={2}
+                >
+	                  <TextField
+	                    placeholder={searchPlaceholder}
+	                    value={searchQuery}
+	                    onChange={(e) => setSearchQuery(e.target.value)}
+	                    InputProps={{
+	                      endAdornment: (
+	                        <SearchFilterAdornment
+	                          filter={searchFilter}
+	                          onSelectFilter={setSearchFilter}
+	                          includeAwca={includeAwca}
+	                          onToggleIncludeAwca={() =>
+	                            setIncludeAwca((prev) => !prev)
+	                          }
+	                        />
+	                      ),
+	                    }}
+	                    size="small"
+	                    sx={{ minWidth: 240 }}
+	                  />
+
+                  {/* FIXED paginator (desktop/web) */}
+                  <DesktopPaginationControls
+                    page={page}
+                    totalPages={totalPages}
+                    inputValue={inputValue}
+                    onInputChange={handleInputChange}
+                    onCommit={handleInputBlur}
+                    goToPage={goToPage}
+                  />
+                </MDBox>
+              </Card>
+            </Grid>
+          </Grid>
+        )}
+      </MDBox>
+
+      {/* MOBILE floating action menu (more_horiz -> shows Edit + Add) */}
+      {isMobile && !isEditing && (
+        <>
+          {fabMenuOpen && (
+            <>
+              {/* Add (top) */}
+              <IconButton
+                ref={fabAddRef}
+                onClick={() => {
+                  setFabMenuOpen(false);
+                  handleOpenAddMembers();
+                }}
+                sx={(muiTheme) => ({
+                  position: "fixed",
+                  right: 17,
+                  bottom: `calc(${MOBILE_VIEW_FAB_BOTTOM_OFFSET} + ${
+                    MOBILE_VIEW_FAB_STACK_GAP * 2
+                  }px)`,
+                  width: 77,
+                  height: 77,
+                  borderRadius: "50%",
+                  background: ACCENT_CYAN,
+                  color: "#fff",
+                  zIndex: muiTheme.zIndex.modal - 1,
+                  "&:hover": {
+                    background: ACCENT_CYAN,
+                    filter: "brightness(0.9)",
+                  },
+                })}
+                aria-label={t("groupDetailPage.actions.addMembers", "Add members")}
+              >
+                <Icon fontSize="large" sx={{ color: "#fff" }}>
+                  add
+                </Icon>
+              </IconButton>
+
+              {/* Edit (middle) */}
+              <IconButton
+                ref={fabEditRef}
+                onClick={() => startEditing()}
+                sx={(muiTheme) => ({
+                  position: "fixed",
+                  right: 17,
+                  bottom: `calc(${MOBILE_VIEW_FAB_BOTTOM_OFFSET} + ${MOBILE_VIEW_FAB_STACK_GAP}px)`,
+                  width: 77,
+                  height: 77,
+                  borderRadius: "50%",
+                  background: ACCENT_CYAN,
+                  color: "#fff",
+                  zIndex: muiTheme.zIndex.modal - 1,
+                  "&:hover": {
+                    background: ACCENT_CYAN,
+                    filter: "brightness(0.9)",
+                  },
+                })}
+                aria-label={t("groupForm.header.editTitle", "Edit Group")}
+              >
+                <Icon fontSize="large" sx={{ color: "#fff" }}>
+                  edit
+                </Icon>
+              </IconButton>
+            </>
           )}
-        </DialogContent>
-        <DialogActions>
-          <MDBox />
-          <MDButton
-            variant="text"
-            color="secondary"
-            onClick={closeMonthYearPicker}
+
+          {/* Toggle (bottom) */}
+          <IconButton
+            ref={fabToggleRef}
+            onClick={() => setFabMenuOpen((prev) => !prev)}
+            sx={(muiTheme) => {
+              const backgroundColor = fabMenuOpen
+                ? muiTheme.palette.error?.main || "#f44336"
+                : ACCENT_CYAN;
+
+              return {
+                position: "fixed",
+                right: 17,
+                bottom: MOBILE_VIEW_FAB_BOTTOM_OFFSET,
+                width: 77,
+                height: 77,
+                borderRadius: "50%",
+                backgroundColor,
+                color: "#fff",
+                zIndex: muiTheme.zIndex.modal - 1,
+                "&:hover": {
+                  backgroundColor,
+                },
+                "@media (hover: none)": {
+                  "&:hover": {
+                    backgroundColor,
+                  },
+                },
+              };
+            }}
+            aria-label={fabMenuOpen ? "Close actions" : "Open actions"}
           >
-            {t("buttons.cancel", "Cancel")}
-          </MDButton>
-        </DialogActions>
-      </Dialog>
-      <Footer />
-      {isMobile && (
+            <Icon fontSize="large" sx={{ color: "#fff" }}>
+              {fabMenuOpen ? "clear" : "more_horiz"}
+            </Icon>
+          </IconButton>
+        </>
+      )}
+
+      {/* MOBILE floating save button (edit form) */}
+      {isMobile && isEditing && (
         <IconButton
-          onClick={() => navigate("/event/add")}
+          onClick={handleSaveGroup}
+          disabled={isSaving}
           sx={(muiTheme) => ({
             position: "fixed",
             right: 17,
@@ -1029,33 +1444,223 @@ function Events() {
             width: 77,
             height: 77,
             borderRadius: "50%",
-            background: ACCENT_CYAN,
+            backgroundColor: ACCENT_CYAN,
+            opacity: isSaving ? 0.6 : 1,
             color: "#fff",
             zIndex: muiTheme.zIndex.modal - 1,
-            opacity: fabVisible ? 1 : 0,
-            transform: fabVisible ? "scale(1)" : "scale(0.8)",
-            transition: "opacity 0.2s ease, transform 0.2s ease",
-            pointerEvents: fabVisible ? "auto" : "none",
             "&:hover": {
-              background: ACCENT_CYAN,
-              filter: "brightness(0.9)",
+              backgroundColor: ACCENT_CYAN,
+              filter: isSaving ? "none" : "brightness(0.9)",
+            },
+            "&.Mui-disabled": {
+              backgroundColor: ACCENT_CYAN,
+              color: "#fff",
+              opacity: 0.6,
             },
           })}
-          aria-label={t("eventsPage.addEvent", "Add event")}
         >
           <Icon fontSize="large" sx={{ color: "#fff" }}>
-            add
+            save
           </Icon>
         </IconButton>
       )}
+      <Footer />
+      <Dialog
+        open={addMembersOpen}
+        onClose={(_event, reason) => {
+          if (reason === "backdropClick" || reason === "escapeKeyDown") {
+            setMemberPickerOpen(false);
+            return;
+          }
+          setAddMembersOpen(false);
+        }}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            pr: 1,
+          }}
+        >
+          <span>{t("groupDetailPage.actions.addMembers", "Add members")}</span>
+          <IconButton
+            aria-label={t("buttons.close", "Close")}
+            onClick={() => setAddMembersOpen(false)}
+            size="small"
+            sx={{ color: "text.secondary" }}
+          >
+            <Icon fontSize="small">close</Icon>
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          {(() => {
+            const existingMemberIds = new Set(
+              (members || [])
+                .map((m) => m?._id || m?.id)
+                .filter(Boolean)
+                .map(String),
+            );
+
+            return (
+              <Autocomplete
+                multiple
+                options={peopleOptions}
+                value={selectedToAdd}
+                inputValue={memberQuery}
+                onInputChange={(_e, next) => {
+                  setMemberQuery(next);
+                  if (!next.trim()) {
+                    setMemberPickerOpen(true);
+                    return;
+                  }
+                  const input = next.trim().toLowerCase();
+                  const matchCount = peopleOptions.filter((p) => {
+                    const name = (p?.Name || "").toLowerCase();
+                    const nameChi = (p?.NameChi || "").toLowerCase();
+                    return name.includes(input) || nameChi.includes(input);
+                  }).length;
+                  setMemberPickerOpen(matchCount > 0);
+                }}
+                onChange={(_e, next) => setSelectedToAdd(next)}
+                open={memberPickerOpen}
+                onOpen={() => setMemberPickerOpen(true)}
+                onClose={() => setMemberPickerOpen(false)}
+                openOnFocus
+                disableCloseOnSelect
+                getOptionLabel={(option) => getPersonLabel(option, unknownLabel)}
+                isOptionEqualToValue={(opt, val) => opt?._id === val?._id}
+                getOptionDisabled={(option) =>
+                  existingMemberIds.has(String(option?._id || option?.id))
+                }
+                filterOptions={(options, state) => {
+                  const input = (state.inputValue || "").trim().toLowerCase();
+                  const filtered = !input
+                    ? options
+                    : options.filter((p) => {
+                        const name = (p?.Name || "").toLowerCase();
+                        const nameChi = (p?.NameChi || "").toLowerCase();
+                        return name.includes(input) || nameChi.includes(input);
+                      });
+
+                  const available = [];
+                  const alreadyAdded = [];
+                  filtered.forEach((option) => {
+                    const optionId = option?._id || option?.id;
+                    if (existingMemberIds.has(String(optionId))) {
+                      alreadyAdded.push(option);
+                    } else {
+                      available.push(option);
+                    }
+                  });
+
+                  return [...available, ...alreadyAdded];
+                }}
+                noOptionsText=""
+                renderOption={(props, option) => {
+                  const { key, ...rest } = props;
+                  const optionId = option?._id || option?.id;
+                  const isExisting = existingMemberIds.has(String(optionId));
+                  return (
+                    <li
+                      key={optionId || key}
+                      {...rest}
+                      style={{
+                        ...rest.style,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: 12,
+                      }}
+                    >
+                      <span
+                        style={{ overflow: "hidden", textOverflow: "ellipsis" }}
+                      >
+                        {getPersonLabel(option, unknownLabel)}
+                      </span>
+                      {isExisting && (
+                        <span style={{ opacity: 0.8, fontSize: 12 }}>
+                          {t("groupDetailPage.addMembersDialog.added", "Added")}
+                        </span>
+                      )}
+                    </li>
+                  );
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    variant="outlined"
+                    label={t("groupForm.fields.members", "Members")}
+                    placeholder={t(
+                      "groupForm.fields.searchPeople",
+                      "Search people...",
+                    )}
+                    autoFocus
+                    sx={{ mt: 1 }}
+                  />
+                )}
+              />
+            );
+          })()}
+        </DialogContent>
+        <DialogActions>
+          <MDButton
+            variant="text"
+            color="secondary"
+            onClick={() => setAddMembersOpen(false)}
+          >
+            {t("buttons.cancel", "Cancel")}
+          </MDButton>
+          <MDButton
+            variant="gradient"
+            color="info"
+            onClick={handleConfirmAddMembers}
+          >
+            {t("buttons.add", "Add")}
+          </MDButton>
+        </DialogActions>
+      </Dialog>
       <Toast
         open={toast.open}
         message={toast.message}
         severity={toast.severity}
-        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+        actionLabel={toast.actionLabel}
+        onAction={toast.onAction}
+        autoHideDuration={toast.autoHideDuration}
+        onClose={() =>
+          setToast((prev) => ({
+            ...prev,
+            open: false,
+            actionLabel: null,
+            onAction: null,
+          }))
+        }
       />
+      <Dialog open={showDiscardConfirmModal} onClose={closeDiscardConfirmModal}>
+        <DialogTitle>
+          {t("personDetailPage.dialogs.discardTitle", "Discard changes?")}
+        </DialogTitle>
+        <DialogContent>
+          <MDTypography variant="body2">
+            {t(
+              "personDetailPage.dialogs.discardBody",
+              "You have unsaved changes. Discard them?",
+            )}
+          </MDTypography>
+        </DialogContent>
+        <DialogActions>
+          <MDButton onClick={closeDiscardConfirmModal} color="info">
+            {t("buttons.keepEditing", "Keep editing")}
+          </MDButton>
+          <MDButton onClick={confirmDiscard} color="error">
+            {t("buttons.discard", "Discard")}
+          </MDButton>
+        </DialogActions>
+      </Dialog>
     </DashboardLayout>
   );
 }
 
-export default Events;
+export default GroupDetail;
