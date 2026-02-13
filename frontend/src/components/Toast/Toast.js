@@ -1,12 +1,13 @@
 import PropTypes from "prop-types";
 import Snackbar from "@mui/material/Snackbar";
-import IconButton from "@mui/material/IconButton";
-import Icon from "@mui/material/Icon";
 import Button from "@mui/material/Button";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTranslation } from "i18n";
 import MDBox from "components/MDBox";
 import MDAlert from "components/MDAlert";
+
+const TOAST_AUTO_HIDE_DURATION_MS = 2000;
 
 export default function Toast({
   open,
@@ -15,11 +16,11 @@ export default function Toast({
   onClose,
   actionLabel,
   onAction,
-  autoHideDuration = 2000,
   anchorOrigin,
 }) {
   const theme = useTheme();
   const isMobileView = useMediaQuery(theme.breakpoints.down("sm"));
+  const { t } = useTranslation();
 
   const resolvedAnchorOrigin =
     anchorOrigin ||
@@ -31,16 +32,21 @@ export default function Toast({
     severity === "success"
       ? "success"
       : severity === "info"
-        ? "info"
-        : severity === "warning"
-          ? "warning"
-          : "error";
+      ? "info"
+      : severity === "warning"
+      ? "warning"
+      : "error";
+
+  const translatedMessage = t(message, message);
+  const translatedActionLabel = actionLabel
+    ? t(actionLabel, actionLabel)
+    : null;
 
   return (
     <Snackbar
       open={open}
       onClose={onClose}
-      autoHideDuration={autoHideDuration}
+      autoHideDuration={TOAST_AUTO_HIDE_DURATION_MS}
       anchorOrigin={resolvedAnchorOrigin}
       sx={{
         ...(isMobileView
@@ -55,16 +61,28 @@ export default function Toast({
           : null),
       }}
     >
-      {/* Snackbar requires a child that can hold a ref; MDAlert is a function component. */}
       <MDBox sx={{ width: isMobileView ? "100%" : "calc(100vw - 32px)" }}>
-        <MDAlert color={color}>
-          <MDBox
-            display="flex"
-            alignItems="center"
-            justifyContent="space-between"
-            gap={1}
-            width="100%"
-          >
+        <MDAlert
+          color={color}
+          sx={({ palette, functions }) => {
+            const gradient =
+              palette.gradients?.[color] || palette.gradients?.info;
+
+            // remove transparency: use solid gradient colors (no rgba alpha)
+            return {
+              backgroundImage: gradient
+                ? functions.linearGradient(gradient.main, gradient.state)
+                : undefined,
+
+              // force toast text to white
+              "&, & *": { color: "#fff !important" },
+              "& .MuiAlert-message": { color: "#fff !important" },
+              "& .MuiAlert-icon": { color: "#fff !important" },
+              "& .MuiAlert-action": { color: "#fff !important" },
+            };
+          }}
+        >
+          <MDBox display="flex" alignItems="center" gap={1} width="100%">
             <MDBox
               display="flex"
               alignItems="center"
@@ -72,9 +90,13 @@ export default function Toast({
               flexWrap="wrap"
               sx={{ minWidth: 0 }}
             >
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                {message}
-              </span>
+              <MDBox
+                component="span"
+                sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
+              >
+                {translatedMessage}
+              </MDBox>
+
               {actionLabel && onAction && (
                 <Button
                   variant="text"
@@ -90,22 +112,13 @@ export default function Toast({
                     textTransform: "none",
                     fontWeight: 600,
                     textDecoration: "underline",
+                    color: "#fff !important",
                   }}
                 >
-                  {actionLabel}
+                  {translatedActionLabel}
                 </Button>
               )}
             </MDBox>
-
-            <IconButton
-              size="small"
-              aria-label="close"
-              color="inherit"
-              onClick={onClose}
-              sx={{ ml: 1 }}
-            >
-              <Icon fontSize="small">close</Icon>
-            </IconButton>
           </MDBox>
         </MDAlert>
       </MDBox>
@@ -120,7 +133,6 @@ Toast.propTypes = {
   onClose: PropTypes.func.isRequired,
   actionLabel: PropTypes.string,
   onAction: PropTypes.func,
-  autoHideDuration: PropTypes.number,
   anchorOrigin: PropTypes.shape({
     vertical: PropTypes.oneOf(["top", "bottom"]).isRequired,
     horizontal: PropTypes.oneOf(["left", "center", "right"]).isRequired,

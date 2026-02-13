@@ -107,6 +107,7 @@ const knownFields = [
   "PhoneNumber",
   "AnnouncementGroup",
   "ChatGroup",
+  "inAwca",
   "Email",
   "District",
   "Address",
@@ -681,6 +682,7 @@ function PersonDetail() {
   // Core State for the Person Detail View
   const [person, setPerson] = useState(null); // The original person data (for view mode/discard)
   const [isEditing, setIsEditing] = useState(location.state?.edit || isAddMode);
+  const wasEditingRef = useRef(isEditing);
   const [editedPerson, setEditedPerson] = useState(
     isAddMode ? { ProfilePic: "" } : null,
   );
@@ -714,6 +716,22 @@ function PersonDetail() {
   const [uploadError, setUploadError] = useState(null);
   const profilePicProcessorRef = useRef(null);
   const pendingDiscardActionRef = useRef(null);
+
+  useEffect(() => {
+    const wasEditing = wasEditingRef.current;
+    wasEditingRef.current = isEditing;
+
+    // On mobile, when exiting edit mode (e.g. after Save), jump back to the top of the page.
+    if (!isMobileView) return;
+    if (!wasEditing || isEditing) return;
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      // iOS/Safari fallback
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    });
+  }, [isEditing, isMobileView]);
 
   const breadcrumbRoute = useMemo(() => {
     const baseRoute = ["people"];
@@ -1592,6 +1610,7 @@ function PersonDetail() {
       if (hasMeaningfulValue(editedPerson?.Address)) return true;
       if (hasMeaningfulValue(editedPerson?.AnnouncementGroup)) return true;
       if (hasMeaningfulValue(editedPerson?.ChatGroup)) return true;
+      if (hasMeaningfulValue(editedPerson?.inAwca)) return true;
       const combinedFields = [...personalCustomFields, ...relationshipFields];
       return combinedFields.some(
         (field) =>

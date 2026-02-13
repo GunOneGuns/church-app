@@ -55,6 +55,12 @@ function PersonDisplay({
     return String(v);
   };
 
+  const renderYesNo = (value) => {
+    if (value === "Y") return t("common.yes", "Yes");
+    if (value === "N") return t("common.no", "No");
+    return displayOrNil(value);
+  };
+
   const normalizeRelationKey = (value = "") => String(value).trim().toLowerCase();
   const getRelationLabel = (value = "") => {
     const normalized = normalizeRelationKey(value);
@@ -187,6 +193,17 @@ function PersonDisplay({
                 {t("personDetailPage.fields.chatGroupLabel", "Chat Group:")}
               </MDTypography>{" "}
               {displayOrNil(person?.ChatGroup)}
+            </MDTypography>
+
+            <MDTypography variant="body2">
+              <MDTypography
+                component="span"
+                fontWeight="bold"
+                sx={{ fontSize: "1rem" }}
+              >
+                {t("personDetailPage.fields.awcaLabel", "AWCA:")}
+              </MDTypography>{" "}
+              {renderYesNo(person?.inAwca)}
             </MDTypography>
 
             <MDTypography variant="body2">

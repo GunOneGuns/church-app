@@ -9,6 +9,7 @@ import DialogActions from "@mui/material/DialogActions";
 import Slider from "@mui/material/Slider";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import Card from "@mui/material/Card";
+import Switch from "@mui/material/Switch";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import MDBox from "components/MDBox";
@@ -45,6 +46,7 @@ export default function GroupEditForm({
   const isMobileView = useMediaQuery(theme.breakpoints.down("xl"));
   const [memberQuery, setMemberQuery] = useState("");
   const [membersOpen, setMembersOpen] = useState(false);
+  const [includeAwca, setIncludeAwca] = useState(true);
   const unknownLabel = t("common.unknown", "Unknown");
   const groupLabel = t("nav.groups", "Group");
 
@@ -328,13 +330,17 @@ export default function GroupEditForm({
   const filterPeopleOptions = useCallback((options, inputValue) => {
     const input = (inputValue || "").trim().toLowerCase();
     const base = Array.isArray(options) ? options.filter(Boolean) : [];
-    if (!input) return base;
-    return base.filter((person) => {
+    const awcaFiltered = includeAwca
+      ? base
+      : base.filter((person) => person?.inAwca === "N");
+
+    if (!input) return awcaFiltered;
+    return awcaFiltered.filter((person) => {
       const name = (person?.Name || "").toLowerCase();
       const nameChi = (person?.NameChi || "").toLowerCase();
       return name.includes(input) || nameChi.includes(input);
     });
-  }, []);
+  }, [includeAwca]);
 
   return (
     <>
@@ -489,6 +495,34 @@ export default function GroupEditForm({
                   },
                 }}
               />
+
+              <MDBox
+                display="flex"
+                alignItems="center"
+                justifyContent="flex-end"
+                gap={1}
+                sx={{ mt: 0.5 }}
+              >
+                <MDTypography variant="button" color="text">
+                  {t("filters.awca", "AWCA")}
+                </MDTypography>
+                <Switch
+                  checked={includeAwca}
+                  onChange={() => setIncludeAwca((prev) => !prev)}
+                  color="success"
+                  sx={(muiTheme) => ({
+                    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                      backgroundColor: `${muiTheme.palette.success.main} !important`,
+                      borderColor: `${muiTheme.palette.success.main} !important`,
+                      opacity: "1 !important",
+                    },
+                    "& .MuiSwitch-switchBase.Mui-checked .MuiSwitch-thumb": {
+                      borderColor: `${muiTheme.palette.success.main} !important`,
+                    },
+                  })}
+                  inputProps={{ "aria-label": t("filters.awca", "AWCA") }}
+                />
+              </MDBox>
 
               <Autocomplete
                 multiple

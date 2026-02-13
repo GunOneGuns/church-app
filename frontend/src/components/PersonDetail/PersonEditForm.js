@@ -136,6 +136,14 @@ function PersonEditForm({
     [editedPerson?.ChatGroup],
   );
 
+  const inAwcaValue = useMemo(
+    () => normalizeSelectValue(editedPerson?.inAwca),
+    [editedPerson?.inAwca],
+  );
+
+  const yesLabel = t("common.yes", "Yes");
+  const noLabel = t("common.no", "No");
+
   const selectedGroups = useMemo(() => {
     const idSet = new Set((selectedGroupIds || []).map(String));
     return (groupsList || []).filter((g) => idSet.has(String(g?._id)));
@@ -751,6 +759,20 @@ function PersonEditForm({
                     {option}
                   </MenuItem>
                 ))}
+              </TextField>
+
+              <TextField
+                variant="outlined"
+                select
+                label={t("personDetailPage.fields.awca", "AWCA")}
+                value={inAwcaValue}
+                onChange={(e) => handleChange("inAwca", e.target.value)}
+                fullWidth
+                InputLabelProps={{ sx: FIELD_LABEL_SX }}
+                sx={{ "& .MuiOutlinedInput-root": { height: "56px" } }}
+              >
+                <MenuItem value="Y">{yesLabel}</MenuItem>
+                <MenuItem value="N">{noLabel}</MenuItem>
               </TextField>
 
               {/* Generic custom fields */}

@@ -10,6 +10,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Divider from "@mui/material/Divider";
+import Switch from "@mui/material/Switch";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import TuneIcon from "@mui/icons-material/Tune";
@@ -134,14 +135,19 @@ function MobilePaginationControls({ page, totalPages, goToPage }) {
   );
 }
 
-function SearchFilterAdornment({ filter, onSelectFilter }) {
+function SearchFilterAdornment({
+  filter,
+  onSelectFilter,
+  includeAwca,
+  onToggleIncludeAwca,
+}) {
   const { t } = useTranslation();
   const menuIdRef = useRef(
     `people-filter-menu-${Math.random().toString(36).slice(2)}`,
   );
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
-  const isActive = filter && filter !== "default";
+  const isActive = (filter && filter !== "default") || includeAwca === false;
 
   const handleOpen = (event) => {
     event.preventDefault();
@@ -185,6 +191,46 @@ function SearchFilterAdornment({ filter, onSelectFilter }) {
           </MDTypography>
         </MDBox>
         <Divider />
+        <MenuItem
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onToggleIncludeAwca?.();
+          }}
+          sx={{ cursor: "default" }}
+        >
+          <MDBox
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            width="100%"
+            gap={2}
+          >
+            <MDTypography variant="button" color="text">
+              {t("filters.awca", "AWCA")}
+            </MDTypography>
+            <Switch
+              edge="end"
+              checked={includeAwca !== false}
+              onChange={(event) => {
+                event.stopPropagation();
+                onToggleIncludeAwca?.();
+              }}
+              color="success"
+              sx={(muiTheme) => ({
+                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                  backgroundColor: `${muiTheme.palette.success.main} !important`,
+                  borderColor: `${muiTheme.palette.success.main} !important`,
+                  opacity: "1 !important",
+                },
+                "& .MuiSwitch-switchBase.Mui-checked .MuiSwitch-thumb": {
+                  borderColor: `${muiTheme.palette.success.main} !important`,
+                },
+              })}
+              inputProps={{ "aria-label": t("filters.awca", "AWCA") }}
+            />
+          </MDBox>
+        </MenuItem>
         <MenuItem
           selected={filter === "district"}
           onClick={(event) => {
@@ -305,6 +351,7 @@ function People() {
   // Search
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilter, setSearchFilter] = useState("default");
+  const [includeAwca, setIncludeAwca] = useState(true);
   const searchPlaceholder =
     searchFilter === "district"
       ? t("search.byDistrict", "Search by District")
@@ -316,16 +363,19 @@ function People() {
   const rowsPerPage = 10;
 
   const filteredPeople = useMemo(() => {
+    const basePeople = includeAwca
+      ? people
+      : (people || []).filter((p) => p?.inAwca === "N");
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return people;
+    if (!q) return basePeople;
     if (searchFilter === "district") {
-      return people.filter((p) =>
+      return basePeople.filter((p) =>
         (p?.District || "").toLowerCase().includes(q),
       );
     }
 
     const qDigits = q.replace(/\D/g, "");
-    return people.filter((p) => {
+    return basePeople.filter((p) => {
       const name = (p?.Name || "").toLowerCase();
       const nameChi = (p?.NameChi || "").toLowerCase();
       const phoneRaw = (p?.PhoneNumber || "").toString();
@@ -333,7 +383,7 @@ function People() {
       const phoneMatch = qDigits ? phoneDigits.includes(qDigits) : false;
       return name.includes(q) || nameChi.includes(q) || phoneMatch;
     });
-  }, [people, searchQuery, searchFilter]);
+  }, [includeAwca, people, searchQuery, searchFilter]);
 
   const handleDeletePerson = useCallback(
     async (person) => {
@@ -455,7 +505,7 @@ function People() {
   useEffect(() => {
     setPage(1);
     setInputValue("1");
-  }, [searchQuery, searchFilter]);
+  }, [includeAwca, searchQuery, searchFilter]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -525,6 +575,10 @@ function People() {
 	                    <SearchFilterAdornment
 	                      filter={searchFilter}
 	                      onSelectFilter={setSearchFilter}
+	                      includeAwca={includeAwca}
+	                      onToggleIncludeAwca={() =>
+	                        setIncludeAwca((prev) => !prev)
+	                      }
 	                    />
 	                  ),
 	                }}
@@ -662,6 +716,10 @@ function People() {
 	                        <SearchFilterAdornment
 	                          filter={searchFilter}
 	                          onSelectFilter={setSearchFilter}
+	                          includeAwca={includeAwca}
+	                          onToggleIncludeAwca={() =>
+	                            setIncludeAwca((prev) => !prev)
+	                          }
 	                        />
 	                      ),
 	                    }}
