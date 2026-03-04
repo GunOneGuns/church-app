@@ -19,6 +19,7 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Toast from "components/Toast";
 import { useTranslation } from "i18n";
+import useMobileFabVisibility from "hooks/useMobileFabVisibility";
 import {
   updatePerson,
   fetchPeople,
@@ -673,6 +674,7 @@ function PersonDetail() {
   const isAddMode = id === "add";
   const theme = useTheme();
   const isMobileView = useMediaQuery(theme.breakpoints.down("xl"));
+  const fabVisible = useMobileFabVisibility(isMobileView);
   const openedFromGroup = useMemo(() => {
     const from = location.state?.from;
     if (typeof from !== "string") return false;
@@ -2159,6 +2161,10 @@ function PersonDetail() {
             background: ACCENT_CYAN,
             color: "#fff",
             zIndex: muiTheme.zIndex.modal - 1,
+            opacity: fabVisible ? 1 : 0,
+            transform: fabVisible ? "scale(1)" : "scale(0.8)",
+            transition: "opacity 0.2s ease, transform 0.2s ease",
+            pointerEvents: fabVisible ? "auto" : "none",
             "&:hover": {
               background: ACCENT_CYAN,
               filter: "brightness(0.9)",
@@ -2186,6 +2192,9 @@ function PersonDetail() {
             opacity: isAddActionDisabled ? 0.45 : 1,
             color: "#fff",
             zIndex: muiTheme.zIndex.modal - 1,
+            transform: fabVisible ? "scale(1)" : "scale(0.8)",
+            transition: "opacity 0.2s ease, transform 0.2s ease",
+            pointerEvents: fabVisible ? "auto" : "none",
             "&:hover": {
               backgroundColor: ACCENT_CYAN,
               filter: isAddActionDisabled ? "none" : "brightness(0.9)",

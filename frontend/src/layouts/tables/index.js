@@ -35,6 +35,7 @@ import { ACCENT_CYAN } from "constants.js";
 import Toast from "components/Toast";
 import { deletePerson, updatePerson } from "services/convo-broker.js";
 import { useTranslation } from "i18n";
+import useMobileFabVisibility from "hooks/useMobileFabVisibility";
 
 const MOBILE_PAGINATION_HEIGHT = 30;
 const DELETE_UNDO_TIMEOUT_MS = 6000;
@@ -251,6 +252,7 @@ function People() {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const fabVisible = useMobileFabVisibility(isMobile);
   const { t } = useTranslation();
   const pageTitle = t("peoplePage.title", "Brothers & Sisters");
   const translatedColumns = useMemo(() => getPeopleColumns(t), [t]);
@@ -755,6 +757,10 @@ function People() {
             background: ACCENT_CYAN,
             color: "#fff",
             zIndex: muiTheme.zIndex.modal - 1,
+            opacity: fabVisible ? 1 : 0,
+            transform: fabVisible ? "scale(1)" : "scale(0.8)",
+            transition: "opacity 0.2s ease, transform 0.2s ease",
+            pointerEvents: fabVisible ? "auto" : "none",
             "&:hover": { background: ACCENT_CYAN, filter: "brightness(0.9)" },
           })}
         >

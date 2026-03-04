@@ -21,6 +21,7 @@ import {
   uploadGroupPicture,
 } from "services/convo-broker.js";
 import { ACCENT_CYAN } from "constants.js";
+import useMobileFabVisibility from "hooks/useMobileFabVisibility";
 
 const DEFAULT_GROUP = {
   Name: "",
@@ -34,6 +35,7 @@ export default function GroupAdd() {
   const location = useLocation();
   const theme = useTheme();
   const isMobileView = useMediaQuery(theme.breakpoints.down("xl"));
+  const fabVisible = useMobileFabVisibility(isMobileView);
   const { t } = useTranslation();
   const [editedGroup, setEditedGroup] = useState(DEFAULT_GROUP);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -270,6 +272,9 @@ export default function GroupAdd() {
             opacity: canSubmit ? 1 : 0.45,
             color: "#fff",
             zIndex: muiTheme.zIndex.modal - 1,
+            transform: fabVisible ? "scale(1)" : "scale(0.8)",
+            transition: "opacity 0.2s ease, transform 0.2s ease",
+            pointerEvents: fabVisible ? "auto" : "none",
             "&:hover": {
               backgroundColor: ACCENT_CYAN,
               filter: canSubmit ? "brightness(0.9)" : "none",

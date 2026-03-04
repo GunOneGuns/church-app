@@ -34,7 +34,7 @@ import TimeWheelPicker from "./components/TimeWheelPicker";
 import useAutoFocusOnOpen from "./hooks/useAutoFocusOnOpen";
 import useEventDraftEditor from "./hooks/useEventDraftEditor";
 import useEventsMonthData from "./hooks/useEventsMonthData";
-import useMobileFabVisibility from "./hooks/useMobileFabVisibility";
+import useMobileFabVisibility from "hooks/useMobileFabVisibility";
 import useSwipeMonthChange from "./hooks/useSwipeMonthChange";
 import {
   SWIPE_THRESHOLD,

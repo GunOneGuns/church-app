@@ -42,6 +42,7 @@ import { ACCENT_CYAN } from "constants.js";
 import Toast from "components/Toast";
 import GroupEditForm from "components/GroupDetail/GroupEditForm";
 import { useTranslation } from "i18n";
+import useMobileFabVisibility from "hooks/useMobileFabVisibility";
 import {
   fetchGroup,
   fetchPeople,
@@ -406,6 +407,7 @@ function GroupDetail() {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("xl"));
+  const fabVisible = useMobileFabVisibility(isMobile);
   const { t } = useTranslation();
   const translatedColumns = useMemo(() => getPeopleColumns(t), [t]);
   const [, dispatch] = useMaterialUIController();
@@ -1354,6 +1356,10 @@ function GroupDetail() {
                   background: ACCENT_CYAN,
                   color: "#fff",
                   zIndex: muiTheme.zIndex.modal - 1,
+                  opacity: fabVisible ? 1 : 0,
+                  transform: fabVisible ? "scale(1)" : "scale(0.8)",
+                  transition: "opacity 0.2s ease, transform 0.2s ease",
+                  pointerEvents: fabVisible ? "auto" : "none",
                   "&:hover": {
                     background: ACCENT_CYAN,
                     filter: "brightness(0.9)",
@@ -1380,6 +1386,10 @@ function GroupDetail() {
                   background: ACCENT_CYAN,
                   color: "#fff",
                   zIndex: muiTheme.zIndex.modal - 1,
+                  opacity: fabVisible ? 1 : 0,
+                  transform: fabVisible ? "scale(1)" : "scale(0.8)",
+                  transition: "opacity 0.2s ease, transform 0.2s ease",
+                  pointerEvents: fabVisible ? "auto" : "none",
                   "&:hover": {
                     background: ACCENT_CYAN,
                     filter: "brightness(0.9)",
@@ -1413,6 +1423,10 @@ function GroupDetail() {
                 backgroundColor,
                 color: "#fff",
                 zIndex: muiTheme.zIndex.modal - 1,
+                opacity: fabVisible ? 1 : 0,
+                transform: fabVisible ? "scale(1)" : "scale(0.8)",
+                transition: "opacity 0.2s ease, transform 0.2s ease",
+                pointerEvents: fabVisible ? "auto" : "none",
                 "&:hover": {
                   backgroundColor,
                 },
@@ -1448,6 +1462,9 @@ function GroupDetail() {
             opacity: isSaving ? 0.6 : 1,
             color: "#fff",
             zIndex: muiTheme.zIndex.modal - 1,
+            transform: fabVisible ? "scale(1)" : "scale(0.8)",
+            transition: "opacity 0.2s ease, transform 0.2s ease",
+            pointerEvents: fabVisible ? "auto" : "none",
             "&:hover": {
               backgroundColor: ACCENT_CYAN,
               filter: isSaving ? "none" : "brightness(0.9)",
