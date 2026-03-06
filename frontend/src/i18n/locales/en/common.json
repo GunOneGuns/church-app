@@ -46,6 +46,10 @@
     "baptisms": "Baptisms",
     "prayerRequests": "Prayer Requests"
   },
+  "morePage": {
+    "title": "More",
+    "placeholder": "This is a placeholder page for mobile More tab."
+  },
   "eventsPage": {
     "noEvents": "No events.",
     "loadFailed": "Failed to load events.",

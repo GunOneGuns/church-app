@@ -59,6 +59,7 @@ import PersonDetail from "layouts/person-detail";
 import GroupDetail from "layouts/groups/group-detail";
 import GroupAdd from "layouts/groups/group-add";
 import EventsMobileSearch from "layouts/events/mobile-search";
+import More from "layouts/more";
 import { Helmet } from "react-helmet";
 import { useTranslation } from "i18n";
 
@@ -374,6 +375,16 @@ export default function App() {
                 </ProtectedRoute>
               }
               key="events-search"
+            />
+            <Route
+              exact
+              path="more"
+              element={
+                <ProtectedRoute isAuthenticated={true}>
+                  <More />
+                </ProtectedRoute>
+              }
+              key="more-page"
             />
             {getRoutes(routes)}
             <Route path="*" element={<Navigate to="/home" />} />

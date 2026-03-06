@@ -46,6 +46,10 @@
     "baptisms": "受洗",
     "prayerRequests": "祷告请求"
   },
+  "morePage": {
+    "title": "更多",
+    "placeholder": "这是移动端“更多”标签的占位页面。"
+  },
   "eventsPage": {
     "noEvents": "没有活动。",
     "loadFailed": "加载活动失败。",

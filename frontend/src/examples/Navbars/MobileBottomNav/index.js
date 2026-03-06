@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  setMiniSidenav,
   setMobileNavbarTitle,
   useMaterialUIController,
 } from "context";
@@ -22,6 +21,7 @@ const getActiveTab = (pathname = "") => {
     return "groups";
   if (normalized.startsWith("/events") || normalized.startsWith("/event"))
     return "events";
+  if (normalized.startsWith("/more")) return "more";
   if (normalized.startsWith("/people") || normalized.startsWith("/person"))
     return "people";
   return "home";
@@ -77,16 +77,13 @@ export default function MobileBottomNav() {
       if (mobileNavbarTitle) setMobileNavbarTitle(dispatch, null);
     }
 
-    if (nextValue === "settings") {
-      setMiniSidenav(dispatch, false);
-      return;
-    }
-
-    setMiniSidenav(dispatch, true);
-
     if (nextValue === "people") {
       setMobileNavbarTitle(dispatch, peopleTitle);
       navigate("/people", { state: { openPeopleOverlay: true } });
+      return;
+    }
+    if (nextValue === "more") {
+      navigate("/more");
       return;
     }
 
@@ -163,7 +160,7 @@ export default function MobileBottomNav() {
           />
           <BottomNavigationAction
             label={moreTitle}
-            value="settings"
+            value="more"
             icon={<Icon fontSize="small">menu</Icon>}
           />
         </BottomNavigation>

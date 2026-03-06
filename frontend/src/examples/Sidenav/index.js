@@ -26,8 +26,7 @@ import List from "@mui/material/List";
 import Divider from "@mui/material/Divider";
 import Link from "@mui/material/Link";
 import Icon from "@mui/material/Icon";
-import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
+import ButtonBase from "@mui/material/ButtonBase";
 
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
@@ -57,6 +56,8 @@ function Sidenav({ color, brandName, routes, ...rest }) {
   const location = useLocation();
   const collapseName = location.pathname.replace("/", "");
   const hasExamples = routes.some((route) => route.type === "examples");
+  const toggleLanguage = () =>
+    setLanguage(language === "en" ? "zh-CN" : "en");
 
   let textColor = "white";
 
@@ -306,42 +307,76 @@ function Sidenav({ color, brandName, routes, ...rest }) {
               }
             />
             <MDBox pt={1.5}>
-              <TextField
-                select
-                size="small"
-                fullWidth
-                label={t("language.label", "Language")}
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
+              <MDTypography
+                variant="caption"
+                fontWeight="medium"
                 sx={{
-                  "& .MuiInputLabel-root": {
-                    color: textColor === "dark" ? "rgba(0,0,0,0.87)" : "#fff",
-                  },
-                  "& .MuiOutlinedInput-root": {
-                    color: textColor === "dark" ? "rgba(0,0,0,0.87)" : "#fff",
-                  },
-                  "& .MuiOutlinedInput-notchedOutline": {
-                    borderColor:
-                      textColor === "dark"
-                        ? "rgba(0,0,0,0.23)"
-                        : "rgba(255,255,255,0.5)",
-                  },
-                  "&:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor:
-                      textColor === "dark"
-                        ? "rgba(0,0,0,0.35)"
-                        : "rgba(255,255,255,0.7)",
-                  },
-                  "& .MuiSvgIcon-root": {
-                    color: textColor === "dark" ? "rgba(0,0,0,0.54)" : "#fff",
-                  },
+                  color: textColor === "dark" ? "rgba(0,0,0,0.87)" : "#fff",
+                  mb: 0.75,
                 }}
               >
-                <MenuItem value="en">{t("language.en", "English")}</MenuItem>
-                <MenuItem value="zh-CN">
-                  {t("language.zhCN", "简体中文")}
-                </MenuItem>
-              </TextField>
+                {t("language.label", "Language")}
+              </MDTypography>
+
+              <MDBox
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  p: 0.5,
+                  borderRadius: 999,
+                  border: "1px solid",
+                  borderColor:
+                    textColor === "dark"
+                      ? "rgba(0,0,0,0.23)"
+                      : "rgba(255,255,255,0.5)",
+                  backgroundColor:
+                    textColor === "dark"
+                      ? "rgba(0,0,0,0.04)"
+                      : "rgba(255,255,255,0.08)",
+                  gap: 0.5,
+                }}
+              >
+                <ButtonBase
+                  onClick={toggleLanguage}
+                  sx={{
+                    borderRadius: 999,
+                    py: 0.65,
+                    color:
+                      language === "en"
+                        ? "#fff"
+                        : textColor === "dark"
+                          ? "rgba(0,0,0,0.7)"
+                          : "rgba(255,255,255,0.8)",
+                    backgroundColor:
+                      language === "en" ? "#00BCD4" : "transparent",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  ENG
+                </ButtonBase>
+
+                <ButtonBase
+                  onClick={toggleLanguage}
+                  sx={{
+                    borderRadius: 999,
+                    py: 0.65,
+                    color:
+                      language === "zh-CN"
+                        ? "#fff"
+                        : textColor === "dark"
+                          ? "rgba(0,0,0,0.7)"
+                          : "rgba(255,255,255,0.8)",
+                    backgroundColor:
+                      language === "zh-CN" ? "#00BCD4" : "transparent",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                  }}
+                >
+                  中文
+                </ButtonBase>
+              </MDBox>
             </MDBox>
           </MDBox>
         )}

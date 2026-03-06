@@ -72,6 +72,7 @@ const MOBILE_TITLE_KEYS = {
   group: { key: "nav.groups", fallback: "Group" },
   events: { key: "nav.events", fallback: "Event" },
   event: { key: "nav.events", fallback: "Event" },
+  more: { key: "nav.more", fallback: "More" },
 };
 
 const getMobileTitle = (routeSegments = [], t) => {

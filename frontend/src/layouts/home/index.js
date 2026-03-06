@@ -13,7 +13,7 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import { ACCENT_CYAN } from "constants.js";
-import { fetchPeopleStats } from "services/convo-broker";
+import { fetchGroups, fetchPeopleStats } from "services/convo-broker";
 import { useTranslation } from "i18n";
 
 const splitValueForHighlight = (value) => {
@@ -58,13 +58,15 @@ function Home() {
     let cancelled = false;
     (async () => {
       try {
-        const stats = await fetchPeopleStats();
+        const [stats, groups] = await Promise.all([
+          fetchPeopleStats(),
+          fetchGroups(),
+        ]);
         if (cancelled) return;
         setPeopleStats({
           peopleCount:
             typeof stats?.peopleCount === "number" ? stats.peopleCount : null,
-          groupCount:
-            typeof stats?.groupCount === "number" ? stats.groupCount : null,
+          groupCount: Array.isArray(groups) ? groups.length : null,
         });
       } catch (error) {
         console.error("Failed to fetch home stats:", error);
