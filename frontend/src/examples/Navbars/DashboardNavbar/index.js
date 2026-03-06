@@ -260,18 +260,36 @@ function DashboardNavbar({
             overflow: "hidden",
           }}
         >
-          <IconButton
-            disableRipple
-            onClick={() => setMiniSidenav(dispatch, false)}
-            aria-label={t("nav.more", "More")}
-            sx={{
-              width: 40,
-              height: 40,
-              flexShrink: 0,
-            }}
-          >
-            <Icon sx={(muiTheme) => mobileIconsStyle(muiTheme)}>menu</Icon>
-          </IconButton>
+          {showBackButton ? (
+            <IconButton
+              size="small"
+              disableRipple
+              color="inherit"
+              onClick={() => navigate("/groups")}
+              aria-label={t("groupDetailPage.actions.back", "Back")}
+              sx={{
+                width: 40,
+                height: 40,
+                flexShrink: 0,
+                "& .MuiSvgIcon-root": { fontSize: 28 },
+              }}
+            >
+              <ArrowBackIosNewIcon sx={mobileIconsStyle} />
+            </IconButton>
+          ) : (
+            <IconButton
+              disableRipple
+              onClick={() => setMiniSidenav(dispatch, false)}
+              aria-label={t("nav.more", "More")}
+              sx={{
+                width: 40,
+                height: 40,
+                flexShrink: 0,
+              }}
+            >
+              <Icon sx={(muiTheme) => mobileIconsStyle(muiTheme)}>menu</Icon>
+            </IconButton>
+          )}
 
           <MDBox sx={{ flex: 1, minWidth: 0, px: 1 }}>
             <MDTypography
@@ -295,27 +313,13 @@ function DashboardNavbar({
             </MDTypography>
           </MDBox>
 
-          {showBackButton ? (
-            <IconButton
-              size="small"
-              disableRipple
-              color="inherit"
-              onClick={() => navigate("/groups")}
-              aria-label={t("groupDetailPage.actions.back", "Back")}
-              sx={{
-                width: 40,
-                height: 40,
-                flexShrink: 0,
-                "& .MuiSvgIcon-root": { fontSize: 28 },
-              }}
-            >
-              <ArrowBackIosNewIcon sx={mobileIconsStyle} />
-            </IconButton>
-          ) : mobileRightIcon ? (
+          {mobileRightIcon ? (
             <IconButton
               disableRipple
               onClick={onMobileRightIconClick}
-              aria-label={mobileRightAriaLabel || t("search.placeholder", "Search")}
+              aria-label={
+                mobileRightAriaLabel || t("search.placeholder", "Search")
+              }
               sx={{
                 width: 40,
                 height: 40,

@@ -59,10 +59,12 @@ export default function EventListPanel({
                 justifyContent="space-between"
                 alignItems="center"
                 gap={1}
+                sx={{ minWidth: 0 }}
               >
                 <MDTypography
                   variant="button"
                   fontWeight="bold"
+                  noWrap
                   sx={{ color: eventItem.color || ACCENT_CYAN }}
                 >
                   {eventItem.title}
@@ -74,9 +76,14 @@ export default function EventListPanel({
               <MDTypography variant="caption" color="text">
                 {eventItem.location}
               </MDTypography>
-              {eventItem.description ? (
-                <MDTypography variant="body2" mt={0.75}>
-                  {eventItem.description}
+              {eventItem.notes || eventItem.description ? (
+                <MDTypography
+                  variant="body2"
+                  mt={0.75}
+                  noWrap
+                  sx={{ minWidth: 0 }}
+                >
+                  {eventItem.notes || eventItem.description}
                 </MDTypography>
               ) : null}
             </Card>
@@ -90,4 +97,3 @@ export default function EventListPanel({
     </Card>
   );
 }
-

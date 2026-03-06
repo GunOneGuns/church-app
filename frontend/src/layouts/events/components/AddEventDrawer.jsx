@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import Divider from "@mui/material/Divider";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -8,10 +9,12 @@ import Select from "@mui/material/Select";
 import Switch from "@mui/material/Switch";
 import SwipeableDrawer from "@mui/material/SwipeableDrawer";
 import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
+import TextField from "@mui/material/TextField";
 import MDBox from "components/MDBox";
 import MDButton from "components/MDButton";
 import MDTypography from "components/MDTypography";
 import { ACCENT_CYAN } from "constants.js";
+import { lookupSingaporePostalCode } from "services/convo-broker";
 import AnimatedInlinePanel from "./AnimatedInlinePanel";
 
 export default function AddEventDrawer({
@@ -20,6 +23,7 @@ export default function AddEventDrawer({
   draftAllDay,
   draftEndTime,
   draftLocation,
+  draftNotes,
   draftRepeat,
   draftStartTime,
   draftTagColor,
@@ -45,6 +49,7 @@ export default function AddEventDrawer({
   deleteLabel,
   setDraftAllDay,
   setDraftLocation,
+  setDraftNotes,
   setDraftRepeat,
   setDraftTagColor,
   setDraftTitle,
@@ -63,6 +68,48 @@ export default function AddEventDrawer({
   primaryActionLabel,
   onPrimaryAction,
 }) {
+  const [postalSuggestions, setPostalSuggestions] = useState([]);
+  const [isPostalLookupLoading, setIsPostalLookupLoading] = useState(false);
+
+  useEffect(() => {
+    const input = String(draftLocation || "").trim();
+    if (!isAddSheetOpen) {
+      setPostalSuggestions([]);
+      setIsPostalLookupLoading(false);
+      return undefined;
+    }
+    if (!/^\d{6}$/.test(input)) {
+      setPostalSuggestions([]);
+      setIsPostalLookupLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setIsPostalLookupLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const payload = await lookupSingaporePostalCode(input);
+        if (cancelled) return;
+        setPostalSuggestions(
+          Array.isArray(payload?.suggestions) ? payload.suggestions : [],
+        );
+      } catch (_error) {
+        if (!cancelled) {
+          setPostalSuggestions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsPostalLookupLoading(false);
+        }
+      }
+    }, 180);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [draftLocation, isAddSheetOpen]);
+
   return (
     <SwipeableDrawer
       anchor="bottom"
@@ -188,6 +235,52 @@ export default function AddEventDrawer({
                 sx={inputRowFieldSx}
               />
             </MDBox>
+
+            {String(draftLocation || "").trim().match(/^\d{6}$/) ? (
+              <>
+                <Divider sx={sectionDividerSx} />
+                <MDBox sx={{ px: 2, py: 1.25 }}>
+                  {isPostalLookupLoading ? (
+                    <MDTypography variant="caption" color="text">
+                      {t("eventsForm.postal.loading")}
+                    </MDTypography>
+                  ) : postalSuggestions.length ? (
+                    <MDBox display="flex" flexDirection="column" gap={0.5}>
+                      {postalSuggestions.map((suggestion, idx) => (
+                        <MDButton
+                          key={`${suggestion?.label || ""}-${idx}`}
+                          variant="text"
+                          onClick={() => {
+                            setDraftLocation(String(suggestion?.label || ""));
+                            setPostalSuggestions([]);
+                          }}
+                          sx={{
+                            justifyContent: "flex-start",
+                            textTransform: "none",
+                            px: 0,
+                            py: 0.25,
+                            minHeight: 0,
+                            color: "text.primary",
+                          }}
+                        >
+                          <MDTypography
+                            variant="button"
+                            fontWeight="regular"
+                            sx={{ textAlign: "left", lineHeight: 1.35 }}
+                          >
+                            {suggestion?.label}
+                          </MDTypography>
+                        </MDButton>
+                      ))}
+                    </MDBox>
+                  ) : (
+                    <MDTypography variant="caption" color="text">
+                      {t("eventsForm.postal.noResults")}
+                    </MDTypography>
+                  )}
+                </MDBox>
+              </>
+            ) : null}
           </MDBox>
 
           <ClickAwayListener
@@ -552,6 +645,30 @@ export default function AddEventDrawer({
                 ))}
               </Select>
             </MDBox>
+          </MDBox>
+
+          <MDBox sx={{ ...sectionCardSx, mt: 2, p: 2 }}>
+            <MDTypography
+              variant="button"
+              fontWeight="regular"
+              sx={{ lineHeight: 1.2, mb: 1 }}
+            >
+              {t("eventsForm.fields.notes")}
+            </MDTypography>
+            <TextField
+              placeholder={t("eventsForm.placeholders.notes")}
+              value={draftNotes}
+              onChange={(e) => setDraftNotes(e.target.value)}
+              disabled={isSavingEvent}
+              multiline
+              rows={4}
+              fullWidth
+              sx={{
+                "& .MuiInputBase-inputMultiline": {
+                  overflowY: "auto",
+                },
+              }}
+            />
           </MDBox>
 
           {showDelete ? (

@@ -210,3 +210,24 @@ export const restoreEvent = async (id) => {
   }
   return data;
 };
+
+export const lookupSingaporePostalCode = async (postalCode) => {
+  const params = new URLSearchParams();
+  params.set("postalCode", String(postalCode || "").trim());
+
+  const response = await fetch(
+    `${baseURL}/events/postal-lookup?${params.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        "Cache-Control": "no-cache",
+      },
+    },
+  );
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || "Failed to lookup postal code");
+  }
+  return data;
+};

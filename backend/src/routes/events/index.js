@@ -75,6 +75,63 @@ function normalizeMonthQuery(monthParam) {
   return { fromKey: toDateKey(start), toKey: toDateKey(end) };
 }
 
+router.get("/postal-lookup", async (req, res) => {
+  try {
+    const postalCode = String(req.query.postalCode || "").trim();
+    if (!/^\d{6}$/.test(postalCode)) {
+      return res.status(400).json({ error: "postalCode must be 6 digits" });
+    }
+
+    const params = new URLSearchParams({
+      searchVal: postalCode,
+      returnGeom: "N",
+      getAddrDetails: "Y",
+      pageNum: "1",
+    });
+
+    const response = await fetch(
+      `https://www.onemap.gov.sg/api/common/elastic/search?${params.toString()}`,
+    );
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return res.status(502).json({ error: "Postal lookup failed" });
+    }
+
+    const rawResults = Array.isArray(data?.results) ? data.results : [];
+
+    const suggestions = [];
+    const seen = new Set();
+
+    rawResults.forEach((item) => {
+      const block = String(item?.BLK_NO || "").trim();
+      const road = String(item?.ROAD_NAME || "").trim();
+      const building = String(item?.BUILDING || "").trim();
+      const postal = String(item?.POSTAL || postalCode).trim();
+
+      const labelParts = [];
+      if (block || road) labelParts.push(`${block} ${road}`.trim());
+      if (building && building !== "NIL") labelParts.push(building);
+      if (postal) labelParts.push(`Singapore ${postal}`);
+
+      const label = labelParts.filter(Boolean).join(", ");
+      if (!label) return;
+      if (seen.has(label)) return;
+      seen.add(label);
+
+      suggestions.push({
+        label,
+        postalCode: postal || postalCode,
+      });
+    });
+
+    return res.status(200).json({ suggestions });
+  } catch (error) {
+    console.error("Error looking up postal code:", error);
+    return res.status(500).json({ error: "Failed to lookup postal code" });
+  }
+});
+
 router.get("/", async (req, res) => {
   try {
     const monthParam = req.query.month;
@@ -125,6 +182,12 @@ router.get("/", async (req, res) => {
           time: eventDoc.allDay ? "All-day" : eventDoc.startTime || "",
           location: eventDoc.location || "",
           description: eventDoc.description || "",
+          notes: typeof eventDoc.notes === "string" ? eventDoc.notes : "",
+          peopleInvolved: Array.isArray(eventDoc.peopleInvolved)
+            ? eventDoc.peopleInvolved
+                .map((v) => (v == null ? "" : String(v)))
+                .filter(Boolean)
+            : [],
           color: eventDoc.color || "",
           allDay: Boolean(eventDoc.allDay),
           startDateKey: eventStartKey,
@@ -188,6 +251,12 @@ router.post("/", async (req, res) => {
       title,
       location: typeof body.location === "string" ? body.location : "",
       description: typeof body.description === "string" ? body.description : "",
+      notes: typeof body.notes === "string" ? body.notes : "",
+      peopleInvolved: Array.isArray(body.peopleInvolved)
+        ? body.peopleInvolved
+            .map((v) => (v == null ? "" : String(v)))
+            .filter(Boolean)
+        : [],
       allDay,
       startDateKey,
       endDateKey,
@@ -206,6 +275,12 @@ router.post("/", async (req, res) => {
       title: eventDoc.title,
       location: eventDoc.location || "",
       description: eventDoc.description || "",
+      notes: typeof eventDoc.notes === "string" ? eventDoc.notes : "",
+      peopleInvolved: Array.isArray(eventDoc.peopleInvolved)
+        ? eventDoc.peopleInvolved
+            .map((v) => (v == null ? "" : String(v)))
+            .filter(Boolean)
+        : [],
       allDay: Boolean(eventDoc.allDay),
       startDateKey: eventDoc.startDateKey,
       endDateKey: eventDoc.endDateKey,
@@ -273,6 +348,12 @@ router.put("/:id", async (req, res) => {
       title,
       location: typeof body.location === "string" ? body.location : "",
       description: typeof body.description === "string" ? body.description : "",
+      notes: typeof body.notes === "string" ? body.notes : "",
+      peopleInvolved: Array.isArray(body.peopleInvolved)
+        ? body.peopleInvolved
+            .map((v) => (v == null ? "" : String(v)))
+            .filter(Boolean)
+        : [],
       allDay,
       startDateKey,
       endDateKey,
@@ -297,6 +378,12 @@ router.put("/:id", async (req, res) => {
       title: updated.title,
       location: updated.location || "",
       description: updated.description || "",
+      notes: typeof updated.notes === "string" ? updated.notes : "",
+      peopleInvolved: Array.isArray(updated.peopleInvolved)
+        ? updated.peopleInvolved
+            .map((v) => (v == null ? "" : String(v)))
+            .filter(Boolean)
+        : [],
       allDay: Boolean(updated.allDay),
       startDateKey: updated.startDateKey,
       endDateKey: updated.endDateKey,
@@ -335,6 +422,12 @@ router.post("/:id/restore", async (req, res) => {
       title: updated.title,
       location: updated.location || "",
       description: updated.description || "",
+      notes: typeof updated.notes === "string" ? updated.notes : "",
+      peopleInvolved: Array.isArray(updated.peopleInvolved)
+        ? updated.peopleInvolved
+            .map((v) => (v == null ? "" : String(v)))
+            .filter(Boolean)
+        : [],
       allDay: Boolean(updated.allDay),
       startDateKey: updated.startDateKey,
       endDateKey: updated.endDateKey,

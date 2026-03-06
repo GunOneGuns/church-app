@@ -21,6 +21,8 @@ export default function useEventDraftEditor({
 
   const [draftTitle, setDraftTitle] = useState("");
   const [draftLocation, setDraftLocation] = useState("");
+  const [draftNotes, setDraftNotes] = useState("");
+  const [draftPeopleInvolved, setDraftPeopleInvolved] = useState([]);
   const [draftAllDay, setDraftAllDay] = useState(false);
   const [draftStartTime, setDraftStartTime] = useState("09:00");
   const [draftEndTime, setDraftEndTime] = useState("10:00");
@@ -161,6 +163,8 @@ export default function useEventDraftEditor({
     const defaultEndTime = `${formatHour(endHour)}:00`;
     setDraftTitle("");
     setDraftLocation("");
+    setDraftNotes("");
+    setDraftPeopleInvolved([]);
     setDraftAllDay(false);
     setDraftStartTime(defaultStartTime);
     setDraftEndTime(defaultEndTime);
@@ -182,6 +186,10 @@ export default function useEventDraftEditor({
       setEditingEventId(String(eventItem.id));
       setDraftTitle(String(eventItem.title || ""));
       setDraftLocation(String(eventItem.location || ""));
+      setDraftNotes(String(eventItem.notes || eventItem.description || ""));
+      setDraftPeopleInvolved(
+        Array.isArray(eventItem.peopleInvolved) ? eventItem.peopleInvolved : [],
+      );
       setDraftAllDay(Boolean(eventItem.allDay));
       setDraftStartTime(String(eventItem.startTime || "09:00"));
       setDraftEndTime(String(eventItem.endTime || "10:00"));
@@ -260,6 +268,10 @@ export default function useEventDraftEditor({
             title: trimmedTitle,
             location: String(draftLocation || "").trim(),
             description: "",
+            notes: String(draftNotes || ""),
+            peopleInvolved: Array.isArray(draftPeopleInvolved)
+              ? draftPeopleInvolved
+              : [],
             allDay: Boolean(draftAllDay),
             startDateKey: draftStartDateKey,
             endDateKey: draftEndDateKey,
@@ -274,6 +286,10 @@ export default function useEventDraftEditor({
             title: trimmedTitle,
             location: String(draftLocation || "").trim(),
             description: "",
+            notes: String(draftNotes || ""),
+            peopleInvolved: Array.isArray(draftPeopleInvolved)
+              ? draftPeopleInvolved
+              : [],
             allDay: Boolean(draftAllDay),
             startDateKey: draftStartDateKey,
             endDateKey: draftEndDateKey,
@@ -329,6 +345,8 @@ export default function useEventDraftEditor({
       draftEndDateKey,
       draftStartTime,
       draftEndTime,
+      draftNotes,
+      draftPeopleInvolved,
       draftRepeat,
       t,
       fetchMonth,
@@ -410,6 +428,10 @@ export default function useEventDraftEditor({
     setDraftTitle,
     draftLocation,
     setDraftLocation,
+    draftNotes,
+    setDraftNotes,
+    draftPeopleInvolved,
+    setDraftPeopleInvolved,
     draftAllDay,
     setDraftAllDay,
     draftStartTime,
@@ -450,4 +472,3 @@ export default function useEventDraftEditor({
     locationInputRef,
   };
 }
-

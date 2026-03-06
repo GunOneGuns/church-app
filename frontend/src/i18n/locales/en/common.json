@@ -63,12 +63,20 @@
     "fields": {
       "title": "Title",
       "location": "Location",
+      "notes": "Notes",
       "allDay": "All-day",
       "starts": "Starts",
       "ends": "Ends",
       "tagColour": "Tag Colour",
       "start": "Start",
       "end": "End"
+    },
+    "placeholders": {
+      "notes": "Add notes about this event..."
+    },
+    "postal": {
+      "loading": "Looking up postal code...",
+      "noResults": "No address found for this postal code."
     }
   },
   "actions": {
@@ -141,7 +149,9 @@
     "byDistrict": "Search by District",
     "byLocation": "Search by Location",
     "byDate": "Search by Date",
-    "eventsPlaceholder": "Search events..."
+    "eventsPlaceholder": "Search events...",
+    "results": "Results",
+    "typeToSearch": "Type to search."
   },
   "filters": {
     "label": "Filters",

@@ -23,15 +23,13 @@ import Footer from "examples/Footer";
 import Toast from "components/Toast";
 import { ACCENT_CYAN } from "constants.js";
 import { useTranslation } from "i18n";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import AddEventDrawer from "./components/AddEventDrawer";
 import AddEventFab from "./components/AddEventFab";
 import CalendarPanel from "./components/CalendarPanel";
 import EventListPanel from "./components/EventListPanel";
-import MobileSearchBar from "./components/MobileSearchBar";
 import MonthYearPickerDialog from "./components/MonthYearPickerDialog";
 import TimeWheelPicker from "./components/TimeWheelPicker";
-import useAutoFocusOnOpen from "./hooks/useAutoFocusOnOpen";
 import useEventDraftEditor from "./hooks/useEventDraftEditor";
 import useEventsMonthData from "./hooks/useEventsMonthData";
 import useMobileFabVisibility from "hooks/useMobileFabVisibility";
@@ -48,7 +46,8 @@ import {
 import sortEventsByTime from "./utils/sortEventsByTime";
 
 function Events() {
-  const navigate = useNavigate(); // (not used here, leaving as-is)
+  const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("xl"));
   const { t, language } = useTranslation();
@@ -69,12 +68,6 @@ function Events() {
 
   const listRef = useRef(null);
   const calendarRef = useRef(null);
-
-  // Search state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchFilter, setSearchFilter] = useState("default");
-  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const searchInputRef = useRef(null);
 
   const handleMonthLoadError = useCallback(
     (error) => {
@@ -118,24 +111,38 @@ function Events() {
     t,
     theme,
     isMobile,
-    setIsMobileSearchOpen,
   });
-
-  const searchPlaceholder = useMemo(() => {
-    if (searchFilter === "location") {
-      return t("search.byLocation", "Search by Location");
-    }
-    if (searchFilter === "date") {
-      return t("search.byDate", "Search by Date");
-    }
-    return t("search.eventsPlaceholder", "Search events...");
-  }, [searchFilter, t]);
 
   const calendarLocale = language === "zh-CN" ? "zh-cn" : "en";
 
   useEffect(() => {
     dayjs.locale(calendarLocale);
   }, [calendarLocale]);
+
+  useEffect(() => {
+    const selectedKeyFromNav = location?.state?.selectedKey;
+    if (!selectedKeyFromNav) return;
+
+    const date = fromDateKey(String(selectedKeyFromNav));
+    if (!date) return;
+
+    if (
+      date.getFullYear() !== monthDate.getFullYear() ||
+      date.getMonth() !== monthDate.getMonth()
+    ) {
+      setActiveMonth(startOfMonth(date), date);
+    } else {
+      setSelectedKey(String(selectedKeyFromNav));
+    }
+
+    navigate("/events", { replace: true, state: {} });
+  }, [
+    location?.state?.selectedKey,
+    monthDate,
+    navigate,
+    setActiveMonth,
+    setSelectedKey,
+  ]);
 
   const inlineCalendarValue = useMemo(() => {
     const key =
@@ -221,13 +228,6 @@ function Events() {
       setEndTime={editor.setDraftEndTime}
     />
   );
-
-  useAutoFocusOnOpen({
-    enabled: isMobile,
-    open: isMobileSearchOpen,
-    inputRef: searchInputRef,
-    delayMs: 0,
-  });
 
   const today = useMemo(() => new Date(), []);
   const todayKey = useMemo(() => toDateKey(today), [today]);
@@ -433,28 +433,16 @@ function Events() {
     <DashboardLayout>
       <DashboardNavbar
         customRoute={["events"]}
-        mobileRightIcon={isMobileSearchOpen ? "close" : "search"}
+        mobileRightIcon="search"
         mobileRightAriaLabel={
-          isMobileSearchOpen
-            ? t("buttons.close", "Close")
-            : t("search.placeholder", "Search...")
+          t("search.placeholder", "Search...")
         }
-        onMobileRightIconClick={() => setIsMobileSearchOpen((prev) => !prev)}
+        onMobileRightIconClick={() => {
+          if (isMobile) navigate("/events/search");
+        }}
       />
 
       <MDBox pt={isMobile ? 2 : 3} pb={3}>
-        {isMobile && (
-          <MobileSearchBar
-            open={isMobileSearchOpen}
-            inputRef={searchInputRef}
-            placeholder={searchPlaceholder}
-            value={searchQuery}
-            onChangeValue={setSearchQuery}
-            filter={searchFilter}
-            onSelectFilter={setSearchFilter}
-          />
-        )}
-
         <Grid container spacing={isMobile ? 2 : 3}>
           <Grid item xs={12} sx={isMobile ? { px: 0 } : undefined}>
             {isMobile ? (
@@ -512,6 +500,7 @@ function Events() {
         draftAllDay={editor.draftAllDay}
         draftEndTime={editor.draftEndTime}
         draftLocation={editor.draftLocation}
+        draftNotes={editor.draftNotes}
         draftRepeat={editor.draftRepeat}
         draftStartTime={editor.draftStartTime}
         draftTagColor={editor.draftTagColor}
@@ -543,6 +532,7 @@ function Events() {
         sectionDividerSx={sectionDividerSx}
         setDraftAllDay={editor.setDraftAllDay}
         setDraftLocation={editor.setDraftLocation}
+        setDraftNotes={editor.setDraftNotes}
         setDraftRepeat={editor.setDraftRepeat}
         setDraftTagColor={editor.setDraftTagColor}
         setDraftTitle={editor.setDraftTitle}

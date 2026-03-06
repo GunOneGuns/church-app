@@ -77,6 +77,7 @@
     "fields": {
       "title": "标题",
       "location": "地点",
+      "notes": "备注",
       "allDay": "全天",
       "starts": "开始",
       "ends": "结束",
@@ -84,6 +85,13 @@
       "repeat": "重复",
       "start": "开始",
       "end": "结束"
+    },
+    "placeholders": {
+      "notes": "添加活动备注..."
+    },
+    "postal": {
+      "loading": "正在查询邮政编码...",
+      "noResults": "未找到该邮政编码对应地址。"
     },
     "repeat": {
       "never": "从不",
@@ -164,7 +172,9 @@
     "byDistrict": "按地区搜索",
     "byLocation": "按地点搜索",
     "byDate": "按日期搜索",
-    "eventsPlaceholder": "搜索活动..."
+    "eventsPlaceholder": "搜索活动...",
+    "results": "结果",
+    "typeToSearch": "输入内容开始搜索。"
   },
   "filters": {
     "label": "筛选",

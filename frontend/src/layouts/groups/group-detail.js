@@ -353,7 +353,13 @@ function Job({ title, description }) {
   );
 }
 
-function buildGroupMemberRows(rawPeople, navigate, slug, onRemove, naLabel = "N/A") {
+function buildGroupMemberRows(
+  rawPeople,
+  navigate,
+  slug,
+  onRemove,
+  naLabel = "N/A",
+) {
   return rawPeople.map((person) => ({
     people: (
       <PeopleCell
@@ -857,7 +863,13 @@ function GroupDetail() {
 
   const rows = useMemo(
     () =>
-      buildGroupMemberRows(filteredMembers, navigate, id, handleRemoveMember, naLabel),
+      buildGroupMemberRows(
+        filteredMembers,
+        navigate,
+        id,
+        handleRemoveMember,
+        naLabel,
+      ),
     [filteredMembers, navigate, id, handleRemoveMember, naLabel],
   );
 
@@ -1008,7 +1020,10 @@ function GroupDetail() {
         open: true,
         message:
           error?.message ||
-          t("groupDetailPage.errors.addMembersFailed", "Failed to add members."),
+          t(
+            "groupDetailPage.errors.addMembersFailed",
+            "Failed to add members.",
+          ),
         severity: "error",
       });
     }
@@ -1018,7 +1033,6 @@ function GroupDetail() {
     <DashboardLayout>
       <DashboardNavbar
         customRoute={["groups", group.Name]}
-        hideMobileBackButton={isEditing}
       />
       <MDBox pt={{ xs: 3, xl: 6 }} pb={{ xs: 2, xl: 3 }}>
         {isEditing ? (
@@ -1122,26 +1136,26 @@ function GroupDetail() {
               alignItems="center"
               gap={1}
               sx={{ flexShrink: 0 }}
-	            >
-	              <TextField
-	                placeholder={searchPlaceholder}
-	                value={searchQuery}
-	                onChange={(e) => setSearchQuery(e.target.value)}
-	                InputProps={{
-	                  endAdornment: (
-	                    <SearchFilterAdornment
-	                      filter={searchFilter}
-	                      onSelectFilter={setSearchFilter}
-	                      includeAwca={includeAwca}
-	                      onToggleIncludeAwca={() =>
-	                        setIncludeAwca((prev) => !prev)
-	                      }
-	                    />
-	                  ),
-	                }}
-	                size="small"
-	                sx={{ flex: 1 }}
-	              />
+            >
+              <TextField
+                placeholder={searchPlaceholder}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                InputProps={{
+                  endAdornment: (
+                    <SearchFilterAdornment
+                      filter={searchFilter}
+                      onSelectFilter={setSearchFilter}
+                      includeAwca={includeAwca}
+                      onToggleIncludeAwca={() =>
+                        setIncludeAwca((prev) => !prev)
+                      }
+                    />
+                  ),
+                }}
+                size="small"
+                sx={{ flex: 1 }}
+              />
             </MDBox>
             <MDBox
               sx={{
@@ -1254,7 +1268,10 @@ function GroupDetail() {
                     variant="contained"
                     color="white"
                     iconOnly
-                    aria-label={t("groupDetailPage.actions.addMember", "Add member")}
+                    aria-label={t(
+                      "groupDetailPage.actions.addMember",
+                      "Add member",
+                    )}
                     onClick={() => {
                       handleOpenAddMembers();
                     }}
@@ -1269,18 +1286,18 @@ function GroupDetail() {
                   pt={3}
                   sx={{ maxHeight: "calc(100vh - 400px)", overflow: "auto" }}
                 >
-	                  {paginatedRows.length ? (
-	                    <DataTable
-	                      table={{
-	                        columns: translatedColumns,
-	                        rows: paginatedRows,
-	                      }}
-	                      isSorted={false}
-	                      entriesPerPage={false}
-	                      showTotalEntries={false}
-	                      noEndBorder
-	                      pagination={false}
-	                    />
+                  {paginatedRows.length ? (
+                    <DataTable
+                      table={{
+                        columns: translatedColumns,
+                        rows: paginatedRows,
+                      }}
+                      isSorted={false}
+                      entriesPerPage={false}
+                      showTotalEntries={false}
+                      noEndBorder
+                      pagination={false}
+                    />
                   ) : (
                     <MDBox p={2}>
                       <MDTypography variant="button" color="text">
@@ -1296,25 +1313,25 @@ function GroupDetail() {
                   p={2}
                   gap={2}
                 >
-	                  <TextField
-	                    placeholder={searchPlaceholder}
-	                    value={searchQuery}
-	                    onChange={(e) => setSearchQuery(e.target.value)}
-	                    InputProps={{
-	                      endAdornment: (
-	                        <SearchFilterAdornment
-	                          filter={searchFilter}
-	                          onSelectFilter={setSearchFilter}
-	                          includeAwca={includeAwca}
-	                          onToggleIncludeAwca={() =>
-	                            setIncludeAwca((prev) => !prev)
-	                          }
-	                        />
-	                      ),
-	                    }}
-	                    size="small"
-	                    sx={{ minWidth: 240 }}
-	                  />
+                  <TextField
+                    placeholder={searchPlaceholder}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    InputProps={{
+                      endAdornment: (
+                        <SearchFilterAdornment
+                          filter={searchFilter}
+                          onSelectFilter={setSearchFilter}
+                          includeAwca={includeAwca}
+                          onToggleIncludeAwca={() =>
+                            setIncludeAwca((prev) => !prev)
+                          }
+                        />
+                      ),
+                    }}
+                    size="small"
+                    sx={{ minWidth: 240 }}
+                  />
 
                   {/* FIXED paginator (desktop/web) */}
                   <DesktopPaginationControls
@@ -1365,7 +1382,10 @@ function GroupDetail() {
                     filter: "brightness(0.9)",
                   },
                 })}
-                aria-label={t("groupDetailPage.actions.addMembers", "Add members")}
+                aria-label={t(
+                  "groupDetailPage.actions.addMembers",
+                  "Add members",
+                )}
               >
                 <Icon fontSize="large" sx={{ color: "#fff" }}>
                   add
@@ -1547,7 +1567,9 @@ function GroupDetail() {
                 onClose={() => setMemberPickerOpen(false)}
                 openOnFocus
                 disableCloseOnSelect
-                getOptionLabel={(option) => getPersonLabel(option, unknownLabel)}
+                getOptionLabel={(option) =>
+                  getPersonLabel(option, unknownLabel)
+                }
                 isOptionEqualToValue={(opt, val) => opt?._id === val?._id}
                 getOptionDisabled={(option) =>
                   existingMemberIds.has(String(option?._id || option?.id))

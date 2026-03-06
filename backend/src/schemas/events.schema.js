@@ -5,6 +5,8 @@ const eventsSchema = new mongoose.Schema(
     title: { type: String, required: true, trim: true },
     location: { type: String, default: "" },
     description: { type: String, default: "" },
+    notes: { type: String, default: "" },
+    peopleInvolved: { type: [String], default: [] },
     allDay: { type: Boolean, default: false },
     startDateKey: { type: String, required: true }, // YYYY-MM-DD
     endDateKey: { type: String, required: true }, // YYYY-MM-DD
@@ -23,4 +25,3 @@ const eventsSchema = new mongoose.Schema(
 );
 
 export const eventsModel = mongoose.model("Events", eventsSchema, "events");
-
