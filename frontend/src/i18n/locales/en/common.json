@@ -169,6 +169,15 @@
   "peoplePage": {
     "title": "Brothers & Sisters",
     "noPeopleFound": "No people found.",
+    "errors": {
+      "deleteSavedOnly": "Delete is only available for saved people.",
+      "undoFailed": "Failed to undo delete.",
+      "deleteFailed": "Failed to delete person."
+    },
+    "toasts": {
+      "deleted": "Person deleted.",
+      "undoSuccess": "Undo successful."
+    },
     "columns": {
       "name": "Name",
       "address": "Address",
@@ -178,7 +187,15 @@
   },
   "groupsPage": {
     "searchPlaceholder": "Search by group name...",
-    "noGroupsFound": "No groups found."
+    "noGroupsFound": "No groups found.",
+    "errors": {
+      "editSavedOnly": "Edit is only available for saved groups.",
+      "deleteSavedOnly": "Delete is only available for saved groups.",
+      "deleteFailed": "Failed to delete group."
+    },
+    "toasts": {
+      "deleted": "Group deleted."
+    }
   },
   "peopleOverlay": {
     "step1": {

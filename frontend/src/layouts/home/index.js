@@ -13,7 +13,11 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import { ACCENT_CYAN } from "constants.js";
-import { fetchGroups, fetchPeopleStats } from "services/convo-broker";
+import {
+  fetchEvents,
+  fetchGroups,
+  fetchPeopleStats,
+} from "services/convo-broker";
 import { useTranslation } from "i18n";
 
 const splitValueForHighlight = (value) => {
@@ -32,13 +36,23 @@ const splitValueForHighlight = (value) => {
 const renderCyanNumberValue = (value) => {
   const { prefix, number, suffix } = splitValueForHighlight(value);
   if (!number) return value;
+  const isPlusSuffix = suffix === "+";
   return (
     <>
       {prefix}
       <MDBox component="span" sx={{ color: ACCENT_CYAN }}>
         {number}
       </MDBox>
-      {suffix}
+      {isPlusSuffix ? (
+        <MDBox
+          component="span"
+          sx={{ color: ACCENT_CYAN, fontWeight: 500, fontSize: "17px" }}
+        >
+          {suffix}
+        </MDBox>
+      ) : (
+        suffix
+      )}
     </>
   );
 };
@@ -53,6 +67,7 @@ function Home() {
     peopleCount: null,
     groupCount: null,
   });
+  const [upcomingEventsCount, setUpcomingEventsCount] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,6 +93,51 @@ function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const toDateKey = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const addDays = (date, deltaDays) => {
+      const next = new Date(date);
+      next.setDate(next.getDate() + deltaDays);
+      return next;
+    };
+
+    (async () => {
+      try {
+        const today = new Date();
+        const fromKey = toDateKey(today);
+        const toKey = toDateKey(addDays(today, 365));
+        const payload = await fetchEvents({ fromKey, toKey });
+        if (cancelled) return;
+
+        const ids = new Set();
+        Object.values(payload?.eventsByDate || {}).forEach((events) => {
+          (events || []).forEach((eventItem) => {
+            const id = String(eventItem?.id || "").trim();
+            if (id) ids.add(id);
+          });
+        });
+
+        setUpcomingEventsCount(ids.size);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Failed to fetch upcoming events:", error);
+        setUpcomingEventsCount(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const homeStats = useMemo(
     () => [
       {
@@ -92,13 +152,43 @@ function Home() {
         value: peopleStats.groupCount ?? "—",
         detail: "Small groups",
       },
-      { key: "events", title: t("nav.events", "Event"), value: "5", detail: "Upcoming" },
-      { key: "visitors", title: t("home.visitors", "Visitors"), value: "14", detail: "This month" },
-      { key: "donations", title: t("home.donations", "Donations"), value: "$1,250", detail: "This week" },
-      { key: "baptisms", title: t("home.baptisms", "Baptisms"), value: "2", detail: "This quarter" },
-      { key: "prayerRequests", title: t("home.prayerRequests", "Prayer Requests"), value: "9", detail: "Open" },
+      {
+        key: "events",
+        title: t("nav.events", "Event"),
+        value:
+          typeof upcomingEventsCount === "number"
+            ? upcomingEventsCount > 7
+              ? "7+"
+              : upcomingEventsCount
+            : "—",
+        detail: "Upcoming",
+      },
+      {
+        key: "visitors",
+        title: t("home.visitors", "Visitors"),
+        value: "14",
+        detail: "This month",
+      },
+      {
+        key: "donations",
+        title: t("home.donations", "Donations"),
+        value: "$1,250",
+        detail: "This week",
+      },
+      {
+        key: "baptisms",
+        title: t("home.baptisms", "Baptisms"),
+        value: "2",
+        detail: "This quarter",
+      },
+      {
+        key: "prayerRequests",
+        title: t("home.prayerRequests", "Prayer Requests"),
+        value: "9",
+        detail: "Open",
+      },
     ],
-    [peopleStats.groupCount, peopleStats.peopleCount, t],
+    [peopleStats.groupCount, peopleStats.peopleCount, t, upcomingEventsCount],
   );
 
   const getCardNavigation = (key) => {
@@ -112,6 +202,12 @@ function Home() {
     if (key === "groups") {
       return () => navigate("/groups");
     }
+    if (key === "events") {
+      return () =>
+        navigate("/events/search", {
+          state: { applyExpiredFilter: true },
+        });
+    }
     return null;
   };
 
@@ -119,17 +215,17 @@ function Home() {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox pt={6} pb={3}>
-	        <Grid container spacing={2}>
-	          {homeStats.map((item) => {
-	            const onCardClick = getCardNavigation(item.key);
-	            const isClickable = typeof onCardClick === "function";
+        <Grid container spacing={2}>
+          {homeStats.map((item) => {
+            const onCardClick = getCardNavigation(item.key);
+            const isClickable = typeof onCardClick === "function";
 
-	            return (
-	              <Grid item xs={6} md={3} key={item.key}>
-	                <Card
-	                  sx={{
-	                    height: "100%",
-	                    aspectRatio: "1 / 1",
+            return (
+              <Grid item xs={6} md={3} key={item.key}>
+                <Card
+                  sx={{
+                    height: "100%",
+                    aspectRatio: "1 / 1",
                     borderRadius: 2,
                   }}
                 >

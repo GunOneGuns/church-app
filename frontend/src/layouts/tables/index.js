@@ -294,7 +294,7 @@ function People() {
     const undoPerson = toastFromNav.undo?.person;
     const undoPersonId = undoPerson?._id || undoPerson?.id;
     if (!onAction && undoPerson && isMongoObjectId(undoPersonId)) {
-      actionLabel = actionLabel || "Undo";
+      actionLabel = actionLabel || t("actions.undo", "Undo");
       onAction = async () => {
         try {
           const { _id, id, createdAt, updatedAt, deletedAt, ...rest } =
@@ -304,7 +304,10 @@ function People() {
           await refreshPeople();
           setToast({
             open: true,
-            message: "Undo successful.",
+            message: t(
+              "peoplePage.toasts.undoSuccess",
+              "Undo successful.",
+            ),
             severity: "success",
             actionLabel: null,
             onAction: null,
@@ -313,7 +316,9 @@ function People() {
         } catch (error) {
           setToast({
             open: true,
-            message: error?.message || "Failed to undo delete.",
+            message:
+              error?.message ||
+              t("peoplePage.errors.undoFailed", "Failed to undo delete."),
             severity: "error",
             actionLabel: null,
             onAction: null,
@@ -393,7 +398,10 @@ function People() {
       if (!isMongoObjectId(personId)) {
         setToast({
           open: true,
-          message: "Delete is only available for saved people.",
+          message: t(
+            "peoplePage.errors.deleteSavedOnly",
+            "Delete is only available for saved people.",
+          ),
           severity: "warning",
           actionLabel: null,
           onAction: null,
@@ -427,7 +435,9 @@ function People() {
         });
         setToast({
           open: true,
-          message: error?.message || "Failed to delete person.",
+          message:
+            error?.message ||
+            t("peoplePage.errors.deleteFailed", "Failed to delete person."),
           severity: "error",
           actionLabel: null,
           onAction: null,
@@ -442,10 +452,10 @@ function People() {
 
       setToast({
         open: true,
-        message: "Person deleted.",
+        message: t("peoplePage.toasts.deleted", "Person deleted."),
         severity: "success",
         autoHideDuration: DELETE_UNDO_TIMEOUT_MS,
-        actionLabel: "Undo",
+        actionLabel: t("actions.undo", "Undo"),
         onAction: async () => {
           const pending = pendingDeleteRef.current.get(String(personId));
           if (!pending) return;
@@ -458,7 +468,10 @@ function People() {
             await refreshPeople();
             setToast({
               open: true,
-              message: "Undo successful.",
+              message: t(
+                "peoplePage.toasts.undoSuccess",
+                "Undo successful.",
+              ),
               severity: "success",
               actionLabel: null,
               onAction: null,
@@ -467,7 +480,9 @@ function People() {
           } catch (error) {
             setToast({
               open: true,
-              message: error?.message || "Failed to undo delete.",
+              message:
+                error?.message ||
+                t("peoplePage.errors.undoFailed", "Failed to undo delete."),
               severity: "error",
               actionLabel: null,
               onAction: null,

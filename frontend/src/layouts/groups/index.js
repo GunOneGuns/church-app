@@ -247,7 +247,10 @@ function Groups() {
     if (!isMongoObjectId(groupId)) {
       setToast({
         open: true,
-        message: "Edit is only available for saved groups.",
+        message: t(
+          "groupsPage.errors.editSavedOnly",
+          "Edit is only available for saved groups.",
+        ),
         severity: "warning",
         actionLabel: null,
         onAction: null,
@@ -265,7 +268,10 @@ function Groups() {
     if (!isMongoObjectId(groupId)) {
       setToast({
         open: true,
-        message: "Delete is only available for saved groups.",
+        message: t(
+          "groupsPage.errors.deleteSavedOnly",
+          "Delete is only available for saved groups.",
+        ),
         severity: "warning",
         actionLabel: null,
         onAction: null,
@@ -296,7 +302,9 @@ function Groups() {
       setGroups((prev) => [groupToDelete, ...(prev || [])]);
       setToast({
         open: true,
-        message: error?.message || "Failed to delete group.",
+        message:
+          error?.message ||
+          t("groupsPage.errors.deleteFailed", "Failed to delete group."),
         severity: "error",
         actionLabel: null,
         onAction: null,
@@ -307,10 +315,10 @@ function Groups() {
 
     setToast({
       open: true,
-      message: "Group deleted.",
+      message: t("groupsPage.toasts.deleted", "Group deleted."),
       severity: "success",
       autoHideDuration: 6000,
-      actionLabel: "Undo",
+      actionLabel: t("actions.undo", "Undo"),
       onAction: async () => {
         const pending = pendingDeleteRef.current.get(String(groupId));
         if (!pending) return;

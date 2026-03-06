@@ -192,6 +192,15 @@
   "peoplePage": {
     "title": "弟兄姊妹",
     "noPeopleFound": "没有人员。",
+    "errors": {
+      "deleteSavedOnly": "仅已保存的人员可删除。",
+      "undoFailed": "撤销删除失败。",
+      "deleteFailed": "删除人员失败。"
+    },
+    "toasts": {
+      "deleted": "人员已删除。",
+      "undoSuccess": "撤销成功。"
+    },
     "columns": {
       "name": "姓名",
       "address": "地址",
@@ -201,7 +210,15 @@
   },
   "groupsPage": {
     "searchPlaceholder": "按小组名称搜索...",
-    "noGroupsFound": "没有小组。"
+    "noGroupsFound": "没有小组。",
+    "errors": {
+      "editSavedOnly": "仅已保存的小组可编辑。",
+      "deleteSavedOnly": "仅已保存的小组可删除。",
+      "deleteFailed": "删除小组失败。"
+    },
+    "toasts": {
+      "deleted": "小组已删除。"
+    }
   },
   "peopleOverlay": {
     "step1": {
